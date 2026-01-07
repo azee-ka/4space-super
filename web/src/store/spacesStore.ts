@@ -1,62 +1,83 @@
 import { create } from 'zustand';
-import { Space } from '@4space/shared';
 import { supabase } from '../lib/supabase';
-import { EncryptionService } from '@4space/shared';
+import type { Space } from '@4space/shared';
 
 interface SpacesState {
   spaces: Space[];
-  loading: boolean;
   selectedSpace: Space | null;
+  loading: boolean;
   fetchSpaces: () => Promise<void>;
-  createSpace: (name: string, description?: string) => Promise<Space>;
+  createSpace: (space: Partial<Space>) => Promise<Space>;
   selectSpace: (space: Space) => void;
+  deleteSpace: (id: string) => Promise<void>;
 }
 
 export const useSpacesStore = create<SpacesState>((set, get) => ({
   spaces: [],
-  loading: false,
   selectedSpace: null,
+  loading: false,
 
   fetchSpaces: async () => {
     set({ loading: true });
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        set({ loading: false });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('spaces')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('owner_id', user.id)
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
       set({ spaces: data || [], loading: false });
     } catch (error) {
-      console.error('Fetch spaces error:', error);
+      console.error('Error fetching spaces:', error);
       set({ loading: false });
     }
   },
 
-  createSpace: async (name, description) => {
+  createSpace: async (spaceData) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-
-    const spaceKey = EncryptionService.generateSpaceKey();
 
     const { data, error } = await supabase
       .from('spaces')
       .insert({
-        name,
-        description,
+        name: spaceData.name,
+        description: spaceData.description,
+        privacy: spaceData.privacy || 'private',
+        icon: spaceData.icon,
+        color: spaceData.color,
         owner_id: user.id,
-        privacy: 'private',
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    localStorage.setItem(`space_key_${data.id}`, spaceKey);
-
-    await get().fetchSpaces();
+    set((state) => ({ spaces: [data, ...state.spaces] }));
     return data;
   },
 
-  selectSpace: (space) => set({ selectedSpace: space }),
+  selectSpace: (space) => {
+    set({ selectedSpace: space });
+  },
+
+  deleteSpace: async (id) => {
+    const { error } = await supabase
+      .from('spaces')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    set((state) => ({
+      spaces: state.spaces.filter((s) => s.id !== id),
+      selectedSpace: state.selectedSpace?.id === id ? null : state.selectedSpace,
+    }));
+  },
 }));

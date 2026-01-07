@@ -93,10 +93,10 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
               </p>
 
               {/* Metadata */}
-              {message.metadata && Object.keys(message.metadata).length > 0 && (
+              {(message as any).metadata && Object.keys((message as any).metadata).length > 0 && (
                 <div className="mt-2 pt-2 border-t border-current/10">
                   <p className="text-xs opacity-70">
-                    {JSON.stringify(message.metadata)}
+                    {JSON.stringify((message as any).metadata)}
                   </p>
                 </div>
               )}

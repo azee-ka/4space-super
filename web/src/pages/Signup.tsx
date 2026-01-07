@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 export function Signup() {
   const [username, setUsername] = useState('');
@@ -30,13 +31,9 @@ export function Signup() {
 
     try {
       await signUp(email, password, username);
-      console.log('✅ Signup successful');
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      console.error('❌ Signup failed:', err);
       setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
@@ -45,189 +42,144 @@ export function Signup() {
 
   if (success) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(to bottom right, #f0f9ff, #ffffff, #f0f9ff)',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '80px', marginBottom: '20px' }}>✓</div>
-          <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#0ea5e9', marginBottom: '10px' }}>
-            Account Created!
-          </h2>
-          <p style={{ color: '#64748b' }}>Redirecting to login...</p>
+      <div className="min-h-screen gradient-bg flex items-center justify-center p-6">
+        <div className="text-center animate-scale-in">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full gradient-primary flex items-center justify-center glow-strong">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold mb-2 text-gradient">Account Created!</h2>
+          <p className="text-slate-400">Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(to bottom right, #f0f9ff, #ffffff, #f0f9ff)',
-      padding: '20px'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '400px',
-        background: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(10px)',
-        padding: '40px',
-        borderRadius: '20px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{
-            fontSize: '48px',
-            fontWeight: 'bold',
-            background: 'linear-gradient(to right, #0ea5e9, #0369a1)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '10px'
-          }}>
-            4Space
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '16px' }}>
-            Create Your Account
-          </p>
+    <div className="min-h-screen gradient-bg relative overflow-hidden flex items-center justify-center p-6">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      {/* Theme toggle */}
+      <div className="absolute top-6 right-6 z-20">
+        <ThemeToggle />
+      </div>
+
+      {/* Signup card */}
+      <div className="relative z-10 w-full max-w-md animate-scale-in">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center glow">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className="text-3xl font-bold text-gradient">4SPACE</span>
+          </div>
+          <p className="text-slate-400">Create your digital universe</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#334155'
-            }}>
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="johndoe"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '15px',
-                background: 'rgba(255, 255, 255, 0.8)',
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#334155'
-            }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '15px',
-                background: 'rgba(255, 255, 255, 0.8)',
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#334155'
-            }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '15px',
-                background: 'rgba(255, 255, 255, 0.8)',
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          {error && (
-            <div style={{
-              padding: '12px',
-              background: '#fee2e2',
-              border: '1px solid #fecaca',
-              borderRadius: '10px',
-              marginBottom: '20px',
-              color: '#dc2626',
-              fontSize: '14px'
-            }}>
-              {error}
+        {/* Form */}
+        <div className="glass-strong rounded-2xl p-8 border border-white/20 scan-line">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="johndoe"
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-xl glass border border-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: loading ? '#94a3b8' : 'linear-gradient(to right, #0ea5e9, #0369a1)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginBottom: '15px'
-            }}
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-xl glass border border-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+              />
+            </div>
 
-          <div style={{ textAlign: 'center' }}>
-            <Link
-              to="/login"
-              style={{
-                color: '#0ea5e9',
-                textDecoration: 'none',
-                fontSize: '14px'
-              }}
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-xl glass border border-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+              />
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="glass-strong rounded-xl p-4 border border-red-500/20 bg-red-500/10">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full gradient-primary py-3 rounded-xl font-semibold text-white glow hover:glow-strong transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              Already have an account? Sign in
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Creating account...
+                </span>
+              ) : (
+                'Create Account'
+              )}
+            </button>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 glass text-slate-400">Already have an account?</span>
+              </div>
+            </div>
+
+            {/* Sign in link */}
+            <Link to="/login">
+              <button
+                type="button"
+                className="w-full glass-strong py-3 rounded-xl font-semibold hover:bg-white/10 transition-all transform hover:scale-[1.02]"
+              >
+                Sign In
+              </button>
             </Link>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        {/* Back to home */}
+        <Link to="/">
+          <button className="mt-6 w-full text-center text-slate-400 hover:text-slate-300 transition-colors text-sm">
+            ← Back to Home
+          </button>
+        </Link>
       </div>
     </div>
   );
