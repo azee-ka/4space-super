@@ -4,7 +4,7 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 export function Landing() {
   return (
-    <div className="min-h-screen gradient-bg relative overflow-hidden">
+    <div className="min-h-screen gradient-bg relative overflow-hidden bg-black">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
@@ -50,7 +50,7 @@ export function Landing() {
           </div>
           
           <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-            Your Digital Universe,
+            Your Digital Space,
             <br />
             <span className="text-gradient">Infinitely Organized</span>
           </h1>
@@ -167,7 +167,7 @@ export function Landing() {
           <p className="text-xl text-slate-400 mb-8">Join thousands organizing their digital lives</p>
           <Link to="/signup">
             <button className="gradient-primary px-10 py-4 rounded-xl font-semibold text-white text-lg glow-strong hover:scale-105 transition-all">
-              Create Your Universe
+              Create Your Space
             </button>
           </Link>
         </div>
