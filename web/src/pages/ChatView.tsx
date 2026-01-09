@@ -1,630 +1,560 @@
+// Advanced Chat View with Futuristic Design and All Features
+// web/src/pages/AdvancedChatView.tsx
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSpacesStore } from '../store/spacesStore';
-import { useAuthStore } from '../store/authStore';
-import { supabase } from '../lib/supabase';
-import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faArrowLeft, faSearch, faPaperPlane, faEllipsisV,
-  faPhone, faVideo, faMicrophone, faImage, faFile,
-  faPaperclip, faSmile, faBolt, faReply, faCopy,
-  faTrash, faEdit, faCheck, faCheckDouble, faTimes,
-  faCircle, faClock
+import {
+  faArrowLeft, faSearch, faEllipsisV, faPhone, faVideo,
+  faCircle, faBell, faBellSlash, faUserPlus, faShieldAlt,
+  faTimes, faDownload, faArchive, faTrash, faStar, faExpand,
+  faCompress, faPalette, faLock, faUsers, faInfoCircle,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
+import { useSpacesStore } from '../store/spacesStore';
+import { realtimeService, type Message, type TypingIndicator, type OnlineStatus } from '../services/realtime.service';
+import { Message as MessageComponent } from '../components/chat/Message';
+import { MessageInput as MessageInputComponent } from '../components/chat/MessageInput';
 
-interface Conversation {
+interface SpaceDetails {
   id: string;
   name: string;
-  avatar?: string;
-  lastMessage?: string;
-  lastMessageTime?: string;
-  unreadCount: number;
-  isOnline: boolean;
-  isTyping: boolean;
-  isPinned?: boolean;
-}
-
-interface Message {
-  id: string;
-  space_id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  edited_at?: string;
-  reply_to?: string;
-  sender?: {
-    email: string;
-    display_name: string;
-  };
+  description?: string;
+  avatar_url?: string;
+  icon?: string;
+  color?: string;
+  type: string;
+  privacy: string;
+  members_count: number;
+  owner_id: string;
 }
 
 export function ChatView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { selectedSpace } = useSpacesStore();
   const { user } = useAuthStore();
+  const [space, setSpace] = useState<SpaceDetails | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<Map<string, OnlineStatus>>(new Map());
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Mock conversations - will be dynamic
-  const [conversations] = useState<Conversation[]>([
-    {
-      id: '1',
-      name: 'General',
-      lastMessage: 'Let\'s sync up tomorrow',
-      lastMessageTime: '2m',
-      unreadCount: 3,
-      isOnline: true,
-      isTyping: false,
-      isPinned: true,
-    },
-    {
-      id: '2',
-      name: 'Design Team',
-      lastMessage: 'Updated mockups v3',
-      lastMessageTime: '45m',
-      unreadCount: 0,
-      isOnline: true,
-      isTyping: true,
-      isPinned: true,
-    },
-    {
-      id: '3',
-      name: 'Engineering',
-      lastMessage: 'Pushed to staging',
-      lastMessageTime: '2h',
-      unreadCount: 12,
-      isOnline: false,
-      isTyping: false,
-    },
-    {
-      id: '4',
-      name: 'Random',
-      lastMessage: 'Coffee break?',
-      lastMessageTime: '5h',
-      unreadCount: 0,
-      isOnline: false,
-      isTyping: false,
-    },
-  ]);
-
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (id && selectedConversation) {
-      fetchMessages();
-      const channel = subscribeToMessages();
-      return () => { channel.unsubscribe(); };
+    if (id) {
+      loadSpace();
+      loadMessages();
+      subscribeToRealtime();
     }
-  }, [id, selectedConversation]);
+
+    return () => {
+      if (id) {
+        realtimeService.unsubscribeFromSpace(id);
+      }
+    };
+  }, [id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
 
-  const fetchMessages = async () => {
+  const loadSpace = async () => {
+    const { data, error } = await supabase
+      .from('spaces')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error loading space:', error);
+      return;
+    }
+
+    setSpace(data);
+  };
+
+  const loadMessages = async () => {
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('*, sender:profiles!messages_sender_id_fkey(email, display_name)')
+        .select(`
+          *,
+          sender:profiles(id, username, display_name, avatar_url, status),
+          reactions:message_reactions(*, user:profiles(username, display_name, avatar_url)),
+          read_receipts:message_read_receipts(*, user:profiles(username, display_name))
+        `)
         .eq('space_id', id)
-        .order('created_at', { ascending: true });
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .limit(100);
 
       if (error) throw error;
+
       setMessages(data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error loading messages:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const subscribeToMessages = () => {
-    return supabase
-      .channel(`space-${id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `space_id=eq.${id}`,
-      }, async (payload) => {
-        const { data: sender } = await supabase
-          .from('profiles')
-          .select('email, display_name')
-          .eq('id', payload.new.sender_id)
-          .single();
+  const subscribeToRealtime = () => {
+    if (!id || !user) return;
 
-        setMessages((prev) => [...prev, { ...payload.new as Message, sender }]);
-      })
-      .subscribe();
+    // Subscribe to messages and updates
+    realtimeService.subscribeToSpace(id, {
+      onMessage: (message) => {
+        setMessages(prev => {
+          // Check if message already exists
+          if (prev.some(m => m.id === message.id)) {
+            return prev;
+          }
+          return [...prev, message];
+        });
+        
+        // Mark as read if not own message
+        if (message.sender_id !== user.id) {
+          realtimeService.markAsRead(message.id, user.id);
+        }
+      },
+      onMessageUpdate: (message) => {
+        setMessages(prev => prev.map(m => m.id === message.id ? message : m));
+      },
+      onMessageDelete: (message) => {
+        setMessages(prev => prev.filter(m => m.id !== message.id));
+      },
+      onTyping: (indicators) => {
+        // Filter out current user
+        setTypingUsers(indicators.filter(i => i.user_id !== user.id));
+      },
+      onReaction: (reaction) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === reaction.message_id) {
+            return {
+              ...m,
+              reactions: [...(m.reactions || []), reaction],
+            };
+          }
+          return m;
+        }));
+      },
+      onReadReceipt: (receipt) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === receipt.message_id) {
+            return {
+              ...m,
+              read_receipts: [...(m.read_receipts || []), receipt],
+            };
+          }
+          return m;
+        }));
+      },
+    });
+
+    // Subscribe to presence
+    realtimeService.subscribeToPresence(id, user.id, (status) => {
+      setOnlineUsers(prev => new Map(prev).set(status.user_id, status));
+    });
+
+    // Update own status to online
+    realtimeService.updateOnlineStatus(user.id, 'online');
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSendMessage = async (content: string, type = 'text', metadata?: any) => {
+    if (!user || !id) return;
 
     setSending(true);
     try {
-      const { error } = await supabase.from('messages').insert({
-        space_id: id,
-        sender_id: user.id,
-        content: newMessage.trim(),
-        reply_to: replyTo?.id,
-      });
+      // TODO: Implement actual encryption here
+      const encryptedContent = content; // Placeholder for encrypted content
+
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          space_id: id,
+          sender_id: user.id,
+          encrypted_content: encryptedContent,
+          message_type: type,
+          reply_to_id: replyTo?.id,
+          metadata,
+        })
+        .select(`
+          *,
+          sender:profiles(id, username, display_name, avatar_url, status)
+        `)
+        .single();
 
       if (error) throw error;
-      setNewMessage('');
+
       setReplyTo(null);
-    } catch (error: any) {
-      alert(error.message);
+      
+      // Remove typing indicator
+      if (id && user) {
+        await realtimeService.removeTypingIndicator(id, user.id);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const handleCopyMessage = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setSelectedMessage(null);
+  const handleTyping = () => {
+    if (!id || !user) return;
+
+    // Send typing indicator
+    realtimeService.sendTypingIndicator(id, user.id);
   };
 
-  const getConversationAvatar = (name: string) => {
-    const colors = [
-      'from-cyan-500 to-blue-600',
-      'from-purple-500 to-pink-600',
-      'from-orange-500 to-red-600',
-      'from-green-500 to-teal-600',
-    ];
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+  const handleEditMessage = async (message: Message) => {
+    setEditingMessage(message);
+    // TODO: Implement edit UI
   };
 
-  if (loading && selectedConversation) {
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Delete this message?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', messageId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert('Failed to delete message');
+    }
+  };
+
+  const handleReaction = async (messageId: string, reaction: string) => {
+    if (!user) return;
+
+    try {
+      await realtimeService.addReaction(messageId, user.id, reaction);
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+  };
+
+  const handleRemoveReaction = async (messageId: string, reaction: string) => {
+    if (!user) return;
+
+    try {
+      await realtimeService.removeReaction(messageId, user.id, reaction);
+    } catch (error) {
+      console.error('Error removing reaction:', error);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
+      <div className="h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-cyan-500/20 rounded-full" />
-          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+          <div className="w-20 h-20 border-4 border-primary-500/20 rounded-full" />
+          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-primary-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <FontAwesomeIcon icon={faShieldAlt} className="text-primary-500 text-xl animate-pulse" />
+          </div>
         </div>
+        <p className="absolute mt-32 text-gray-400 text-sm animate-pulse">
+          Establishing secure connection...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-black flex overflow-hidden">
-      {/* Left Sidebar - Conversations */}
-      <div className="w-full md:w-96 border-r border-slate-800/50 flex flex-col bg-gradient-to-b from-slate-950 to-black backdrop-blur-xl">
-        {/* Sidebar Header */}
-        <div className="p-4 border-b border-slate-800/50">
-          <div className="flex items-center justify-between mb-4">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-black via-gray-950 to-black">
+      {/* Header */}
+      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-800/50 backdrop-blur-xl bg-black/40">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            {/* Back Button */}
             <button
-              onClick={() => navigate(`/spaces/${id}`)}
-              className="w-10 h-10 rounded-xl bg-slate-900/50 backdrop-blur-xl hover:bg-slate-800/50 flex items-center justify-center transition-all border border-slate-800/50"
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-xl bg-gray-900/50 hover:bg-gray-800/50 flex items-center justify-center transition-all border border-gray-800/50"
             >
-              <FontAwesomeIcon icon={faArrowLeft} className="text-cyan-400" />
+              <FontAwesomeIcon icon={faArrowLeft} className="text-gray-400" />
             </button>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Conversations
-            </h2>
-            <button className="w-10 h-10 rounded-xl bg-slate-900/50 backdrop-blur-xl hover:bg-slate-800/50 flex items-center justify-center transition-all border border-slate-800/50">
-              <FontAwesomeIcon icon={faEllipsisV} className="text-slate-400" />
-            </button>
-          </div>
 
-          {/* Search */}
-          <div className="relative group">
-            <FontAwesomeIcon 
-              icon={faSearch} 
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-all" 
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full pl-11 pr-4 py-3 bg-slate-900/30 border border-slate-800/50 rounded-xl text-white placeholder-slate-500 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 focus:bg-slate-900/50 outline-none transition-all backdrop-blur-xl"
-            />
-          </div>
-        </div>
-
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {conversations
-            .filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            .map((conv, index) => (
-            <button
-              key={conv.id}
-              onClick={() => setSelectedConversation(conv.id)}
-              className={`w-full p-4 flex items-center gap-3 hover:bg-slate-900/30 transition-all border-l-2 relative group ${
-                selectedConversation === conv.id
-                  ? 'bg-slate-900/40 border-cyan-500 shadow-lg shadow-cyan-500/10'
-                  : 'border-transparent'
-              }`}
-              style={{
-                animationDelay: `${index * 50}ms`,
-                animation: 'slideInLeft 0.3s ease-out forwards'
-              }}
-            >
-              {/* Glow Effect on Hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-              {/* Avatar */}
-              <div className="relative flex-shrink-0 z-10">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getConversationAvatar(conv.name)} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
-                  {conv.name[0]}
-                </div>
-                {/* Online Status */}
-                {conv.isOnline && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-black shadow-lg shadow-green-500/50 animate-pulse" />
-                )}
-                {/* Unread Badge */}
-                {conv.unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-cyan-500/50">
-                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                  </div>
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 text-left min-w-0 z-10">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-semibold text-white truncate flex items-center gap-2">
-                    {conv.name}
-                    {conv.isPinned && (
-                      <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-xs" />
-                    )}
-                  </h3>
-                  <span className="text-xs text-slate-500 flex-shrink-0 ml-2 font-medium">
-                    {conv.lastMessageTime}
+            {/* Space Info */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {space?.avatar_url ? (
+                <img
+                  src={space.avatar_url}
+                  alt={space.name}
+                  className="w-12 h-12 rounded-xl ring-2 ring-primary-500/30"
+                />
+              ) : (
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${space?.color || 'from-primary-500 to-cyan-600'} flex items-center justify-center`}>
+                  <span className="text-white font-bold">
+                    {space?.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className={`text-sm truncate ${
-                    conv.isTyping 
-                      ? 'text-cyan-400 italic font-medium' 
-                      : conv.unreadCount > 0 
-                        ? 'text-white font-medium' 
-                        : 'text-slate-400'
-                  }`}>
-                    {conv.isTyping ? (
-                      <span className="flex items-center gap-1">
-                        <span className="inline-flex gap-0.5">
-                          <span className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </span>
-                        <span className="ml-1">typing</span>
+              )}
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg truncate">{space?.name}</h2>
+                  {space?.privacy === 'secret' && (
+                    <FontAwesomeIcon icon={faLock} className="text-primary-400 text-xs" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  {typingUsers.length > 0 ? (
+                    <div className="flex items-center gap-1 text-primary-400">
+                      <div className="flex gap-0.5">
+                        <div className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                        <div className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                        <div className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                      </div>
+                      <span>
+                        {typingUsers.length === 1
+                          ? `${typingUsers[0].user?.display_name} is typing...`
+                          : `${typingUsers.length} people are typing...`
+                        }
                       </span>
-                    ) : (
-                      conv.lastMessage
-                    )}
-                  </p>
+                    </div>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faUsers} />
+                      <span>{space?.members_count || 0} members</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <FontAwesomeIcon icon={faCircle} className="text-green-400 text-[6px]" />
+                        {Array.from(onlineUsers.values()).filter(s => s.status === 'online').length} online
+                      </span>
+                    </>
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Quick Actions Footer */}
-        <div className="p-4 border-t border-slate-800/50 backdrop-blur-xl">
-          <div className="flex items-center gap-2">
-            <button className="flex-1 p-3 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 transition-all border border-slate-800/50 flex items-center justify-center gap-2 group">
-              <FontAwesomeIcon icon={faPhone} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-              <span className="text-sm text-slate-400 group-hover:text-cyan-400 transition-all">Call</span>
-            </button>
-            <button className="flex-1 p-3 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 transition-all border border-slate-800/50 flex items-center justify-center gap-2 group">
-              <FontAwesomeIcon icon={faVideo} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-              <span className="text-sm text-slate-400 group-hover:text-cyan-400 transition-all">Video</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Chat Area */}
-      {selectedConversation ? (
-        <div className="flex-1 flex flex-col bg-black relative">
-          {/* Animated Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 pointer-events-none" />
-          
-          {/* Chat Header */}
-          <div className="p-4 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-xl relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getConversationAvatar('Team Chat')} flex items-center justify-center text-white font-bold shadow-lg`}>
-                    T
-                  </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-950 shadow-lg shadow-green-500/50" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-white">General</h2>
-                  <p className="text-xs text-cyan-400 flex items-center gap-1">
-                    <FontAwesomeIcon icon={faCircle} className="text-green-500 animate-pulse" style={{ fontSize: '6px' }} />
-                    3 members online
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 flex items-center justify-center transition-all border border-slate-800/50 group">
-                  <FontAwesomeIcon icon={faPhone} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-                </button>
-                <button className="w-10 h-10 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 flex items-center justify-center transition-all border border-slate-800/50 group">
-                  <FontAwesomeIcon icon={faVideo} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-                </button>
-                <button 
-                  onClick={() => setShowSearch(!showSearch)}
-                  className="w-10 h-10 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 flex items-center justify-center transition-all border border-slate-800/50 group"
-                >
-                  <FontAwesomeIcon icon={faSearch} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-                </button>
               </div>
             </div>
-          </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative z-10">
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-slate-900/30 backdrop-blur-xl border border-slate-800/50 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faPaperPlane} className="text-cyan-400 text-4xl" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Start the conversation</h3>
-                  <p className="text-slate-400">Send your first message to begin chatting</p>
-                </div>
-              </div>
-            ) : (
-              messages.map((msg, idx) => {
-                const isOwn = msg.sender_id === user?.id;
-                const showAvatar = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id;
-                const showTimestamp = idx === 0 || 
-                  new Date(msg.created_at).getTime() - new Date(messages[idx - 1].created_at).getTime() > 300000;
-
-                return (
-                  <div key={msg.id}>
-                    {/* Timestamp Divider */}
-                    {showTimestamp && (
-                      <div className="flex items-center justify-center my-8">
-                        <div className="px-4 py-2 bg-slate-900/50 backdrop-blur-xl border border-slate-800/50 rounded-full text-xs text-slate-400 font-medium shadow-lg">
-                          <FontAwesomeIcon icon={faClock} className="mr-2 text-cyan-400" />
-                          {new Date(msg.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
-                      <div className={`flex items-end gap-3 max-w-[75%] ${isOwn ? 'flex-row-reverse' : ''}`}>
-                        {/* Avatar */}
-                        {!isOwn && showAvatar && (
-                          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getConversationAvatar(msg.sender?.display_name || 'U')} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-lg`}>
-                            {msg.sender?.display_name?.[0] || 'U'}
-                          </div>
-                        )}
-                        {!isOwn && !showAvatar && <div className="w-9" />}
-
-                        <div className="flex-1">
-                          {/* Sender Name */}
-                          {!isOwn && showAvatar && (
-                            <p className="text-xs text-cyan-400 mb-1.5 ml-3 font-semibold">
-                              {msg.sender?.display_name || 'Unknown'}
-                            </p>
-                          )}
-
-                          {/* Message Bubble */}
-                          <div
-                            onMouseEnter={() => setSelectedMessage(msg.id)}
-                            onMouseLeave={() => setSelectedMessage(null)}
-                            className="relative"
-                          >
-                            <div
-                              className={`px-5 py-3.5 rounded-2xl backdrop-blur-xl transition-all ${
-                                isOwn
-                                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-md shadow-xl shadow-cyan-500/20 border border-cyan-500/20'
-                                  : 'bg-slate-900/40 border border-slate-800/50 text-white rounded-bl-md shadow-lg'
-                              }`}
-                            >
-                              {/* Reply Preview */}
-                              {msg.reply_to && (
-                                <div className="mb-3 pb-3 border-b border-white/10">
-                                  <div className="flex items-center gap-2 text-xs opacity-70">
-                                    <FontAwesomeIcon icon={faReply} />
-                                    <span>Replying to message...</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                                {msg.content}
-                              </p>
-
-                              {msg.edited_at && (
-                                <span className="text-xs opacity-50 italic ml-2">(edited)</span>
-                              )}
-                            </div>
-
-                            {/* Message Actions - Hover */}
-                            {selectedMessage === msg.id && (
-                              <div className={`absolute -top-10 flex items-center gap-1 bg-slate-900/90 backdrop-blur-xl border border-slate-800/50 rounded-xl p-1.5 shadow-2xl z-20 animate-fade-in ${
-                                isOwn ? 'right-0' : 'left-0'
-                              }`}>
-                                <button
-                                  onClick={() => setReplyTo(msg)}
-                                  className="p-2 hover:bg-cyan-500/20 rounded-lg transition-all group"
-                                  title="Reply"
-                                >
-                                  <FontAwesomeIcon icon={faReply} className="text-slate-400 group-hover:text-cyan-400 text-xs transition-all" />
-                                </button>
-                                <button
-                                  onClick={() => handleCopyMessage(msg.content)}
-                                  className="p-2 hover:bg-cyan-500/20 rounded-lg transition-all group"
-                                  title="Copy"
-                                >
-                                  <FontAwesomeIcon icon={faCopy} className="text-slate-400 group-hover:text-cyan-400 text-xs transition-all" />
-                                </button>
-                                {isOwn && (
-                                  <>
-                                    <button
-                                      onClick={() => setEditingMessage(msg.id)}
-                                      className="p-2 hover:bg-cyan-500/20 rounded-lg transition-all group"
-                                      title="Edit"
-                                    >
-                                      <FontAwesomeIcon icon={faEdit} className="text-slate-400 group-hover:text-cyan-400 text-xs transition-all" />
-                                    </button>
-                                    <button
-                                      className="p-2 hover:bg-red-500/20 rounded-lg transition-all group"
-                                      title="Delete"
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} className="text-slate-400 group-hover:text-red-400 text-xs transition-all" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Message Status */}
-                          <div className={`flex items-center gap-2 mt-1.5 text-xs text-slate-500 ${isOwn ? 'justify-end' : ''}`}>
-                            <span className="font-medium">
-                              {new Date(msg.created_at).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                            {isOwn && (
-                              <FontAwesomeIcon icon={faCheckDouble} className="text-cyan-400" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-xl p-4 relative z-10">
-            {/* Reply Preview */}
-            {replyTo && (
-              <div className="mb-3 flex items-center justify-between px-4 py-3 bg-slate-900/40 backdrop-blur-xl rounded-xl border border-slate-800/50 shadow-lg">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-1 h-10 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-full" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-cyan-400 font-semibold mb-1">
-                      Replying to {replyTo.sender?.display_name}
-                    </p>
-                    <p className="text-sm text-slate-300 truncate">{replyTo.content}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setReplyTo(null)}
-                  className="w-8 h-8 rounded-lg hover:bg-slate-800/50 flex items-center justify-center transition-all"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="text-slate-400" />
-                </button>
-              </div>
-            )}
-
-            <form onSubmit={handleSend} className="flex items-end gap-3">
-              {/* Attachment */}
+            {/* Header Actions */}
+            <div className="flex items-center gap-2">
+              {/* Search */}
               <button
-                type="button"
-                className="w-11 h-11 rounded-xl bg-slate-900/30 hover:bg-slate-800/50 flex items-center justify-center transition-all flex-shrink-0 border border-slate-800/50 group"
-              >
-                <FontAwesomeIcon icon={faPaperclip} className="text-slate-400 group-hover:text-cyan-400 transition-all" />
-              </button>
-
-              {/* Input */}
-              <div className="flex-1 relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  disabled={sending}
-                  className="w-full px-5 py-3.5 bg-slate-900/30 border border-slate-800/50 rounded-xl text-white placeholder-slate-500 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 focus:bg-slate-900/50 outline-none transition-all pr-24 backdrop-blur-xl"
-                />
-                
-                {/* Inline Actions */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-slate-800/50 rounded-lg transition-all group"
-                  >
-                    <FontAwesomeIcon icon={faSmile} className="text-slate-400 group-hover:text-cyan-400 text-sm transition-all" />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-slate-800/50 rounded-lg transition-all group"
-                  >
-                    <FontAwesomeIcon icon={faMicrophone} className="text-slate-400 group-hover:text-cyan-400 text-sm transition-all" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={!newMessage.trim() || sending}
-                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                  newMessage.trim()
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105'
-                    : 'bg-slate-900/30 border border-slate-800/50 cursor-not-allowed'
+                onClick={() => setShowSearch(!showSearch)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  showSearch
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'bg-gray-900/30 hover:bg-gray-800/50 text-gray-400'
                 }`}
               >
-                {sending ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <FontAwesomeIcon 
-                    icon={faPaperPlane} 
-                    className={newMessage.trim() ? 'text-white' : 'text-slate-600'} 
-                  />
-                )}
+                <FontAwesomeIcon icon={faSearch} />
               </button>
-            </form>
 
-            {/* Quick Reactions */}
-            <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 custom-scrollbar">
-              {['👍', '❤️', '😂', '🔥', '✨', '👀'].map((emoji) => (
-                <button
-                  key={emoji}
-                  className="px-3 py-2 bg-slate-900/30 hover:bg-slate-800/50 rounded-xl transition-all text-base flex-shrink-0 border border-slate-800/50 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 hover:scale-105"
-                >
-                  {emoji}
-                </button>
-              ))}
+              {/* Voice Call */}
+              <button className="w-10 h-10 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 flex items-center justify-center transition-all text-gray-400">
+                <FontAwesomeIcon icon={faPhone} />
+              </button>
+
+              {/* Video Call */}
+              <button className="w-10 h-10 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 flex items-center justify-center transition-all text-gray-400">
+                <FontAwesomeIcon icon={faVideo} />
+              </button>
+
+              {/* Fullscreen */}
+              <button
+                onClick={toggleFullscreen}
+                className="w-10 h-10 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 flex items-center justify-center transition-all text-gray-400"
+              >
+                <FontAwesomeIcon icon={isFullscreen ? faCompress : faExpand} />
+              </button>
+
+              {/* Info */}
+              <button
+                onClick={() => setShowInfo(!showInfo)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  showInfo
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'bg-gray-900/30 hover:bg-gray-800/50 text-gray-400'
+                }`}
+              >
+                <FontAwesomeIcon icon={faInfoCircle} />
+              </button>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center bg-black relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 pointer-events-none" />
-          <div className="text-center z-10">
-            <div className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-slate-900/30 backdrop-blur-xl border border-slate-800/50 flex items-center justify-center shadow-2xl">
-              <FontAwesomeIcon icon={faPaperPlane} className="text-cyan-400 text-5xl" />
+
+        {/* Search Bar */}
+        {showSearch && (
+          <div className="mt-4 animate-slide-down">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="w-full px-4 py-3 pl-11 bg-gray-900/50 border border-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"
+              />
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="text-gray-500 hover:text-gray-300" />
+                </button>
+              )}
             </div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-3">
-              Select a conversation
-            </h2>
-            <p className="text-slate-400 text-lg">Choose a chat from the left to start messaging</p>
+          </div>
+        )}
+      </div>
+
+      {/* Messages Container */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar"
+      >
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500/10 to-cyan-600/10 flex items-center justify-center mb-6">
+              <FontAwesomeIcon icon={faShieldAlt} className="text-5xl text-primary-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">End-to-End Encrypted</h3>
+            <p className="text-gray-400 max-w-md">
+              Your messages are protected with military-grade encryption.
+              Nobody, not even 4Space, can read them.
+            </p>
+            <p className="text-sm text-primary-400 mt-4">
+              Send your first message to get started
+            </p>
+          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => {
+              const showAvatar =
+                index === 0 ||
+                messages[index - 1].sender_id !== message.sender_id ||
+                new Date(message.created_at).getTime() - new Date(messages[index - 1].created_at).getTime() > 300000;
+
+              return (
+                <MessageComponent
+                  key={message.id}
+                  message={message}
+                  isOwn={message.sender_id === user?.id}
+                  showAvatar={showAvatar}
+                  onReply={setReplyTo}
+                  onEdit={handleEditMessage}
+                  onDelete={handleDeleteMessage}
+                  onReact={handleReaction}
+                  onRemoveReaction={handleRemoveReaction}
+                />
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="flex-shrink-0">
+        <MessageInputComponent
+          onSend={handleSendMessage}
+          onTyping={handleTyping}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          loading={sending}
+        />
+      </div>
+
+      {/* Info Sidebar */}
+      {showInfo && (
+        <div className="fixed right-0 top-0 bottom-0 w-96 glass border-l border-gray-800/50 p-6 overflow-y-auto animate-slide-in-right z-50">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold">Space Info</h3>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="w-8 h-8 rounded-lg hover:bg-gray-800/50 flex items-center justify-center transition-all"
+            >
+              <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
+            </button>
+          </div>
+
+          {/* Space Details */}
+          <div className="mb-6">
+            <div className="flex flex-col items-center text-center mb-6">
+              {space?.avatar_url ? (
+                <img
+                  src={space.avatar_url}
+                  alt={space.name}
+                  className="w-24 h-24 rounded-2xl ring-4 ring-primary-500/20 mb-4"
+                />
+              ) : (
+                <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${space?.color || 'from-primary-500 to-cyan-600'} flex items-center justify-center mb-4`}>
+                  <span className="text-white font-bold text-3xl">
+                    {space?.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <h3 className="text-xl font-bold mb-1">{space?.name}</h3>
+              {space?.description && (
+                <p className="text-sm text-gray-400">{space.description}</p>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 transition-all">
+                <FontAwesomeIcon icon={faBell} className="text-primary-400" />
+                <span className="text-xs">Mute</span>
+              </button>
+              <button className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 transition-all">
+                <FontAwesomeIcon icon={faStar} className="text-yellow-400" />
+                <span className="text-xs">Favorite</span>
+              </button>
+              <button className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-900/30 hover:bg-gray-800/50 transition-all">
+                <FontAwesomeIcon icon={faArchive} className="text-gray-400" />
+                <span className="text-xs">Archive</span>
+              </button>
+              <button className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-900/30 hover:bg-red-500/10 transition-all">
+                <FontAwesomeIcon icon={faTrash} className="text-red-400" />
+                <span className="text-xs">Delete</span>
+              </button>
+            </div>
+
+            {/* Security Info */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-500/20">
+              <div className="flex items-center gap-3 mb-2">
+                <FontAwesomeIcon icon={faShieldAlt} className="text-green-400" />
+                <span className="font-semibold text-sm">End-to-End Encrypted</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Messages are secured with military-grade encryption. Only you and recipients can read them.
+              </p>
+            </div>
           </div>
         </div>
       )}

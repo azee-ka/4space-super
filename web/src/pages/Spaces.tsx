@@ -62,7 +62,7 @@ export function Spaces() {
                 Your Spaces
               </h1>
               <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                Organize your digital universe
+                Organize your digital space
               </p>
             </div>
             <button
@@ -244,7 +244,10 @@ export function Spaces() {
         </div>
       </main>
 
-      <CreateSpaceModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <CreateSpaceModal
+  isOpen={modalOpen} 
+  onClose={() => setModalOpen(false)} 
+/>
     </div>
   );
 }

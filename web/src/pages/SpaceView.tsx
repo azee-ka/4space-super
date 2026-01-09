@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSpacesStore } from '../store/spacesStore';
 import { useThemeStore } from '../store/themeStore';
 import { Navbar } from '../components/navbar/Navbar';
+import { InviteToSpaceModal } from '../components/spaces/InviteToSpaceModal';
+import { ConvertSpaceModal } from '../components/spaces/ConvertSpaceModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faArrowLeft, faComments, faFolder, faFileAlt, faCheckCircle, 
   faUsers, faCalendar, faChartBar, faLock, faHeart, faBriefcase, 
   faGlobe, faRocket, faPlus, faEllipsisV, faGripVertical,
   faTimes, faCode, faImage, faLink, faVideo, faMicrophone, faPoll,
+  faUserPlus, faShieldAlt, faBuilding, faCog
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
 
@@ -45,6 +48,13 @@ const AVAILABLE_WIDGETS: Widget[] = [
   { id: 'code', name: 'Code Editor', icon: faCode, color: 'from-slate-500 to-gray-600', description: 'Collaborative coding', category: 'productivity' },
 ];
 
+const PRIVACY_OPTIONS = [
+  { value: 'private', label: 'Private', icon: faLock, color: 'from-gray-500 to-gray-700' },
+  { value: 'shared', label: 'Shared', icon: faUsers, color: 'from-blue-500 to-cyan-600' },
+  { value: 'team', label: 'Team', icon: faBuilding, color: 'from-purple-500 to-pink-600' },
+  { value: 'public', label: 'Public', icon: faGlobe, color: 'from-green-500 to-emerald-600' },
+];
+
 export function SpaceView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -52,8 +62,13 @@ export function SpaceView() {
   const { selectedSpace, fetchSpaces } = useSpacesStore();
   const [loading, setLoading] = useState(true);
   const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [targetPrivacy, setTargetPrivacy] = useState<'private' | 'shared' | 'team' | 'public'>('shared');
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<string[]>(['chat']);
   const [stats, setStats] = useState({ messages: 0, files: 0, tasks: 0, members: 1 });
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id && !selectedSpace) {
@@ -64,6 +79,17 @@ export function SpaceView() {
     }
   }, [id]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const loadSpaceData = async () => {
     try {
       const { data: messages } = await supabase
@@ -71,11 +97,17 @@ export function SpaceView() {
         .select('id', { count: 'exact', head: true })
         .eq('space_id', id);
 
+      // Load member count
+      const { data: members } = await supabase
+        .from('space_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('space_id', id);
+
       setStats({
         messages: messages?.length || 0,
         files: 0,
         tasks: 0,
-        members: 1,
+        members: members?.length || 1,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -92,6 +124,34 @@ export function SpaceView() {
     );
   };
 
+  const handleInviteClick = () => {
+    // If space is private, show convert modal first
+    if (selectedSpace?.privacy === 'private') {
+      setTargetPrivacy('shared');
+      setShowConvertModal(true);
+    } else {
+      // Otherwise, directly show invite modal
+      setShowInviteModal(true);
+    }
+  };
+
+  const handleConvertSuccess = () => {
+    // Reload space data
+    fetchSpaces();
+    loadSpaceData();
+    
+    // If converting to shared/team, open invite modal
+    if (targetPrivacy === 'shared' || targetPrivacy === 'team') {
+      setShowInviteModal(true);
+    }
+  };
+
+  const handlePrivacyChange = (privacy: 'private' | 'shared' | 'team' | 'public') => {
+    setTargetPrivacy(privacy);
+    setShowConvertModal(true);
+    setShowSettingsMenu(false);
+  };
+
   const activeWidgetsList = AVAILABLE_WIDGETS.filter(w => activeWidgets.includes(w.id));
   const categories = ['communication', 'productivity', 'content', 'collaboration'] as const;
   const isDark = theme === 'dark';
@@ -103,6 +163,8 @@ export function SpaceView() {
       </div>
     );
   }
+
+  const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === selectedSpace?.privacy);
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
@@ -140,9 +202,18 @@ export function SpaceView() {
               </div>
 
               <div>
-                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {selectedSpace?.name || 'Space'}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {selectedSpace?.name || 'Space'}
+                  </h1>
+                  {/* Privacy Badge */}
+                  {currentPrivacy && (
+                    <div className={`px-3 py-1 rounded-lg bg-gradient-to-r ${currentPrivacy.color} flex items-center gap-2`}>
+                      <FontAwesomeIcon icon={currentPrivacy.icon} className="text-white text-xs" />
+                      <span className="text-white text-xs font-semibold">{currentPrivacy.label}</span>
+                    </div>
+                  )}
+                </div>
                 {selectedSpace?.description && (
                   <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     {selectedSpace.description}
@@ -152,15 +223,30 @@ export function SpaceView() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 border ${
-                isDark 
-                  ? 'glass hover:bg-white/10 border-white/10' 
-                  : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
-              }`}>
+              <button 
+                onClick={() => navigate(`/spaces/${id}/chat`)}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 border ${
+                  isDark 
+                    ? 'glass hover:bg-white/10 border-white/10' 
+                    : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
+                }`}
+              >
                 <FontAwesomeIcon icon={faUsers} className={isDark ? 'text-slate-400' : 'text-slate-600'} />
                 <span className={`hidden md:inline text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {stats.members} members
                 </span>
+              </button>
+
+              {/* Invite Button - Always show (will convert if private) */}
+              <button
+                onClick={handleInviteClick}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-semibold shadow-lg shadow-green-500/50 transition-all flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faUserPlus} />
+                Invite
+                {selectedSpace?.privacy === 'private' && (
+                  <FontAwesomeIcon icon={faLock} className="text-xs" />
+                )}
               </button>
               
               <button 
@@ -171,13 +257,70 @@ export function SpaceView() {
                 Add Widget
               </button>
 
-              <button className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border ${
-                isDark 
-                  ? 'glass hover:bg-white/10 border-white/10' 
-                  : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
-              }`}>
-                <FontAwesomeIcon icon={faEllipsisV} className={isDark ? 'text-slate-400' : 'text-slate-600'} />
-              </button>
+              {/* Settings Menu */}
+              <div className="relative" ref={settingsMenuRef}>
+                <button 
+                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border ${
+                    isDark 
+                      ? 'glass hover:bg-white/10 border-white/10' 
+                      : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faEllipsisV} className={isDark ? 'text-slate-400' : 'text-slate-600'} />
+                </button>
+
+                {/* Settings Dropdown */}
+                {showSettingsMenu && (
+                  <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl overflow-hidden animate-scale-in z-50 ${
+                    isDark
+                      ? 'glass-strong border-white/10 backdrop-blur-2xl'
+                      : 'bg-white border-slate-200'
+                  }`}>
+                    <div className={`p-3 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                      <p className={`text-xs font-semibold uppercase tracking-wider ${
+                        isDark ? 'text-slate-400' : 'text-slate-600'
+                      }`}>
+                        Space Privacy
+                      </p>
+                    </div>
+                    <div className="p-2">
+                      {PRIVACY_OPTIONS.map((privacy) => (
+                        <button
+                          key={privacy.value}
+                          onClick={() => handlePrivacyChange(privacy.value as any)}
+                          disabled={selectedSpace?.privacy === privacy.value}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                            selectedSpace?.privacy === privacy.value
+                              ? isDark
+                                ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-l-4 border-cyan-500'
+                                : 'bg-gradient-to-r from-cyan-100 to-blue-100 border-l-4 border-cyan-500'
+                              : isDark
+                                ? 'hover:bg-white/5'
+                                : 'hover:bg-slate-50'
+                          } disabled:cursor-default`}
+                        >
+                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${privacy.color} flex items-center justify-center flex-shrink-0`}>
+                            <FontAwesomeIcon icon={privacy.icon} className="text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className={`text-sm font-semibold ${
+                              selectedSpace?.privacy === privacy.value
+                                ? 'text-cyan-400'
+                                : isDark ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {privacy.label}
+                            </p>
+                            {selectedSpace?.privacy === privacy.value && (
+                              <p className="text-xs text-cyan-400">Current</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -369,6 +512,30 @@ export function SpaceView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Convert Space Modal */}
+      {showConvertModal && id && selectedSpace && (
+        <ConvertSpaceModal
+          isOpen={showConvertModal}
+          onClose={() => setShowConvertModal(false)}
+          spaceId={id}
+          spaceName={selectedSpace.name}
+          currentPrivacy={selectedSpace.privacy}
+          targetPrivacy={targetPrivacy}
+          onSuccess={handleConvertSuccess}
+        />
+      )}
+
+      {/* Invite Modal */}
+      {showInviteModal && id && selectedSpace && (
+        <InviteToSpaceModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          spaceId={id}
+          spaceName={selectedSpace.name}
+          spacePrivacy={selectedSpace.privacy}
+        />
       )}
     </div>
   );

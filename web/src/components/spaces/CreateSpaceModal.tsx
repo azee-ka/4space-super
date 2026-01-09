@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faTimes, faSpinner, faRocket, faLock, faUsers, 
+  faBriefcase, faGlobe, faShieldAlt, faUserFriends, faBuilding
+} from '@fortawesome/free-solid-svg-icons';
 import { useSpacesStore } from '../../store/spacesStore';
 
 interface CreateSpaceModalProps {
@@ -7,19 +12,43 @@ interface CreateSpaceModalProps {
 }
 
 const SPACE_COLORS = [
-  'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-  'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-  'linear-gradient(135deg, #ec4899 0%, #be123c 100%)',
-  'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-  'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-  'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+  { gradient: 'from-blue-500 to-cyan-600', hex: '#3b82f6' },
+  { gradient: 'from-purple-500 to-pink-600', hex: '#8b5cf6' },
+  { gradient: 'from-rose-500 to-orange-600', hex: '#f43f5e' },
+  { gradient: 'from-emerald-500 to-teal-600', hex: '#10b981' },
+  { gradient: 'from-amber-500 to-orange-600', hex: '#f59e0b' },
+  { gradient: 'from-cyan-500 to-blue-600', hex: '#06b6d4' },
 ];
 
 const PRIVACY_OPTIONS = [
-  { value: 'private', label: 'Private', description: 'Only you can access' },
-  { value: 'shared', label: 'Shared', description: 'Invite specific people' },
-  { value: 'team', label: 'Team', description: 'For team collaboration' },
-  { value: 'public', label: 'Public', description: 'Anyone can view' },
+  { 
+    value: 'private', 
+    label: 'Private', 
+    description: 'Only you can access',
+    icon: faLock,
+    gradient: 'from-gray-700 to-gray-800'
+  },
+  { 
+    value: 'shared', 
+    label: 'Shared', 
+    description: 'Invite specific people',
+    icon: faUserFriends,
+    gradient: 'from-blue-900/50 to-cyan-900/50'
+  },
+  { 
+    value: 'team', 
+    label: 'Team', 
+    description: 'For team collaboration',
+    icon: faBuilding,
+    gradient: 'from-purple-900/50 to-pink-900/50'
+  },
+  { 
+    value: 'public', 
+    label: 'Public', 
+    description: 'Anyone can view',
+    icon: faGlobe,
+    gradient: 'from-green-900/50 to-emerald-900/50'
+  },
 ];
 
 export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
@@ -47,9 +76,8 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
       await createSpace({
         name: name.trim(),
         description: description.trim() || undefined,
-        type: 'custom',
         privacy: privacy as any,
-        color: selectedColor,
+        color: `linear-gradient(135deg, ${selectedColor.hex} 0%, ${selectedColor.hex}dd 100%)`,
       });
 
       // Reset and close
@@ -59,7 +87,8 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
       setPrivacy('private');
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to create space');
+      console.error('Space creation error:', err);
+      setError(err.message || 'Failed to create space. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,131 +98,200 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      {/* Backdrop */}
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl glass-strong rounded-2xl p-8 border border-white/20 animate-scale-in">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Create New Space</h2>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl glass hover:bg-white/10 flex items-center justify-center transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Space Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="My Awesome Space"
-              disabled={loading}
-              className="w-full px-4 py-3 rounded-xl glass border border-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Description (Optional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this space for?"
-              rows={3}
-              disabled={loading}
-              className="w-full px-4 py-3 rounded-xl glass border border-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none disabled:opacity-50"
-            />
-          </div>
-
-          {/* Color */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Color Theme</label>
-            <div className="grid grid-cols-6 gap-3">
-              {SPACE_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className={`w-full aspect-square rounded-xl transition-all ${
-                    selectedColor === color ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900 scale-110' : 'hover:scale-105'
-                  }`}
-                  style={{ background: color }}
-                />
-              ))}
+      <div className="relative h-full w-full overflow-y-auto max-w-2xl bg-gradient-to-br from-gray-900/95 via-gray-950/95 to-black/95 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50 shadow-2xl shadow-cyan-500/10 animate-scale-in">
+        {/* Glow effect */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 rounded-3xl blur-xl opacity-50" />
+        
+        {/* Content */}
+        <div className="relative">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <FontAwesomeIcon icon={faRocket} className="text-white text-xl" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  Create New Space
+                </h2>
+                <p className="text-sm text-gray-400">Your personal digital universe</p>
+              </div>
             </div>
-          </div>
-
-          {/* Privacy */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Privacy</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {PRIVACY_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPrivacy(option.value)}
-                  className={`p-4 rounded-xl text-left transition-all ${
-                    privacy === option.value
-                      ? 'glass-strong border-2 border-blue-500'
-                      : 'glass border border-white/10 hover:bg-white/5'
-                  }`}
-                >
-                  <div className="font-medium mb-1">{option.label}</div>
-                  <div className="text-sm text-slate-400">{option.description}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="glass-strong rounded-xl p-4 border border-red-500/20 bg-red-500/10">
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-4">
             <button
-              type="button"
               onClick={onClose}
-              disabled={loading}
-              className="flex-1 glass-strong py-3 rounded-xl font-semibold hover:bg-white/10 transition-all disabled:opacity-50"
+              className="w-10 h-10 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center transition-all border border-gray-700/50 hover:border-gray-600/50"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="flex-1 gradient-primary py-3 rounded-xl font-semibold text-white glow hover:glow-strong transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Creating...
-                </span>
-              ) : (
-                'Create Space'
-              )}
+              <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
             </button>
           </div>
-        </form>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Space Name
+              </label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="My Awesome Space"
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 rounded-xl bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all disabled:opacity-50 text-white placeholder-gray-500 group-hover:border-gray-600/50"
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Description <span className="text-gray-500 font-normal">(Optional)</span>
+              </label>
+              <div className="relative group">
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What's this space for?"
+                  rows={3}
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 rounded-xl bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none disabled:opacity-50 text-white placeholder-gray-500 group-hover:border-gray-600/50"
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Color Theme */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-300">
+                Color Theme
+              </label>
+              <div className="grid grid-cols-6 gap-3">
+                {SPACE_COLORS.map((color, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSelectedColor(color)}
+                    className={`relative w-full aspect-square rounded-xl transition-all ${
+                      selectedColor.hex === color.hex 
+                        ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-gray-900 scale-110' 
+                        : 'hover:scale-105'
+                    }`}
+                  >
+                    <div className={`w-full h-full rounded-xl bg-gradient-to-br ${color.gradient} shadow-lg`} />
+                    {selectedColor.hex === color.hex && (
+                      <div className="absolute inset-0 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Privacy */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-300">
+                Privacy Level
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {PRIVACY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPrivacy(option.value)}
+                    className={`relative p-4 rounded-xl text-left transition-all overflow-hidden ${
+                      privacy === option.value
+                        ? 'border-2 border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-blue-500/10'
+                        : 'border border-gray-700/50 bg-gray-800/20 hover:bg-gray-800/40 hover:border-gray-600/50'
+                    }`}
+                  >
+                    {/* Background gradient on select */}
+                    {privacy === option.value && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5" />
+                    )}
+                    
+                    <div className="relative flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${option.gradient} flex items-center justify-center text-white mt-0.5`}>
+                        <FontAwesomeIcon icon={option.icon} />
+                      </div>
+                      <div className="flex-1">
+                        <div className={`font-semibold mb-1 ${
+                          privacy === option.value ? 'text-cyan-400' : 'text-white'
+                        }`}>
+                          {option.label}
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          {option.description}
+                        </div>
+                      </div>
+                      {privacy === option.value && (
+                        <div className="flex-shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="relative rounded-xl p-4 bg-red-500/10 border border-red-500/30 backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-pink-500/5 rounded-xl" />
+                <p className="relative text-red-400 text-sm flex items-center gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1 py-3.5 rounded-xl font-semibold bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 hover:bg-gray-700/40 hover:border-gray-600/50 transition-all disabled:opacity-50 text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !name.trim()}
+                className="flex-1 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <FontAwesomeIcon icon={faRocket} />
+                    Create Space
+                  </span>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faRocket, faSearch, faBell, faCog, faUser, faSignOutAlt,
   faChevronDown, faPalette, faKeyboard, faMoon, faSun, faShieldAlt,
-  faCreditCard, faChartLine
+  faCreditCard, faChartLine, faComment, faComments
 } from '@fortawesome/free-solid-svg-icons';
 
 export function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signOut } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -32,6 +33,7 @@ export function Navbar() {
   }, []);
 
   const isDark = theme === 'dark';
+  const isOnMessagesPage = location.pathname === '/messages';
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-2xl ${
@@ -100,6 +102,34 @@ export function Navbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {/* Messages Button */}
+          <button
+            onClick={() => navigate('/messages')}
+            className={`relative px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all ${
+              isOnMessagesPage
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
+                : isDark 
+                  ? 'glass hover:bg-white/10 border border-white/10' 
+                  : 'bg-white hover:bg-slate-50 border border-slate-200 shadow-sm'
+            }`}
+          >
+            <FontAwesomeIcon 
+              icon={faComments} 
+              className={isOnMessagesPage ? 'text-white' : isDark ? 'text-cyan-400' : 'text-cyan-600'} 
+            />
+            <span className={`hidden md:inline text-sm font-semibold ${
+              isOnMessagesPage 
+                ? 'text-white' 
+                : isDark ? 'text-white' : 'text-slate-900'
+            }`}>
+              Messages
+            </span>
+            {/* Unread badge */}
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-white text-xs font-bold">3</span>
+            </div>
+          </button>
+
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <button
