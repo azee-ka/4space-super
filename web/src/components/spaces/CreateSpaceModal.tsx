@@ -97,7 +97,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in-0.1">
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-md"
@@ -107,7 +107,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
       {/* Modal */}
       <div className="relative h-full w-full overflow-y-auto max-w-2xl bg-gradient-to-br from-gray-900/95 via-gray-950/95 to-black/95 backdrop-blur-xl rounded-3xl p-8 border border-gray-700/50 shadow-2xl shadow-cyan-500/10 animate-scale-in">
         {/* Glow effect */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 rounded-3xl blur-xl opacity-50" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-700/10 via-purple-500/20 to-fuchsia-500/20 rounded-3xl blur-xl opacity-30" />
         
         {/* Content */}
         <div className="relative">
@@ -181,7 +181,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                     key={index}
                     type="button"
                     onClick={() => setSelectedColor(color)}
-                    className={`relative w-full aspect-square rounded-xl transition-all ${
+                    className={`relative w-full h-10 aspect-square rounded-xl transition-all ${
                       selectedColor.hex === color.hex 
                         ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-gray-900 scale-110' 
                         : 'hover:scale-105'
@@ -205,7 +205,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
               <label className="block text-sm font-medium text-gray-300">
                 Privacy Level
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-30">
                 {PRIVACY_OPTIONS.map((option) => (
                   <button
                     key={option.value}

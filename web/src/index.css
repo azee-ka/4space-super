@@ -287,3 +287,12 @@
     transform: translateX(0);
   }
 }
+
+
+
+.logo-gradient   {
+  background: linear-gradient(120deg, #00ffd0, #7500f9);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

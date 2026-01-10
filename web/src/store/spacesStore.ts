@@ -26,11 +26,8 @@ export const useSpacesStore = create<SpacesState>((set, get) => ({
         return;
       }
 
-      const { data, error } = await supabase
-        .from('spaces')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('updated_at', { ascending: false });
+      // FIXED: Changed from direct query to function call
+      const { data, error } = await supabase.rpc('get_user_spaces');
 
       if (error) throw error;
       set({ spaces: data || [], loading: false });

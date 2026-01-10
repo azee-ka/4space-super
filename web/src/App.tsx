@@ -1,5 +1,5 @@
 import React, { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { publicRoutes, protectedRoutes, spaceWidgetRoutes, type RouteConfig } from './config/routes';
 
@@ -97,13 +97,15 @@ class ErrorBoundary extends React.Component<
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login with return URL
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -111,16 +113,32 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    // If user is authenticated, redirect to dashboard or intended destination
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
   }
 
   return <>{children}</>;
+}
+
+// Root redirect component
+function RootRedirect() {
+  const { user, loading } = useAuthStore();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // If authenticated, go to dashboard
+  // If not authenticated, go to landing page
+  return <Navigate to={user ? '/dashboard' : '/landing'} replace />;
 }
 
 // Component to render a single route
@@ -147,7 +165,15 @@ function RouteRenderer({ route }: { route: RouteConfig }) {
   if (route.isPublicOnly) {
     return (
       <PublicRoute>
-        <Element />
+        {route.isLazy ? (
+          <ErrorBoundary>
+            <Suspense fallback={<ComponentLoader message={route.loadingMessage} />}>
+              <Element />
+            </Suspense>
+          </ErrorBoundary>
+        ) : (
+          <Element />
+        )}
       </PublicRoute>
     );
   }
@@ -167,6 +193,9 @@ function App() {
       <BrowserRouter>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
+            {/* Root route - smart redirect based on auth status */}
+            <Route path="/" element={<RootRedirect />} />
+
             {/* Render all public routes */}
             {publicRoutes.map((route) => (
               <Route
@@ -194,8 +223,8 @@ function App() {
               />
             ))}
 
-            {/* Catch all - redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Catch all - redirect based on auth status */}
+            <Route path="*" element={<RootRedirect />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
