@@ -12,6 +12,38 @@ interface SpacesState {
   deleteSpace: (id: string) => Promise<void>;
 }
 
+// Helper function to ensure profile exists
+async function ensureProfileExists() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Check if profile exists
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .single();
+
+  // If no profile, create one
+  if (!profile) {
+    const { error } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        email: user.email,
+        username: user.email?.split('@')[0] || 'user',
+        display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+      });
+
+    if (error) {
+      console.error('Error creating profile:', error);
+      throw new Error('Failed to create user profile');
+    }
+  }
+
+  return user;
+}
+
 export const useSpacesStore = create<SpacesState>((set, get) => ({
   spaces: [],
   selectedSpace: null,
@@ -38,8 +70,8 @@ export const useSpacesStore = create<SpacesState>((set, get) => ({
   },
 
   createSpace: async (spaceData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    // Ensure profile exists before creating space
+    const user = await ensureProfileExists();
 
     const { data, error } = await supabase
       .from('spaces')
@@ -54,7 +86,10 @@ export const useSpacesStore = create<SpacesState>((set, get) => ({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating space:', error);
+      throw error;
+    }
 
     set((state) => ({ spaces: [data, ...state.spaces] }));
     return data;
