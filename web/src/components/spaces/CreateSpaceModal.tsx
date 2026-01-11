@@ -4,7 +4,7 @@ import {
   faTimes, faSpinner, faRocket, faLock, faUsers, 
   faBriefcase, faGlobe, faShieldAlt, faUserFriends, faBuilding
 } from '@fortawesome/free-solid-svg-icons';
-import { useSpacesStore } from '../../store/spacesStore';
+import { useCreateSpace } from '../../hooks/useSpaces';
 
 interface CreateSpaceModalProps {
   isOpen: boolean;
@@ -55,32 +55,26 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedColor, setSelectedColor] = useState(SPACE_COLORS[0]);
-  const [privacy, setPrivacy] = useState('private');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [privacy, setPrivacy] = useState<'private' | 'shared' | 'team' | 'public'>('private');
 
-  const createSpace = useSpacesStore((state) => state.createSpace);
+  const createSpaceMutation = useCreateSpace();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
-      setError('Please enter a space name');
       return;
     }
 
-    setLoading(true);
-    setError('');
-
     try {
-      await createSpace({
+      await createSpaceMutation.mutateAsync({
         name: name.trim(),
         description: description.trim() || undefined,
-        privacy: privacy as any,
+        privacy,
         color: `linear-gradient(135deg, ${selectedColor.hex} 0%, ${selectedColor.hex}dd 100%)`,
       });
 
-      // Reset and close
+      // Reset form and close
       setName('');
       setDescription('');
       setSelectedColor(SPACE_COLORS[0]);
@@ -88,13 +82,14 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
       onClose();
     } catch (err: any) {
       console.error('Space creation error:', err);
-      setError(err.message || 'Failed to create space. Please try again.');
-    } finally {
-      setLoading(false);
+      // Error is already handled by mutation state
     }
   };
 
   if (!isOpen) return null;
+
+  const isLoading = createSpaceMutation.isPending;
+  const error = createSpaceMutation.error;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in-0.1">
@@ -145,7 +140,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="My Awesome Space"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="w-full px-4 py-3.5 rounded-xl bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all disabled:opacity-50 text-white placeholder-gray-500 group-hover:border-gray-600/50"
                 />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -163,7 +158,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What's this space for?"
                   rows={3}
-                  disabled={loading}
+                  disabled={isLoading}
                   className="w-full px-4 py-3.5 rounded-xl bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none disabled:opacity-50 text-white placeholder-gray-500 group-hover:border-gray-600/50"
                 />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -181,7 +176,8 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                     key={index}
                     type="button"
                     onClick={() => setSelectedColor(color)}
-                    className={`relative w-full h-10 aspect-square rounded-xl transition-all ${
+                    disabled={isLoading}
+                    className={`relative w-full h-10 aspect-square rounded-xl transition-all disabled:opacity-50 ${
                       selectedColor.hex === color.hex 
                         ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-gray-900 scale-110' 
                         : 'hover:scale-105'
@@ -210,8 +206,9 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setPrivacy(option.value)}
-                    className={`relative p-4 rounded-xl text-left transition-all overflow-hidden ${
+                    onClick={() => setPrivacy(option.value as any)}
+                    disabled={isLoading}
+                    className={`relative p-4 rounded-xl text-left transition-all overflow-hidden disabled:opacity-50 ${
                       privacy === option.value
                         ? 'border-2 border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-blue-500/10'
                         : 'border border-gray-700/50 bg-gray-800/20 hover:bg-gray-800/40 hover:border-gray-600/50'
@@ -257,7 +254,7 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {error}
+                  {error instanceof Error ? error.message : 'Failed to create space. Please try again.'}
                 </p>
               </div>
             )}
@@ -267,17 +264,17 @@ export function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                disabled={loading}
+                disabled={isLoading}
                 className="flex-1 py-3.5 rounded-xl font-semibold bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 hover:bg-gray-700/40 hover:border-gray-600/50 transition-all disabled:opacity-50 text-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={loading || !name.trim()}
+                disabled={isLoading || !name.trim()}
                 className="flex-1 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {loading ? (
+                {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
                     Creating...

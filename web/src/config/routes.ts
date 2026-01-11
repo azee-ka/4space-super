@@ -9,7 +9,7 @@ import { SpaceView } from '../pages/SpaceView';
 import { GeneralChat } from '../pages/GeneralChat';
 
 // Lazy load heavy components
-const ChatView = lazy(() => import('../pages/ChatView').then(module => ({ default: module.SpaceChatView })));
+const ChatView = lazy(() => import('../pages/SpaceChatView').then(module => ({ default: module.SpaceChatView })));
 const FilesView = lazy(() => import('../pages/FilesView').then(module => ({ default: module.FilesView })));
 const NotesView = lazy(() => import('../pages/NotesView').then(module => ({ default: module.NotesView })));
 const TasksView = lazy(() => import('../pages/TasksView').then(module => ({ default: module.TasksView })));

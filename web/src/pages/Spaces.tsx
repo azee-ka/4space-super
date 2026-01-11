@@ -1,6 +1,7 @@
+// web/src/pages/Spaces.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSpacesStore } from '../store/spacesStore';
+import { useSpaces, useCreateSpace } from '../hooks/useSpaces';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { CreateSpaceModal } from '../components/spaces/CreateSpaceModal';
@@ -16,6 +17,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { Space } from '@4space/shared';
 import { supabase } from '../lib/supabase';
+import { logger } from '@4space/shared/src/utils/logger';
+import { useQueryClient } from '@tanstack/react-query';
 
 const iconMap: { [key: string]: any } = {
   'lock': faLock,
@@ -34,7 +37,7 @@ interface SpaceInvitation {
   message?: string;
   created_at: string;
   expires_at: string;
-  space: {
+  space: {  // Changed from 'spaces' to 'space' to match the alias
     id: string;
     name: string;
     description?: string;
@@ -84,10 +87,15 @@ const SPACE_TEMPLATES: SpaceTemplate[] = [
 ];
 
 export function Spaces() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { theme } = useThemeStore();
   const { user } = useAuthStore();
-  const { spaces, loading, fetchSpaces, selectSpace } = useSpacesStore();
+  
+  // Use React Query hooks
+  const { data: spaces = [], isLoading, error } = useSpaces();
+  const createSpaceMutation = useCreateSpace();
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'my-spaces' | 'shared'>('my-spaces');
   const [viewMode, setViewMode] = useState<'all' | 'favorites' | 'recent'>('all');
@@ -112,57 +120,117 @@ export function Spaces() {
   ]);
 
   useEffect(() => {
-    fetchSpaces();
     loadInvitations();
   }, []);
 
-  const loadInvitations = async () => {
-    if (!user) return;
 
-    setLoadingInvitations(true);
-    try {
-      const { data, error } = await supabase
-        .from('space_invitations')
-        .select(`
-          *,
-          space:spaces(id, name, description, icon, color, privacy),
-          invited_by:profiles!space_invitations_invited_by_user_id_fkey(id, display_name, email, avatar_url)
-        `)
-        .eq('invited_user_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setInvitations(data as any || []);
-    } catch (err) {
-      console.error('Error loading invitations:', err);
-    } finally {
-      setLoadingInvitations(false);
+const loadInvitations = async () => {
+  if (!user) {
+    logger.warn('No user found');
+    return;
+  }
+
+  logger.info('Starting invitation load for user:', user.id);
+  setLoadingInvitations(true);
+  
+  try {
+    logger.info('Making Supabase query...');
+    
+    const { data, error } = await supabase
+      .from('space_invitations')
+      .select(`
+        *,
+        space:spaces(id, name, description, icon, color, privacy),
+        invited_by:profiles!space_invitations_invited_by_user_id_fkey(id, display_name, email, avatar_url)
+      `)
+      .eq('invited_user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Supabase error:', error);
+      throw error;
     }
-  };
 
-  const acceptInvitation = async (invitationId: string) => {
-    setProcessingInvitation(invitationId);
-    try {
-      const { data, error } = await supabase.rpc('accept_space_invitation', {
-        p_invitation_id: invitationId
-      });
-
-      if (error) throw error;
-
-      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-      await fetchSpaces();
+    logger.info('Query successful');
+    logger.info('Raw data received:', data);
+    logger.info('Number of invitations:', { count: data?.length || 0 });
+    
+    if (data && data.length > 0) {
+      logger.info('First invitation structure:', { structure: JSON.stringify(data[0], null, 2) });
       
-      if (data && data.space_id) {
-        navigate(`/spaces/${data.space_id}`);
-      }
-    } catch (err: any) {
-      console.error('Error accepting invitation:', err);
-      alert(err.message || 'Failed to accept invitation');
-    } finally {
-      setProcessingInvitation(null);
+      // Check if space data exists
+      data.forEach((inv, index) => {
+        logger.info(`Invitation ${index}:`, {
+          id: inv.id,
+          space_id: inv.space_id,
+          has_space_object: !!inv.space,
+          space_name: inv.space?.name,
+          invited_by_name: inv.invited_by?.display_name || inv.invited_by?.email
+        });
+      });
+    } else {
+      logger.warn('No invitations found in database');
     }
-  };
+    
+    setInvitations(data as any || []);
+    logger.info('Invitations set in state');
+    
+  } catch (err: any) {
+    logger.error('Error loading invitations:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint,
+      full_error: err
+    });
+  } finally {
+    setLoadingInvitations(false);
+    logger.info('Loading complete');
+  }
+};
+
+// Also add logging when tab changes
+useEffect(() => {
+  if (activeTab === 'shared') {
+    loadInvitations();
+  }
+}, [activeTab, user]);
+
+const acceptInvitation = async (invitationId: string) => {
+  setProcessingInvitation(invitationId);
+  try {
+    const { data, error } = await supabase.rpc('accept_space_invitation', {
+      p_invitation_id: invitationId
+    });
+
+    if (error) throw error;
+
+    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    
+    // Invalidate spaces query to refresh the list
+    queryClient.invalidateQueries({ queryKey: ['spaces'] });
+    
+    // Function returns array with single row containing space_id column
+    if (data && data.length > 0 && data[0]?.space_id) {
+      const spaceId = data[0].space_id;
+      
+      // Invalidate the specific space's members
+      queryClient.invalidateQueries({ 
+        queryKey: ['space_members', spaceId] 
+      });
+      
+      // Navigate to the space
+      navigate(`/spaces/${spaceId}`);
+    }
+  } catch (err: any) {
+    logger.error('Error accepting invitation:', err);
+    alert(err.message || 'Failed to accept invitation');
+  } finally {
+    setProcessingInvitation(null);
+  }
+};
 
   const rejectInvitation = async (invitationId: string) => {
     if (!confirm('Decline this invitation?')) return;
@@ -176,7 +244,7 @@ export function Spaces() {
       if (error) throw error;
       setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
     } catch (err: any) {
-      console.error('Error rejecting invitation:', err);
+      logger.error('Error rejecting invitation:', err);
       alert(err.message || 'Failed to reject invitation');
     } finally {
       setProcessingInvitation(null);
@@ -184,7 +252,6 @@ export function Spaces() {
   };
 
   const handleSpaceClick = (space: Space) => {
-    selectSpace(space);
     navigate(`/spaces/${space.id}`);
   };
 
@@ -230,6 +297,42 @@ export function Spaces() {
     unreadTotal: recentActivity.reduce((sum, a) => sum + a.unreadCount, 0),
     private: spaces.filter(s => s.privacy === 'private').length,
   };
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center pt-16">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-sm text-gray-400">Loading spaces...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center pt-16">
+          <div className="text-center max-w-md">
+            <p className="text-red-400 mb-4">Failed to load spaces</p>
+            <p className="text-sm text-gray-500 mb-6">{(error as Error)?.message}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
@@ -491,12 +594,13 @@ export function Spaces() {
               {/* Create Button - Prominent */}
               <button
                 onClick={() => setModalOpen(true)}
+                disabled={createSpaceMutation.isPending}
                 className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 
                   hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 
                   text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 
-                  hover:shadow-cyan-500/40 hover:scale-105 flex items-center gap-2"
+                  hover:shadow-cyan-500/40 hover:scale-105 flex items-center gap-2 disabled:opacity-50"
               >
-                <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                <FontAwesomeIcon icon={createSpaceMutation.isPending ? faSpinner : faPlus} className={`text-sm ${createSpaceMutation.isPending ? 'animate-spin' : ''}`} />
                 <span>New Space</span>
               </button>
             </div>
@@ -505,11 +609,7 @@ export function Spaces() {
           {/* Spaces Grid / Invitations */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {activeTab === 'my-spaces' ? (
-              loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-                </div>
-              ) : filteredSpaces.length === 0 ? (
+              filteredSpaces.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center max-w-md">
                     <div className="w-20 h-20 rounded-3xl bg-zinc-900/50 
@@ -637,13 +737,13 @@ export function Spaces() {
                         <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getGradient(index)} 
                           flex items-center justify-center shadow-lg`}>
                           <FontAwesomeIcon
-                            icon={invitation.space.icon && iconMap[invitation.space.icon] ? iconMap[invitation.space.icon] : faRocket}
+                            icon={invitation.space?.icon && iconMap[invitation.space?.icon] ? iconMap[invitation.space?.icon] : faRocket}
                             className="text-white text-xl"
                           />
                         </div>
                         <div className="px-2.5 py-1 rounded-lg bg-white/5">
                           <FontAwesomeIcon
-                            icon={invitation.space.privacy === 'private' ? faLock : faUsers}
+                            icon={invitation.space?.privacy === 'private' ? faLock : faUsers}
                             className="text-xs text-gray-400"
                           />
                         </div>
@@ -651,13 +751,13 @@ export function Spaces() {
 
                       {/* Space Name */}
                       <h3 className="text-sm font-bold text-white mb-1 line-clamp-1">
-                        {invitation.space.name}
+                        {invitation.space?.name}
                       </h3>
                       
                       {/* Description */}
-                      {invitation.space.description && (
+                      {invitation.space?.description && (
                         <p className="text-xs text-gray-400 mb-4 line-clamp-2">
-                          {invitation.space.description}
+                          {invitation.space?.description}
                         </p>
                       )}
 

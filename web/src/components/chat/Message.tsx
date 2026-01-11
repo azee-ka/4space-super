@@ -10,7 +10,7 @@ import {
   faClock, faShieldAlt, faFileAlt, faImage, faVideo, faMusic,
   faMapMarkerAlt, faPhone, faFile
 } from '@fortawesome/free-solid-svg-icons';
-import { type Message, type MessageReaction } from '../../services/realtime.service';
+import { type Message, type MessageReaction } from 'shared/src/services/realtime.service';
 import { useAuthStore } from '../../store/authStore';
 
 interface MessageProps {

@@ -1,12 +1,12 @@
 // web/src/components/spaces/ConvertSpaceModal.tsx
 
-import React, { useState } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTimes, faExclamationTriangle, faLock, faUsers, faBuilding,
   faArrowRight, faCheck, faSpinner, faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
-import { supabase } from '../../lib/supabase';
+import { useConvertSpacePrivacy } from '../../hooks/useSpaces';
 
 interface ConvertSpaceModalProps {
   isOpen: boolean;
@@ -58,49 +58,31 @@ export function ConvertSpaceModal({
   targetPrivacy,
   onSuccess
 }: ConvertSpaceModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const convertMutation = useConvertSpacePrivacy();
 
   const currentInfo = PRIVACY_INFO[currentPrivacy];
   const targetInfo = PRIVACY_INFO[targetPrivacy];
+  const isConvertingToPrivate = targetPrivacy === 'private';
 
   const handleConvert = async () => {
-    setLoading(true);
-    setError('');
-
     try {
-      // Update space privacy
-      const { error: updateError } = await supabase
-        .from('spaces')
-        .update({ privacy: targetPrivacy })
-        .eq('id', spaceId);
-
-      if (updateError) throw updateError;
-
-      // If converting to private, remove all non-owner members
-      if (targetPrivacy === 'private') {
-        const { error: deleteError } = await supabase
-          .from('space_members')
-          .delete()
-          .eq('space_id', spaceId)
-          .neq('role', 'owner');
-
-        if (deleteError) throw deleteError;
-      }
-
+      await convertMutation.mutateAsync({
+        spaceId,
+        targetPrivacy
+      });
+      
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error('Error converting space:', err);
-      setError(err.message || 'Failed to convert space');
-    } finally {
-      setLoading(false);
+      // Error is already handled by mutation state
     }
   };
 
   if (!isOpen) return null;
 
-  const isConvertingToPrivate = targetPrivacy === 'private';
+  const isLoading = convertMutation.isPending;
+  const error = convertMutation.error;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -142,7 +124,7 @@ export function ConvertSpaceModal({
               </div>
               <button
                 onClick={onClose}
-                disabled={loading}
+                disabled={isLoading}
                 className="w-10 h-10 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center transition-all border border-gray-700/50 hover:border-gray-600/50 disabled:opacity-50"
               >
                 <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
@@ -225,7 +207,9 @@ export function ConvertSpaceModal({
             {/* Error Message */}
             {error && (
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-red-400 text-sm">
+                  {error instanceof Error ? error.message : 'Failed to convert space'}
+                </p>
               </div>
             )}
           </div>
@@ -234,21 +218,21 @@ export function ConvertSpaceModal({
           <div className="p-6 border-t border-gray-700/50 flex items-center gap-3">
             <button
               onClick={onClose}
-              disabled={loading}
+              disabled={isLoading}
               className="flex-1 py-3.5 rounded-xl font-semibold bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 hover:bg-gray-700/40 hover:border-gray-600/50 transition-all disabled:opacity-50 text-white"
             >
               Cancel
             </button>
             <button
               onClick={handleConvert}
-              disabled={loading}
+              disabled={isLoading}
               className={`flex-1 py-3.5 rounded-xl font-semibold text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isConvertingToPrivate
                   ? 'bg-gradient-to-r from-orange-500 to-red-600 shadow-red-500/30 hover:shadow-red-500/50'
                   : 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/30 hover:shadow-cyan-500/50'
               }`}
             >
-              {loading ? (
+              {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
                   Converting...

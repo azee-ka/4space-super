@@ -12,10 +12,12 @@ export interface Space {
   id: string;
   name: string;
   description?: string;
-  privacy: 'private' | 'shared' | 'team' | 'public';
+  type?: 'personal' | 'couple' | 'team' | 'portfolio' | 'community' | 'custom';
+  privacy: 'private' | 'shared' | 'team' | 'public' | 'unlisted';
   owner_id: string;
   icon?: string;
   color?: string;
+  members_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -30,11 +32,46 @@ export interface Message {
 }
 
 export interface SpaceMember {
+  id: string;              // Space member record ID
+  user_id: string;         // Foreign key to profiles table
+  space_id: string;        // Foreign key to spaces table
+  role: 'owner' | 'admin' | 'editor' | 'commenter' | 'viewer';
+  joined_at: string;
+  // Supabase relation
+  user: {
+    id: string;
+    email: string;
+    display_name?: string;
+    avatar_url?: string;
+  };
+}
+
+// Space Invitation type (matching database)
+export interface SpaceInvitation {
   id: string;
   space_id: string;
-  user_id: string;
-  role: 'owner' | 'admin' | 'editor' | 'viewer';
-  joined_at: string;
+  invited_user_id: string;
+  invited_by_user_id: string;
+  role: 'owner' | 'admin' | 'editor' | 'commenter' | 'viewer';
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  created_at: string;
+  updated_at?: string;
+  expires_at?: string;
+  // Relations
+  space: {
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+    privacy: 'private' | 'shared' | 'team' | 'public' | 'unlisted';
+  };
+  invited_by: {
+    id: string;
+    display_name?: string;
+    email: string;
+    avatar_url?: string;
+  };
 }
 
 // Space Templates

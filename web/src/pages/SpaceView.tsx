@@ -1,9 +1,12 @@
+// web/src/pages/SpaceView.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSpacesStore } from '../store/spacesStore';
+import { useSpace, useSpaceStats, useSpaceMembers } from '../hooks/useSpaces';
+import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { Navbar } from '../components/navbar/Navbar';
 import { InviteToSpaceModal } from '../components/spaces/InviteToSpaceModal';
+import { SpaceMembersModal } from '../components/spaces/SpaceMembersModal';
 import { WidgetLibraryModal } from '../components/spaces/WidgetLibraryModal';
 import { ConvertSpaceModal } from '../components/spaces/ConvertSpaceModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -21,9 +24,9 @@ import {
   faTags, faFilter, faSearch, faSliders, faMoon, faSun, faExpand,
   faCompress, faVolumeUp, faVolumeMute, faInfoCircle, faQuestionCircle,
   faDatabase, faServer, faNetworkWired, faKey, faFingerprint, faQrcode,
-  faRobot, faLightbulb, faFlag, faHeartbeat, faChevronDown, faCheck
+  faRobot, faLightbulb, faFlag, faHeartbeat, faChevronDown, faCheck,
+  faSpinner, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
-import { supabase } from '../lib/supabase';
 
 const iconMap: { [key: string]: any } = {
   'lock': faLock, 'heart': faHeart, 'users': faUsers,
@@ -68,13 +71,19 @@ interface CollaborationMetric {
 }
 
 export function SpaceView() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { theme } = useThemeStore();
-  const { selectedSpace, fetchSpaces } = useSpacesStore();
-  const [loading, setLoading] = useState(true);
+  
+  // Use React Query hooks
+  const { data: space, isLoading: loadingSpace, error: spaceError } = useSpace(id);
+  const { data: stats, isLoading: loadingStats } = useSpaceStats(id);
+  const { data: members = [] } = useSpaceMembers(id);
+  
   const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [targetPrivacy, setTargetPrivacy] = useState<'private' | 'shared' | 'team' | 'public'>('shared');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -83,12 +92,6 @@ export function SpaceView() {
   const [widgetSearchQuery, setWidgetSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showQuickActions, setShowQuickActions] = useState(false);
-  
-  const [stats, setStats] = useState({ 
-    messages: 147, files: 23, tasks: 12, members: 5, activeToday: 3, 
-    storageUsed: 3.7, tasksCompleted: 8, responseTime: 12, engagement: 87,
-    totalStorage: 10, completionRate: 67, averageResponseTime: 12
-  });
   
   const settingsMenuRef = useRef<HTMLDivElement>(null);
   const quickActionsRef = useRef<HTMLDivElement>(null);
@@ -102,9 +105,9 @@ export function SpaceView() {
   ]);
 
   const [metrics] = useState<CollaborationMetric[]>([
-    { label: 'Messages', value: 147, change: 23, trend: 'up', icon: faComments, color: 'cyan' },
+    { label: 'Messages', value: stats?.messages || 147, change: 23, trend: 'up', icon: faComments, color: 'cyan' },
     { label: 'Active Users', value: 3, change: 1, trend: 'up', icon: faBolt, color: 'orange' },
-    { label: 'Files Shared', value: 23, change: 5, trend: 'up', icon: faFolder, color: 'purple' },
+    { label: 'Files Shared', value: stats?.files || 23, change: 5, trend: 'up', icon: faFolder, color: 'purple' },
     { label: 'Tasks Done', value: 8, change: -2, trend: 'down', icon: faCheckCircle, color: 'green' },
   ]);
 
@@ -115,11 +118,6 @@ export function SpaceView() {
     { name: 'Jamie Lee', role: 'PM', status: 'away', avatar: 'J' },
     { name: 'Chris Park', role: 'Engineer', status: 'offline', avatar: 'C' },
   ]);
-
-  useEffect(() => {
-    if (id && !selectedSpace) fetchSpaces();
-    if (id) loadSpaceData();
-  }, [id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -134,24 +132,12 @@ export function SpaceView() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadSpaceData = async () => {
-    try {
-      const { data: messages } = await supabase.from('messages').select('id', { count: 'exact', head: true }).eq('space_id', id);
-      const { data: members } = await supabase.from('space_members').select('id', { count: 'exact', head: true }).eq('space_id', id);
-      setStats(prev => ({ ...prev, messages: messages?.length || 0, members: members?.length || 1 }));
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const toggleWidget = (widgetId: string) => {
     setActiveWidgets(prev => prev.includes(widgetId) ? prev.filter(id => id !== widgetId) : [...prev, widgetId]);
   };
 
   const handleInviteClick = () => {
-    if (selectedSpace?.privacy === 'private') {
+    if (space?.privacy === 'private') {
       setTargetPrivacy('shared');
       setShowConvertModal(true);
     } else {
@@ -160,8 +146,6 @@ export function SpaceView() {
   };
 
   const handleConvertSuccess = () => {
-    fetchSpaces();
-    loadSpaceData();
     if (targetPrivacy === 'shared' || targetPrivacy === 'team') setShowInviteModal(true);
   };
 
@@ -178,7 +162,7 @@ export function SpaceView() {
   }).filter(w => activeWidgets.includes(w.id));
 
   const isDark = theme === 'dark';
-  const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === selectedSpace?.privacy);
+  const currentPrivacy = PRIVACY_OPTIONS.find(p => p.value === space?.privacy);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -200,10 +184,51 @@ export function SpaceView() {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  if (loading) {
+  // Get current user's role
+  const currentUserRole = (members.find(m => m.user.id === user?.id)?.role as 'owner' | 'admin' | 'editor' | 'commenter' | 'viewer') || 'viewer';
+
+  // Handle loading state
+  if (loadingSpace) {
     return (
       <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
-        <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-400">Loading space...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (spaceError) {
+    return (
+      <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 text-3xl" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Cannot Load Space</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            {(spaceError as Error)?.message || 'Failed to load space'}
+          </p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle no space found
+  if (!space) {
+    return (
+      <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+        <div className="text-center">
+          <p className="text-gray-400">Space not found</p>
+        </div>
       </div>
     );
   }
@@ -234,11 +259,11 @@ export function SpaceView() {
 
               <div className="flex items-center gap-3">
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${currentPrivacy?.color || 'from-purple-500 to-purple-600'} flex items-center justify-center shadow-lg`}>
-                  <FontAwesomeIcon icon={selectedSpace?.icon && iconMap[selectedSpace.icon] ? iconMap[selectedSpace.icon] : faRocket} className="text-white text-xl" />
+                  <FontAwesomeIcon icon={space?.icon && iconMap[space.icon] ? iconMap[space.icon] : faRocket} className="text-white text-xl" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-sm font-bold truncate text-white">
-                    {selectedSpace?.name || 'Space'}
+                    {space?.name || 'Space'}
                   </h2>
                   <div className="flex items-center gap-1.5 mt-1">
                     <FontAwesomeIcon icon={currentPrivacy?.icon || faLock} className="text-xs text-cyan-400" />
@@ -307,12 +332,12 @@ export function SpaceView() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs text-gray-400">Engagement Score</span>
-                    <span className="text-sm font-bold text-purple-400">{stats.engagement}%</span>
+                    <span className="text-sm font-bold text-purple-400">87%</span>
                   </div>
                   <div className="relative h-2 rounded-full bg-white/5 overflow-hidden">
                     <div 
                       className="absolute h-full rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-600 shadow-lg shadow-purple-500/50 transition-all duration-500" 
-                      style={{ width: `${stats.engagement}%` }} 
+                      style={{ width: '87%' }} 
                     />
                   </div>
                 </div>
@@ -321,7 +346,7 @@ export function SpaceView() {
                     <FontAwesomeIcon icon={faClock} className="text-purple-400 text-xs" />
                     <span className="text-xs text-gray-400">Response Time</span>
                   </div>
-                  <span className="text-sm font-bold text-cyan-400">{stats.responseTime}min</span>
+                  <span className="text-sm font-bold text-cyan-400">12min</span>
                 </div>
               </div>
             </div>
@@ -446,16 +471,16 @@ export function SpaceView() {
                   <FontAwesomeIcon icon={faDatabase} className="text-pink-400 text-sm" />
                   <h3 className="text-sm font-bold text-white">Storage</h3>
                 </div>
-                <span className="text-xs text-gray-400">{stats.storageUsed}GB / {stats.totalStorage}GB</span>
+                <span className="text-xs text-gray-400">{stats?.storageUsed || 3.7}GB / 10GB</span>
               </div>
               <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2">
                 <div 
                   className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-600" 
-                  style={{ width: `${(stats.storageUsed / stats.totalStorage) * 100}%` }} 
+                  style={{ width: `${((stats?.storageUsed || 3.7) / 10) * 100}%` }} 
                 />
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">{Math.round((stats.storageUsed / stats.totalStorage) * 100)}% used</span>
+                <span className="text-gray-500">{Math.round(((stats?.storageUsed || 3.7) / 10) * 100)}% used</span>
                 <button className="text-cyan-400 hover:text-cyan-300 transition-colors">Upgrade</button>
               </div>
             </div>
@@ -469,11 +494,11 @@ export function SpaceView() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button 
-                onClick={() => navigate(`/spaces/${id}/chat`)} 
+                onClick={() => setShowMembersModal(true)}
                 className="px-4 py-2.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-300 flex items-center gap-2 text-sm text-white"
               >
                 <FontAwesomeIcon icon={faUsers} className="text-xs text-cyan-400" />
-                <span className="font-medium">{stats.members} Members</span>
+                <span className="font-medium">{stats?.members || members.length} Members</span>
               </button>
 
               <button 
@@ -561,9 +586,9 @@ export function SpaceView() {
                           <button
                             key={privacy.value}
                             onClick={() => handlePrivacyChange(privacy.value as any)}
-                            disabled={selectedSpace?.privacy === privacy.value}
+                            disabled={space?.privacy === privacy.value}
                             className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all ${
-                              selectedSpace?.privacy === privacy.value
+                              space?.privacy === privacy.value
                                 ? 'bg-cyan-500/10 border border-cyan-500/20'
                                 : 'hover:bg-white/5'
                             } disabled:cursor-default`}
@@ -572,12 +597,12 @@ export function SpaceView() {
                               <FontAwesomeIcon icon={privacy.icon} className="text-white text-xs" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-semibold ${selectedSpace?.privacy === privacy.value ? 'text-cyan-400' : 'text-white'}`}>
+                              <p className={`text-xs font-semibold ${space?.privacy === privacy.value ? 'text-cyan-400' : 'text-white'}`}>
                                 {privacy.label}
                               </p>
                               <p className="text-xs text-gray-500">{privacy.desc}</p>
                             </div>
-                            {selectedSpace?.privacy === privacy.value && (
+                            {space?.privacy === privacy.value && (
                               <FontAwesomeIcon icon={faCheck} className="text-cyan-400 text-xs" />
                             )}
                           </button>
@@ -767,10 +792,10 @@ export function SpaceView() {
                       {widget.description}
                     </p>
 
-                    {widget.id === 'chat' && stats.messages > 0 && (
+                    {widget.id === 'chat' && (stats?.messages || 0) > 0 && (
                       <div className="absolute top-3 right-3">
                         <div className="px-2 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg">
-                          <span className="text-xs font-bold text-white">{stats.messages}</span>
+                          <span className="text-xs font-bold text-white">{stats?.messages}</span>
                         </div>
                       </div>
                     )}
@@ -807,9 +832,9 @@ export function SpaceView() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {widget.id === 'chat' && stats.messages > 0 && (
+                      {widget.id === 'chat' && (stats?.messages || 0) > 0 && (
                         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg">
-                          <span className="text-xs font-bold text-white">{stats.messages}</span>
+                          <span className="text-xs font-bold text-white">{stats?.messages}</span>
                         </div>
                       )}
                       <FontAwesomeIcon 
@@ -825,6 +850,7 @@ export function SpaceView() {
         </div>
       </div>
 
+      {/* Modals */}
       <WidgetLibraryModal 
         isOpen={showWidgetLibrary} 
         onClose={() => setShowWidgetLibrary(false)} 
@@ -832,24 +858,37 @@ export function SpaceView() {
         onToggleWidget={toggleWidget} 
         availableWidgets={AVAILABLE_WIDGETS} 
       />
-      {showConvertModal && id && selectedSpace && (
+      {showConvertModal && id && space && (
         <ConvertSpaceModal 
           isOpen={showConvertModal} 
           onClose={() => setShowConvertModal(false)} 
           spaceId={id} 
-          spaceName={selectedSpace.name} 
-          currentPrivacy={selectedSpace.privacy} 
+          spaceName={space.name} 
+          currentPrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'} 
           targetPrivacy={targetPrivacy} 
           onSuccess={handleConvertSuccess} 
         />
       )}
-      {showInviteModal && id && selectedSpace && (
+      {showInviteModal && id && space && (
         <InviteToSpaceModal 
           isOpen={showInviteModal} 
           onClose={() => setShowInviteModal(false)} 
           spaceId={id} 
-          spaceName={selectedSpace.name} 
-          spacePrivacy={selectedSpace.privacy} 
+          spaceName={space.name} 
+          spacePrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'} 
+        />
+      )}
+      {showMembersModal && id && space && (
+        <SpaceMembersModal 
+          isOpen={showMembersModal} 
+          onClose={() => setShowMembersModal(false)} 
+          spaceId={id} 
+          spaceName={space.name}
+          currentUserRole={currentUserRole}
+          onInviteClick={() => {
+            setShowMembersModal(false);
+            handleInviteClick();
+          }}
         />
       )}
     </div>

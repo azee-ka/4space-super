@@ -1,3 +1,4 @@
+// shared/src/utils/encryption.ts
 import nacl from 'tweetnacl';
 import { encodeBase64, decodeBase64, encodeUTF8, decodeUTF8 } from 'tweetnacl-util';
 
@@ -44,7 +45,8 @@ export class EncryptionService {
       );
 
       if (!decrypted) return null;
-      return decodeUTF8(decrypted);
+
+      return decodeUTF8(new TextDecoder().decode(decrypted as Uint8Array));
     } catch (error) {
       console.error('Decryption error:', error);
       return null;

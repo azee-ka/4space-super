@@ -1,122 +1,198 @@
+// web/src/store/authStore.ts
+
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { logger } from '@4space/shared/src/utils/logger';
+import type { User, AuthError } from '@supabase/supabase-js';
+
+/**
+ * Authentication state store
+ * 
+ * Security notes:
+ * - Uses Supabase Auth which handles JWT tokens securely
+ * - Tokens are stored in httpOnly cookies or localStorage (based on config)
+ * - All auth operations go through Supabase's secure endpoints
+ * - Row Level Security (RLS) policies enforce data access on the database
+ * - Never exposes API keys or sensitive credentials
+ */
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   initialized: boolean;
+  error: AuthError | null;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: true,
   initialized: false,
+  error: null,
+
+  clearError: () => {
+    set({ error: null });
+  },
 
   initialize: async () => {
     // Prevent multiple initializations
     if (get().initialized) {
-      console.log('Already initialized');
+      logger.debug('Auth already initialized', { component: 'authStore' });
       return;
     }
 
-    console.log('🔐 Initializing auth...');
-    
+    logger.info('Initializing authentication', { component: 'authStore' });
+
     try {
-      // Get current session
+      // Get current session from Supabase
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      console.log('Session check:', { 
-        hasSession: !!session, 
-        hasUser: !!session?.user,
-        error: error?.message 
-      });
 
       if (error) {
-        console.error('Session error:', error);
-        set({ user: null, loading: false, initialized: true });
+        logger.error('Failed to get session', error, { component: 'authStore' });
+        set({ user: null, loading: false, initialized: true, error });
         return;
       }
 
       if (session?.user) {
-        console.log('✅ User found:', session.user.email);
-        set({ user: session.user, loading: false, initialized: true });
+        logger.info('User session restored', {
+          component: 'authStore',
+          userId: session.user.id,
+          email: session.user.email,
+        });
+        set({ user: session.user, loading: false, initialized: true, error: null });
       } else {
-        console.log('❌ No user session');
-        set({ user: null, loading: false, initialized: true });
+        logger.info('No active user session', { component: 'authStore' });
+        set({ user: null, loading: false, initialized: true, error: null });
       }
     } catch (error) {
-      console.error('Initialize error:', error);
-      // Even if there's an error, set loading to false so UI can render
-      set({ user: null, loading: false, initialized: true });
+      logger.error('Auth initialization error', error, { component: 'authStore' });
+      set({ user: null, loading: false, initialized: true, error: error as AuthError });
     }
 
     // Set up auth state listener
-    supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
-      
+    // This automatically updates when user signs in/out in another tab
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      logger.authEvent(`Auth state changed: ${event}`, {
+        userId: session?.user?.id,
+        email: session?.user?.email,
+      });
+
       if (session?.user) {
-        set({ user: session.user, loading: false });
+        set({ user: session.user, loading: false, error: null });
       } else {
-        set({ user: null, loading: false });
+        set({ user: null, loading: false, error: null });
       }
     });
+
+    // Cleanup subscription on unmount (if needed in the future)
+    // subscription.unsubscribe()
   },
 
-  signUp: async (email, password, username) => {
-    console.log('📝 Signing up:', email);
-    
-    const { data, error } = await supabase.auth.signUp({
+  signUp: async (email: string, password: string, username: string) => {
+    logger.info('Sign up initiated', { 
+      component: 'authStore', 
       email,
-      password,
-      options: {
-        data: {
-          username,
-          display_name: username,
+      username,
+    });
+
+    set({ loading: true, error: null });
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            display_name: username,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      console.error('Signup error:', error);
+      if (error) {
+        logger.error('Sign up failed', error, { 
+          component: 'authStore',
+          email,
+        });
+        set({ loading: false, error });
+        throw error;
+      }
+
+      logger.info('Sign up successful', { 
+        component: 'authStore',
+        userId: data.user?.id,
+        email: data.user?.email,
+      });
+
+      set({ loading: false, error: null });
+    } catch (error) {
+      set({ loading: false, error: error as AuthError });
       throw error;
     }
-
-    console.log('✅ Signup successful:', data.user?.email);
   },
 
-  signIn: async (email, password) => {
-    console.log('🔑 Signing in:', email);
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
+  signIn: async (email: string, password: string) => {
+    logger.info('Sign in initiated', { 
+      component: 'authStore',
       email,
-      password,
     });
 
-    if (error) {
-      console.error('Sign in error:', error);
+    set({ loading: true, error: null });
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        logger.error('Sign in failed', error, { 
+          component: 'authStore',
+          email,
+        });
+        set({ loading: false, error });
+        throw error;
+      }
+
+      logger.info('Sign in successful', { 
+        component: 'authStore',
+        userId: data.user?.id,
+        email: data.user?.email,
+      });
+
+      set({ user: data.user, loading: false, error: null });
+    } catch (error) {
+      set({ loading: false, error: error as AuthError });
       throw error;
     }
-
-    console.log('✅ Sign in successful:', data.user?.email);
-    set({ user: data.user, loading: false });
   },
 
   signOut: async () => {
-    console.log('👋 Signing out');
-    
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('Sign out error:', error);
+    logger.info('Sign out initiated', { 
+      component: 'authStore',
+      userId: get().user?.id,
+    });
+
+    set({ loading: true, error: null });
+
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        logger.error('Sign out failed', error, { component: 'authStore' });
+        set({ loading: false, error });
+        throw error;
+      }
+
+      logger.info('Sign out successful', { component: 'authStore' });
+      set({ user: null, loading: false, error: null });
+    } catch (error) {
+      set({ loading: false, error: error as AuthError });
       throw error;
     }
-
-    set({ user: null });
-    console.log('✅ Signed out');
   },
 }));
