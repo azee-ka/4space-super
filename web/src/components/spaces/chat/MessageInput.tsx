@@ -80,19 +80,18 @@ export function MessageInput({
     const messageToSend = message.trim();
     setIsSending(true);
     
-    // Clear immediately for better UX
-    setMessage('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-  
     try {
       await onSend(messageToSend);
+      // Only clear after successful send
+      setMessage('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
       onStopTyping();
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Restore message on error
-      setMessage(messageToSend);
+      // Show error to user
+      alert(`Failed to send message: ${error.message}`);
     } finally {
       setIsSending(false);
     }

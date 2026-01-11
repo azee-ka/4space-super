@@ -155,31 +155,65 @@ export class MessagesService {
   async createRoom(input: CreateRoomInput): Promise<Room> {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-
+  
+    // Verify user is a member of the space
+    const { data: spaceMember } = await this.supabase
+      .from('space_members')
+      .select('id')
+      .eq('space_id', input.space_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+  
+    if (!spaceMember) {
+      throw new Error('You must be a member of the space to create rooms');
+    }
+  
+    // Create the room
     const { data, error } = await this.supabase
       .from('rooms')
       .insert({
-        ...input,
-        created_by: user.id,
+        space_id: input.space_id,
+        name: input.name,
+        description: input.description,
         type: input.type || 'text',
+        category: input.category,
+        icon: input.icon,
+        color: input.color,
         is_private: input.is_private || false,
         is_archived: false,
         message_count: 0,
+        created_by: user.id,
       })
       .select()
       .single();
-
-    if (error) throw error;
-
-    // Add creator as admin member
-    await this.supabase
+  
+    if (error) {
+      console.error('[MessagesService] Failed to create room:', error);
+      throw error;
+    }
+  
+    console.log('[MessagesService] Room created:', data.id);
+  
+    // Add creator as admin member - THIS IS CRITICAL
+    const { error: memberError } = await this.supabase
       .from('room_members')
       .insert({
         room_id: data.id,
         user_id: user.id,
         role: 'admin',
+        notification_preference: 'all',
+        is_muted: false,
       });
-
+  
+    if (memberError) {
+      console.error('[MessagesService] Failed to add creator as room member:', memberError);
+      // This is critical - if this fails, the user won't be able to use the room
+      // Consider deleting the room if member creation fails
+      throw new Error('Failed to join room after creation');
+    }
+  
+    console.log('[MessagesService] Creator added as admin member');
+  
     return data;
   }
 
@@ -211,22 +245,7 @@ export class MessagesService {
   async getRoomMessages(roomId: string, limit = 50, before?: string): Promise<Message[]> {
     let query = this.supabase
       .from('messages')
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url),
-        reactions:message_reactions(
-          id,
-          emoji,
-          user_id,
-          created_at,
-          user:profiles(username, display_name, avatar_url)
-        ),
-        reply_to:messages!reply_to_id(
-          id,
-          content,
-          sender:profiles!messages_sender_id_fkey(username, display_name, avatar_url)
-        )
-      `)
+      .select('*')  // Just get messages, no joins
       .eq('room_id', roomId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -236,34 +255,78 @@ export class MessagesService {
       query = query.lt('created_at', before);
     }
   
-    const { data, error } = await query;
+    const { data: messages, error } = await query;
   
     if (error) {
       console.error('Error fetching messages:', error);
       throw error;
     }
   
-    // Get thread message counts
-    const messagesWithThreadCount = await Promise.all(
-      (data || []).map(async (msg) => {
+    // Enrich each message separately
+    const enrichedMessages = await Promise.all(
+      (messages || []).map(async (msg) => {
+        // Fetch sender
+        const { data: sender } = await this.supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .eq('id', msg.sender_id)
+          .single();
+  
+        // Fetch reactions
+        const { data: reactions } = await this.supabase
+          .from('message_reactions')
+          .select('id, emoji, user_id, created_at')
+          .eq('message_id', msg.id);
+  
+        // Fetch reply_to if exists
+        let reply_to = null;
+        if (msg.reply_to_id) {
+          const { data: replyMsg } = await this.supabase
+            .from('messages')
+            .select('id, content')
+            .eq('id', msg.reply_to_id)
+            .single();
+  
+          if (replyMsg) {
+            const { data: replySender } = await this.supabase
+              .from('profiles')
+              .select('username, display_name, avatar_url')
+              .eq('id', replyMsg.sender_id)
+              .single();
+            
+            reply_to = { ...replyMsg, sender: replySender };
+          }
+        }
+  
+        // Thread count
+        let thread_messages_count = 0;
         if (msg.thread_id) {
           const { count } = await this.supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
             .eq('thread_id', msg.thread_id);
-          return { ...msg, thread_messages_count: count || 0 };
+          thread_messages_count = count || 0;
         }
-        return msg;
+  
+        return {
+          ...msg,
+          sender,
+          reactions: reactions || [],
+          reply_to,  // Will be null if no reply, not an empty array
+          thread_messages_count,
+        };
       })
     );
   
-    return messagesWithThreadCount.reverse();
+    return enrichedMessages.reverse();
   }
 
   async sendMessage(input: SendMessageInput): Promise<Message> {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-
+  
+    console.log('Sending message:', { input, user: user.id }); // Debug log
+  
     const { data, error } = await this.supabase
       .from('messages')
       .insert({
@@ -283,8 +346,13 @@ export class MessagesService {
         sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)
       `)
       .single();
-
-    if (error) throw error;
+  
+    if (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  
+    console.log('Message sent successfully:', data); // Debug log
     return data;
   }
 
@@ -536,11 +604,11 @@ export class MessagesService {
   
     if (!members || members.length === 0) return [];
   
-    // Then get user data separately
+    // Then get user data separately - WITHOUT status field
     const userIds = members.map(m => m.user_id);
     const { data: users } = await this.supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, status')
+      .select('id, username, display_name, avatar_url') // REMOVED status
       .in('id', userIds);
   
     // Combine them

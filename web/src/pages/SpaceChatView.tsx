@@ -126,7 +126,6 @@ export function SpaceChatView() {
         const generalRoom = rooms.find(r => r.name.toLowerCase() === 'general');
         
         if (!generalRoom && rooms.length === 0) {
-          // Create default general room
           console.log('[SpaceChatView] Creating default General room...');
           sessionStorage.setItem(attemptedKey, 'true');
           
@@ -141,6 +140,10 @@ export function SpaceChatView() {
           
           if (newRoom) {
             console.log('[SpaceChatView] General room created:', newRoom.id);
+            
+            // Wait a moment for the room_member insert to complete
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             setSelectedRoomId(newRoom.id);
           }
         } else if (generalRoom && !selectedRoomId) {
@@ -152,10 +155,8 @@ export function SpaceChatView() {
         }
       } catch (error) {
         console.error('[SpaceChatView] Failed to create general room:', error);
-        // Mark as attempted even on error to prevent infinite retry
         sessionStorage.setItem(attemptedKey, 'true');
         
-        // If there are existing rooms, select one
         if (rooms.length > 0 && !selectedRoomId) {
           setSelectedRoomId(rooms[0].id);
         }
@@ -167,18 +168,82 @@ export function SpaceChatView() {
     return () => clearTimeout(timeoutId);
   }, [spaceId, rooms.length, loadingRooms, selectedRoomId, space, createRoomMutation]);
 
+
+
+
+  useEffect(() => {
+    if (!selectedRoomId || !user?.id) return;
+    
+    const checkMembership = async () => {
+      const { data: membership, error } = await supabase
+        .from('room_members')
+        .select('*')
+        .eq('room_id', selectedRoomId)
+        .eq('user_id', user.id)
+        .single();
+      
+      console.log('[SpaceChatView] Room membership:', { 
+        roomId: selectedRoomId, 
+        membership, 
+        error,
+        isMember: !!membership 
+      });
+    };
+    
+    checkMembership();
+  }, [selectedRoomId, user?.id]);
+
+
+
+
+
+
+
   // Mark room as read when viewing
   useEffect(() => {
     if (selectedRoomId && user?.id) {
       markRoomAsRead.mutate(selectedRoomId);
     }
-  }, [selectedRoomId, user?.id, markRoomAsRead]);
+  }, [selectedRoomId, user?.id]);
 
-  const handleSelectRoom = (roomId: string) => {
-    setSelectedRoomId(roomId);
-    setReplyTo(null);
-    setEditingMessage(null);
-  };
+const handleSelectRoom = async (roomId: string) => {
+  setSelectedRoomId(roomId);
+  setReplyTo(null);
+  setEditingMessage(null);
+  
+  // Auto-join room if not already a member
+  if (user?.id) {
+    try {
+      const { data: membership, error } = await supabase
+        .from('room_members')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('user_id', user.id)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid error on no results
+      
+      if (!membership) {
+        console.log('[SpaceChatView] Auto-joining room:', roomId);
+        const { error: insertError } = await supabase
+          .from('room_members')
+          .insert({
+            room_id: roomId,
+            user_id: user.id,
+            role: 'member',
+            notification_preference: 'all',
+            is_muted: false,
+          });
+        
+        if (insertError) {
+          console.error('[SpaceChatView] Failed to join room:', insertError);
+        } else {
+          console.log('[SpaceChatView] Successfully joined room');
+        }
+      }
+    } catch (error) {
+      console.error('[SpaceChatView] Error checking/joining room:', error);
+    }
+  }
+};
 
   const handleCreateRoom = async (name: string, description?: string) => {
     if (!spaceId) return;

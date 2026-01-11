@@ -258,7 +258,7 @@ function MessageBubble({
             )}
 
             {/* Reply To (if replying) */}
-            {message.reply_to && (
+            {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
               <div className="mb-2 pl-3 border-l-2 border-purple-500/50">
                 <p className="text-xs text-gray-500">
                   Replying to <span className="text-purple-400">{message.reply_to.sender?.username}</span>

@@ -392,9 +392,15 @@ export function createMessageHooks(supabase: SupabaseClient) {
    */
   function useMarkRoomAsRead() {
     const queryClient = useQueryClient();
-
+  
     return useMutation({
       mutationFn: (roomId: string) => messagesService.markRoomAsRead(roomId),
+      // Don't block on this mutation
+      retry: 0, // Don't retry if it fails
+      onError: (error) => {
+        console.error('Failed to mark room as read (non-critical):', error);
+        // Don't throw - this is non-critical
+      },
       onSuccess: (_, roomId) => {
         // Invalidate unread count for this room
         queryClient.invalidateQueries({ 
