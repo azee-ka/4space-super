@@ -39,6 +39,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_conversations: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          id: string
+          room_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          room_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          room_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
           duration_seconds: number | null
@@ -209,6 +244,109 @@ export type Database = {
           },
         ]
       }
+      message_bookmarks: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_bookmarks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_label_assignments: {
+        Row: {
+          created_at: string | null
+          id: string
+          label_id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label_id: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_label_assignments_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "message_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_label_assignments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_labels: {
+        Row: {
+          color: string
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          space_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          space_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          space_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_labels_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string | null
@@ -318,41 +456,74 @@ export type Database = {
       }
       messages: {
         Row: {
+          ai_context: Json | null
+          attachments: Json | null
           content: string
           conversation_id: string | null
           created_at: string | null
           deleted_at: string | null
           edited_at: string | null
+          expires_at: string | null
+          forward_from_id: string | null
           id: string
+          is_pinned: boolean | null
+          is_system: boolean | null
+          message_type: string | null
+          metadata: Json | null
           reply_to_id: string | null
+          room_id: string | null
           sender_id: string | null
           space_id: string | null
+          thread_id: string | null
+          ttl: number | null
           type: Database["public"]["Enums"]["message_type"] | null
           updated_at: string | null
         }
         Insert: {
+          ai_context?: Json | null
+          attachments?: Json | null
           content: string
           conversation_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
           edited_at?: string | null
+          expires_at?: string | null
+          forward_from_id?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_system?: boolean | null
+          message_type?: string | null
+          metadata?: Json | null
           reply_to_id?: string | null
+          room_id?: string | null
           sender_id?: string | null
           space_id?: string | null
+          thread_id?: string | null
+          ttl?: number | null
           type?: Database["public"]["Enums"]["message_type"] | null
           updated_at?: string | null
         }
         Update: {
+          ai_context?: Json | null
+          attachments?: Json | null
           content?: string
           conversation_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
           edited_at?: string | null
+          expires_at?: string | null
+          forward_from_id?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_system?: boolean | null
+          message_type?: string | null
+          metadata?: Json | null
           reply_to_id?: string | null
+          room_id?: string | null
           sender_id?: string | null
           space_id?: string | null
+          thread_id?: string | null
+          ttl?: number | null
           type?: Database["public"]["Enums"]["message_type"] | null
           updated_at?: string | null
         }
@@ -365,10 +536,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_forward_from_id_fkey"
+            columns: ["forward_from_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_reply_to_id_fkey"
             columns: ["reply_to_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
@@ -383,6 +568,13 @@ export type Database = {
             columns: ["space_id"]
             isOneToOne: false
             referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -428,6 +620,44 @@ export type Database = {
           },
         ]
       }
+      polls: {
+        Row: {
+          allows_multiple: boolean | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          message_id: string
+          options: Json
+          question: string
+        }
+        Insert: {
+          allows_multiple?: boolean | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          message_id: string
+          options: Json
+          question: string
+        }
+        Update: {
+          allows_multiple?: boolean | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          message_id?: string
+          options?: Json
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -463,6 +693,160 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      room_members: {
+        Row: {
+          id: string
+          is_muted: boolean | null
+          joined_at: string | null
+          last_read_at: string | null
+          notification_preference: string | null
+          role: string | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string | null
+          last_read_at?: string | null
+          notification_preference?: string | null
+          role?: string | null
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string | null
+          last_read_at?: string | null
+          notification_preference?: string | null
+          role?: string | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          category: string | null
+          color: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_archived: boolean | null
+          is_private: boolean | null
+          last_message_at: string | null
+          message_count: number | null
+          metadata: Json | null
+          name: string
+          parent_room_id: string | null
+          space_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_private?: boolean | null
+          last_message_at?: string | null
+          message_count?: number | null
+          metadata?: Json | null
+          name: string
+          parent_room_id?: string | null
+          space_id: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_private?: boolean | null
+          last_message_at?: string | null
+          message_count?: number | null
+          metadata?: Json | null
+          name?: string
+          parent_room_id?: string | null
+          space_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_parent_room_id_fkey"
+            columns: ["parent_room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rooms_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          created_at: string | null
+          encrypted_content: string
+          id: string
+          room_id: string
+          scheduled_for: string
+          sender_id: string
+          sent: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          encrypted_content: string
+          id?: string
+          room_id: string
+          scheduled_for: string
+          sender_id: string
+          sent?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          encrypted_content?: string
+          id?: string
+          room_id?: string
+          scheduled_for?: string
+          sender_id?: string
+          sent?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       space_invitations: {
         Row: {
@@ -616,7 +1000,9 @@ export type Database = {
           conversation_id: string | null
           id: string
           is_typing: boolean | null
+          room_id: string | null
           space_id: string | null
+          started_at: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -624,7 +1010,9 @@ export type Database = {
           conversation_id?: string | null
           id?: string
           is_typing?: boolean | null
+          room_id?: string | null
           space_id?: string | null
+          started_at?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -632,7 +1020,9 @@ export type Database = {
           conversation_id?: string | null
           id?: string
           is_typing?: boolean | null
+          room_id?: string | null
           space_id?: string | null
+          started_at?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -642,6 +1032,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "typing_indicators_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
@@ -666,13 +1063,16 @@ export type Database = {
     }
     Functions: {
       accept_space_invitation: {
-        Args: { invitation_id: string }
-        Returns: undefined
+        Args: { p_invitation_id: string }
+        Returns: {
+          space_id: string
+        }[]
       }
       add_space_member: {
         Args: { p_role?: string; p_space_id: string; p_user_id: string }
         Returns: Json
       }
+      clean_old_typing_indicators: { Args: never; Returns: undefined }
       create_notification: {
         Args: {
           p_action_required?: boolean
@@ -709,7 +1109,7 @@ export type Database = {
         }[]
       }
       reject_space_invitation: {
-        Args: { invitation_id: string }
+        Args: { p_invitation_id: string }
         Returns: undefined
       }
       search_users: {
@@ -722,6 +1122,10 @@ export type Database = {
           relevance_score: number
           username: string
         }[]
+      }
+      user_has_room_access: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

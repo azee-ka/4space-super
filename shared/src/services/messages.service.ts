@@ -27,9 +27,8 @@ export interface Message {
   room_id: string;
   space_id: string;
   sender_id: string;
-  encrypted_content: string;
-  content?: string;
-  message_type: 'text' | 'image' | 'file' | 'code' | 'poll' | 'voice' | 'video' | 'ai_response';
+  content: string; // Using content, not encrypted_content
+  message_type?: string;
   reply_to_id?: string;
   forward_from_id?: string;
   thread_id?: string;
@@ -50,7 +49,6 @@ export interface Message {
     username: string;
     display_name: string;
     avatar_url?: string;
-    status?: string;
   };
   reactions?: MessageReaction[];
   read_receipts?: ReadReceipt[];
@@ -87,39 +85,24 @@ export interface RoomMember {
   id: string;
   room_id: string;
   user_id: string;
-  role: 'admin' | 'moderator' | 'member';
+  role: string; // Using string instead of enum
   joined_at: string;
   last_read_at?: string;
-  notification_preference: 'all' | 'mentions' | 'none';
+  notification_preference: string;
   is_muted: boolean;
   user?: {
     id: string;
     username: string;
     display_name: string;
     avatar_url?: string;
-    status?: string;
   };
-}
-
-export interface Poll {
-  id: string;
-  message_id: string;
-  question: string;
-  options: Array<{
-    id: string;
-    text: string;
-    votes: string[]; // user IDs
-  }>;
-  allows_multiple: boolean;
-  expires_at?: string;
-  created_at: string;
 }
 
 export interface SendMessageInput {
   room_id: string;
   space_id: string;
   content: string;
-  message_type?: 'text' | 'image' | 'file' | 'code' | 'poll' | 'voice' | 'video';
+  message_type?: string;
   reply_to_id?: string;
   attachments?: any[];
   metadata?: any;
@@ -129,7 +112,7 @@ export interface CreateRoomInput {
   space_id: string;
   name: string;
   description?: string;
-  type?: 'text' | 'voice' | 'video' | 'thread' | 'announcement';
+  type?: string;
   category?: string;
   icon?: string;
   color?: string;
@@ -137,7 +120,7 @@ export interface CreateRoomInput {
 }
 
 export class MessagesService {
-  constructor(private readonly supabase: SupabaseClient<Database>) {}
+  constructor(private readonly supabase: SupabaseClient<any>) {}
 
   // ============================================
   // ROOMS
@@ -150,18 +133,12 @@ export class MessagesService {
       .eq('space_id', spaceId)
       .eq('is_archived', false)
       .order('created_at', { ascending: true });
-
+  
     if (error) throw error;
-
-    // Get unread counts for each room
-    const roomsWithUnread = await Promise.all(
-      (data || []).map(async (room) => {
-        const unread = await this.getUnreadCount(room.id);
-        return { ...room, unread_count: unread };
-      })
-    );
-
-    return roomsWithUnread;
+  
+    // Don't fetch unread counts here - too slow
+    // Let the UI fetch them separately if needed
+    return (data || []).map(room => ({ ...room, unread_count: 0 }));
   }
 
   async getRoom(roomId: string): Promise<Room> {
@@ -186,13 +163,15 @@ export class MessagesService {
         created_by: user.id,
         type: input.type || 'text',
         is_private: input.is_private || false,
+        is_archived: false,
+        message_count: 0,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Add creator as admin
+    // Add creator as admin member
     await this.supabase
       .from('room_members')
       .insert({
@@ -234,13 +213,15 @@ export class MessagesService {
       .from('messages')
       .select(`
         *,
-        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url, status),
+        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url),
         reactions:message_reactions(
           id,
-          reaction,
+          emoji,
+          user_id,
+          created_at,
           user:profiles(username, display_name, avatar_url)
         ),
-        reply_to:messages!messages_reply_to_id_fkey(
+        reply_to:messages!reply_to_id(
           id,
           content,
           sender:profiles!messages_sender_id_fkey(username, display_name, avatar_url)
@@ -250,15 +231,18 @@ export class MessagesService {
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit);
-
+  
     if (before) {
       query = query.lt('created_at', before);
     }
-
+  
     const { data, error } = await query;
-
-    if (error) throw error;
-
+  
+    if (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
+    }
+  
     // Get thread message counts
     const messagesWithThreadCount = await Promise.all(
       (data || []).map(async (msg) => {
@@ -272,7 +256,7 @@ export class MessagesService {
         return msg;
       })
     );
-
+  
     return messagesWithThreadCount.reverse();
   }
 
@@ -280,24 +264,23 @@ export class MessagesService {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // For now, we'll store content as both encrypted and plain
-    // In production, encrypt the content properly
     const { data, error } = await this.supabase
       .from('messages')
       .insert({
         room_id: input.room_id,
         space_id: input.space_id,
         sender_id: user.id,
-        encrypted_content: input.content, // TODO: Encrypt properly
         content: input.content,
         message_type: input.message_type || 'text',
         reply_to_id: input.reply_to_id,
         attachments: input.attachments || [],
         metadata: input.metadata || {},
+        is_pinned: false,
+        is_system: false,
       })
       .select(`
         *,
-        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url, status)
+        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)
       `)
       .single();
 
@@ -310,13 +293,12 @@ export class MessagesService {
       .from('messages')
       .update({
         content,
-        encrypted_content: content, // TODO: Encrypt properly
         edited_at: new Date().toISOString(),
       })
       .eq('id', messageId)
       .select(`
         *,
-        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url, status)
+        sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)
       `)
       .single();
 
@@ -380,7 +362,7 @@ export class MessagesService {
       .upsert({
         message_id: messageId,
         user_id: user.id,
-        reaction,
+        emoji: reaction,
       });
 
     if (error) throw error;
@@ -395,7 +377,7 @@ export class MessagesService {
       .delete()
       .eq('message_id', messageId)
       .eq('user_id', user.id)
-      .eq('reaction', reaction);
+      .eq('emoji', reaction);
 
     if (error) throw error;
   }
@@ -421,7 +403,6 @@ export class MessagesService {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Update last_read_at in room_members
     await this.supabase
       .from('room_members')
       .update({ last_read_at: new Date().toISOString() })
@@ -433,7 +414,6 @@ export class MessagesService {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) return 0;
 
-    // Get last read time
     const { data: membership } = await this.supabase
       .from('room_members')
       .select('last_read_at')
@@ -443,16 +423,8 @@ export class MessagesService {
 
     if (!membership) return 0;
 
-    // Count messages after last read
-    const { count } = await this.supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', roomId)
-      .neq('sender_id', user.id)
-      .is('deleted_at', null);
-
     if (membership.last_read_at) {
-      const { count: unreadCount } = await this.supabase
+      const { count } = await this.supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('room_id', roomId)
@@ -460,8 +432,15 @@ export class MessagesService {
         .is('deleted_at', null)
         .gt('created_at', membership.last_read_at);
       
-      return unreadCount || 0;
+      return count || 0;
     }
+
+    const { count } = await this.supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .neq('sender_id', user.id)
+      .is('deleted_at', null);
 
     return count || 0;
   }
@@ -531,7 +510,7 @@ export class MessagesService {
       `)
       .eq('room_id', roomId)
       .is('deleted_at', null)
-      .textSearch('content', query)
+      .ilike('content', `%${query}%`)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -544,19 +523,34 @@ export class MessagesService {
   // ============================================
 
   async getRoomMembers(roomId: string): Promise<RoomMember[]> {
-    const { data, error } = await this.supabase
+    // First get room members
+    const { data: members, error: membersError } = await this.supabase
       .from('room_members')
-      .select(`
-        *,
-        user:profiles(id, username, display_name, avatar_url, status)
-      `)
+      .select('*')
       .eq('room_id', roomId);
-
-    if (error) throw error;
-    return data || [];
+  
+    if (membersError) {
+      console.error('Error fetching room members:', membersError);
+      throw membersError;
+    }
+  
+    if (!members || members.length === 0) return [];
+  
+    // Then get user data separately
+    const userIds = members.map(m => m.user_id);
+    const { data: users } = await this.supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, status')
+      .in('id', userIds);
+  
+    // Combine them
+    return members.map(member => ({
+      ...member,
+      user: users?.find(u => u.id === member.user_id),
+    }));
   }
 
-  async addRoomMember(roomId: string, userId: string, role: 'admin' | 'moderator' | 'member' = 'member'): Promise<void> {
+  async addRoomMember(roomId: string, userId: string, role: string = 'member'): Promise<void> {
     const { error } = await this.supabase
       .from('room_members')
       .insert({
@@ -578,7 +572,7 @@ export class MessagesService {
     if (error) throw error;
   }
 
-  async updateRoomMemberRole(roomId: string, userId: string, role: 'admin' | 'moderator' | 'member'): Promise<void> {
+  async updateRoomMemberRole(roomId: string, userId: string, role: string): Promise<void> {
     const { error } = await this.supabase
       .from('room_members')
       .update({ role })

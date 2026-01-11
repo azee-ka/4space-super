@@ -31,7 +31,7 @@ export function createMessageHooks(supabase: SupabaseClient) {
       queryFn: () => messagesService.getSpaceRooms(spaceId!),
       enabled: !!spaceId,
       staleTime: 1000 * 60, // 1 minute
-      refetchInterval: 1000 * 30, // Refetch every 30 seconds for unread counts
+      refetchInterval: false, // Disable auto-refetch - causing lag
     });
   }
 

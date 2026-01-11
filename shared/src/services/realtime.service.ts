@@ -522,10 +522,10 @@ export class RealtimeService {
   private async enrichMessage(message: Message): Promise<Message> {
     const { data: sender } = await this.supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, status')
+      .select('id, username, display_name, avatar_url')  // Removed status
       .eq('id', message.sender_id)
       .single();
-
+  
     return {
       ...message,
       sender: sender || undefined,

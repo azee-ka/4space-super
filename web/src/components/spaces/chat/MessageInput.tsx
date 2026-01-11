@@ -76,19 +76,23 @@ export function MessageInput({
 
   const handleSend = useCallback(async () => {
     if (!message.trim() || disabled || isSending) return;
-
+  
+    const messageToSend = message.trim();
     setIsSending(true);
+    
+    // Clear immediately for better UX
+    setMessage('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  
     try {
-      await onSend(message.trim());
-      setMessage('');
+      await onSend(messageToSend);
       onStopTyping();
-      
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
     } catch (error) {
       console.error('Failed to send message:', error);
+      // Restore message on error
+      setMessage(messageToSend);
     } finally {
       setIsSending(false);
     }
