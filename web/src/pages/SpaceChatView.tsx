@@ -29,12 +29,15 @@ import {
   useMarkRoomAsRead,
   useBookmarkMessage,
   useCreateRoom,
+  messageKeys,
 } from '../hooks/useMessages';
 import { useRealtimeChat } from '../hooks/useRealtime';
 import { RoomsList } from '../components/spaces/chat/RoomList';
 import { MessagesList } from '../components/spaces/chat/MessagesList';
 import { MessageInput } from '../components/spaces/chat/MessageInput';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
+import { queryClient } from '../lib/queryClient';
+import { useUpdateMessage } from '../hooks/useMessages';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
 type RightSidebarTab = 'chat' | 'media' | 'links' | 'customization';
@@ -92,6 +95,7 @@ export function SpaceChatView() {
   const markRoomAsRead = useMarkRoomAsRead();
   const bookmarkMessage = useBookmarkMessage();
   const createRoomMutation = useCreateRoom();
+  const updateMessage = useUpdateMessage();
   
   // Real-time features
   const {
@@ -196,6 +200,69 @@ export function SpaceChatView() {
 
 
 
+  // Real-time features
+useEffect(() => {
+  if (!selectedRoomId || !spaceId || !user?.id) return;
+
+  console.log('[SpaceChatView] Setting up realtime for room:', selectedRoomId);
+
+  // Subscribe to room changes
+  const channel = supabase
+    .channel(`room:${selectedRoomId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `room_id=eq.${selectedRoomId}`,
+      },
+      (payload) => {
+        console.log('[Realtime] New message:', payload.new);
+        // Refetch messages
+        queryClient.invalidateQueries({
+          queryKey: messageKeys.roomMessages(selectedRoomId),
+        });
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `room_id=eq.${selectedRoomId}`,
+      },
+      (payload) => {
+        console.log('[Realtime] Message updated:', payload.new);
+        queryClient.invalidateQueries({
+          queryKey: messageKeys.roomMessages(selectedRoomId),
+        });
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'messages',
+        filter: `room_id=eq.${selectedRoomId}`,
+      },
+      () => {
+        console.log('[Realtime] Message deleted');
+        queryClient.invalidateQueries({
+          queryKey: messageKeys.roomMessages(selectedRoomId),
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    console.log('[SpaceChatView] Cleaning up realtime');
+    supabase.removeChannel(channel);
+  };
+}, [selectedRoomId, spaceId, user?.id]);
+
 
 
 
@@ -263,14 +330,24 @@ const handleSelectRoom = async (roomId: string) => {
     }
   };
 
-  const handleSendMessage = useCallback(async (
-    content: string,
-    type: string = 'text',
-    attachments: any[] = []
-  ) => {
-    if (!selectedRoomId || !spaceId || !content.trim()) return;
+// In handleSendMessage, add edit handling
+const handleSendMessage = useCallback(async (
+  content: string,
+  type: string = 'text',
+  attachments: any[] = []
+) => {
+  if (!selectedRoomId || !spaceId || !content.trim()) return;
 
-    try {
+  try {
+    // If editing, use update mutation instead
+    if (editingMessage) {
+      await updateMessage.mutateAsync({
+        messageId: editingMessage.id,
+        content: content.trim(),
+      });
+      setEditingMessage(null);
+    } else {
+      // Normal send
       await sendMessage.mutateAsync({
         room_id: selectedRoomId,
         space_id: spaceId,
@@ -279,13 +356,14 @@ const handleSelectRoom = async (roomId: string) => {
         attachments,
         reply_to_id: replyTo?.id,
       });
-      
       setReplyTo(null);
-      stopTyping();
-    } catch (error) {
-      console.error('Failed to send message:', error);
     }
-  }, [selectedRoomId, spaceId, replyTo, sendMessage, stopTyping]);
+    
+    stopTyping();
+  } catch (error) {
+    console.error('Failed to send/edit message:', error);
+  }
+}, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage, stopTyping]);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return;
@@ -333,7 +411,7 @@ const handleSelectRoom = async (roomId: string) => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage]);
 
   const onlineCount = Array.from(onlineUsers.values()).filter((u: any) => u.status === 'online').length;
 
@@ -361,48 +439,142 @@ const handleSelectRoom = async (roomId: string) => {
     );
   }
 
-  return (
-    <div className="h-screen flex flex-col bg-black overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
-      {/* Header with Separate Island Cards */}
-      <div className="flex-shrink-0 pt-2 pl-4 pr-4 pb-0 space-y-3">
-        {/* Top Row - Space Info & Actions */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Space Info Island */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-purple-500/20 to-cyan-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-cyan-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
-            
-            <div className="relative px-4 py-3 rounded-xl backdrop-blur-xl bg-black/70 flex items-center gap-3">
-              <button
-                onClick={() => navigate(`/spaces/${spaceId}`)}
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-              >
-                <FontAwesomeIcon icon={faArrowLeft} className="text-gray-400 text-sm" />
-              </button>
+// Three Vertical Panels - NO NAVBAR, just panels from top to bottom
+// Replace the return statement in SpaceChatView.tsx starting from the main return
 
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: space?.color || 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
-              >
-                <FontAwesomeIcon icon={faRocket} className="text-white text-lg" />
-              </div>
-              
-              <div>
-                <h2 className="text-base font-bold text-white">{space?.name}</h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="px-2 py-0.5 rounded-lg bg-white/5 flex items-center gap-1.5">
-                    <FontAwesomeIcon icon={faHashtag} className="text-cyan-400 text-xs" />
-                    <span className="text-sm text-gray-300">{selectedRoom?.name || 'Select a room'}</span>
-                  </div>
+return (
+  <div className="h-screen flex bg-black overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
+    {/* LEFT PANEL - Space Info + Rooms Sidebar */}
+    <motion.div
+      initial={{ x: -200, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="w-80 flex-shrink-0 bg-zinc-950/30 flex flex-col"
+    >
+      {/* Space Info at Top of Left Panel */}
+      <div className="flex-shrink-0 p-4">
+        <div className="relative group">
+          <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-purple-500/20 to-cyan-500/25 rounded-xl blur-sm" />
+          <div className="absolute inset-0 rounded-xl border border-cyan-500/30" />
+          <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
+          
+          <div className="relative px-4 py-3 rounded-xl backdrop-blur-xl bg-black/70 flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/spaces/${spaceId}`)}
+              className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="text-gray-400 text-sm" />
+            </button>
+
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: space?.color || 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
+            >
+              <FontAwesomeIcon icon={faRocket} className="text-white text-lg" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-white truncate">{space?.name}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="px-2 py-0.5 rounded-lg bg-white/5 flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faHashtag} className="text-cyan-400 text-xs" />
+                  <span className="text-sm text-gray-300 truncate">{selectedRoom?.name || 'Select a room'}</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Action Islands - Spread Out */}
-          <div className="flex items-center gap-2">
+      {/* Rooms Sidebar Below */}
+      <div className="flex-1 overflow-hidden">
+        <LeftSidebar
+          spaceId={spaceId}
+          space={space}
+          rooms={rooms}
+          selectedRoomId={selectedRoomId}
+          onSelectRoom={handleSelectRoom}
+          onCreateRoom={handleCreateRoom}
+          activeTab={leftSidebarTab}
+          onTabChange={setLeftSidebarTab}
+          isLoading={loadingRooms}
+          onlineUsers={onlineUsers}
+          onOpenSettings={() => setRightSidebarTab('chat')}
+        />
+      </div>
+    </motion.div>
+
+    {/* CENTER PANEL - FULL HEIGHT MESSAGES (Nothing at top!) */}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex-1 flex flex-col overflow-hidden"
+    >
+      {selectedRoomId ? (
+        <>
+          {/* Messages Area - FULL HEIGHT */}
+          <div className="flex-1 overflow-hidden">
+            <MessagesList
+              messages={messages}
+              currentUserId={user?.id}
+              onLoadMore={handleLoadMore}
+              hasMore={hasNextPage}
+              isLoading={loadingMessages}
+              isFetchingMore={isFetchingNextPage}
+              onReply={setReplyTo}
+              onEdit={setEditingMessage}
+              onDelete={handleDeleteMessage}
+              onPin={handlePinMessage}
+              onBookmark={handleBookmark}
+              onReaction={handleReaction}
+              onRemoveReaction={handleRemoveReaction}
+              typingUsers={typingUsers}
+            />
+          </div>
+
+          {/* Input Area */}
+          <div className="flex-shrink-0">
+            <MessageInput
+              onSend={handleSendMessage}
+              onTyping={sendTypingIndicator}
+              onStopTyping={stopTyping}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
+              editingMessage={editingMessage}
+              onCancelEdit={() => setEditingMessage(null)}
+              disabled={sendMessage.isPending}
+              placeholder={`Message #${selectedRoom?.name || 'room'}...`}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-12">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-xl bg-white/5 flex items-center justify-center">
+              <FontAwesomeIcon icon={faHashtag} className="text-5xl text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Select a room</h3>
+            <p className="text-gray-400">
+              Choose a room from the sidebar to start chatting
+            </p>
+          </div>
+        </div>
+      )}
+    </motion.div>
+
+    {/* RIGHT PANEL - Beautiful Buttons + Right Sidebar */}
+    <motion.div
+      initial={{ x: 200, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="w-80 flex-shrink-0 bg-zinc-950/30 flex flex-col"
+    >
+      {/* Beautiful Action Buttons at Top of Right Panel */}
+      {selectedRoom && (
+        <div className="flex-shrink-0 p-4 space-y-3">
+          {/* Action Islands - Your Original Beautiful UI */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {[
               { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400' },
               { icon: faUsers, label: 'Members', glowClass: 'from-purple-500/25 via-purple-500/20 to-purple-500/25', borderClass: 'border-purple-500/30', textClass: 'text-purple-400', count: onlineCount },
@@ -435,108 +607,61 @@ const handleSelectRoom = async (roomId: string) => {
               </motion.div>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* Main Content Area with Sidebars */}
-      <div className="flex-1 flex overflow-hidden gap-0 p-0">
-        {/* Left Sidebar - Bigger with faded bg */}
-        <motion.div
-          initial={{ x: -200, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="w-80 flex-shrink-0 bg-zinc-950/30"
-        >
-          <LeftSidebar
-            spaceId={spaceId}
-            space={space}
-            rooms={rooms}
-            selectedRoomId={selectedRoomId}
-            onSelectRoom={handleSelectRoom}
-            onCreateRoom={handleCreateRoom}
-            activeTab={leftSidebarTab}
-            onTabChange={setLeftSidebarTab}
-            isLoading={loadingRooms}
-            onlineUsers={onlineUsers}
-            onOpenSettings={() => setRightSidebarTab('chat')}
-          />
-        </motion.div>
-
-        {/* Chat Area */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          {selectedRoomId ? (
-            <>
-              {/* Messages Area */}
-              <div className="flex-1 overflow-hidden">
-                <MessagesList
-                  messages={messages}
-                  currentUserId={user?.id}
-                  onLoadMore={handleLoadMore}
-                  hasMore={hasNextPage}
-                  isLoading={loadingMessages}
-                  isFetchingMore={isFetchingNextPage}
-                  onReply={setReplyTo}
-                  onEdit={setEditingMessage}
-                  onDelete={handleDeleteMessage}
-                  onPin={handlePinMessage}
-                  onBookmark={handleBookmark}
-                  onReaction={handleReaction}
-                  onRemoveReaction={handleRemoveReaction}
-                  typingUsers={typingUsers}
-                />
-              </div>
-
-              {/* Input Area */}
-              <div className="flex-shrink-0">
-                <MessageInput
-                  onSend={handleSendMessage}
-                  onTyping={sendTypingIndicator}
-                  onStopTyping={stopTyping}
-                  replyTo={replyTo}
-                  onCancelReply={() => setReplyTo(null)}
-                  editingMessage={editingMessage}
-                  onCancelEdit={() => setEditingMessage(null)}
-                  disabled={sendMessage.isPending}
-                  placeholder={`Message #${selectedRoom?.name || 'room'}...`}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center p-12">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-xl bg-white/5 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faHashtag} className="text-5xl text-gray-400" />
+          {/* Room Vibe Indicator - INNOVATIVE */}
+          <div className="relative group/vibe">
+            <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30 hover:border-purple-500/50 transition-all cursor-pointer">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                    <div className="absolute inset-0 w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Room Vibe</p>
+                    <p className="text-sm font-bold text-purple-400">Active 🔥</p>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Select a room</h3>
-                <p className="text-gray-400">
-                  Choose a room from the sidebar to start chatting
-                </p>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-cyan-400">{onlineCount}</p>
+                  <p className="text-[10px] text-gray-500">online</p>
+                </div>
               </div>
             </div>
-          )}
-        </motion.div>
+          </div>
 
-        {/* Right Sidebar - Bigger with faded bg */}
-        <motion.div
-          initial={{ x: 200, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="w-80 flex-shrink-0 bg-zinc-950/30"
-        >
-          <RightSidebar
-            activeTab={rightSidebarTab}
-            onTabChange={setRightSidebarTab}
-            theme={chatTheme}
-            onThemeChange={setChatTheme}
-          />
-        </motion.div>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
+              <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-sm" />
+              <div>
+                <p className="text-xs font-bold text-cyan-400">{messages.length}</p>
+                <p className="text-[9px] text-gray-500 uppercase">Messages</p>
+              </div>
+            </div>
+            <div className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center gap-2">
+              <FontAwesomeIcon icon={faUsers} className="text-purple-400 text-sm" />
+              <div>
+                <p className="text-xs font-bold text-purple-400">{selectedRoom.member_count || 0}</p>
+                <p className="text-[9px] text-gray-500 uppercase">Members</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Right Sidebar Below */}
+      <div className="flex-1 overflow-hidden">
+        <RightSidebar
+          activeTab={rightSidebarTab}
+          onTabChange={setRightSidebarTab}
+          theme={chatTheme}
+          onThemeChange={setChatTheme}
+        />
       </div>
-    </div>
-  );
+    </motion.div>
+  </div>
+);
 }
 
 // Left Sidebar Component - Horizontal Utility Tabs at Bottom

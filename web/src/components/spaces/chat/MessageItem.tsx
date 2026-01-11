@@ -1,4 +1,4 @@
-// Borderless Shadow-Based Message Item - Matching Spaces/SpaceView Design
+// WhatsApp-Style Message Bubble - GROUPED REACTIONS & DROPDOWN
 // web/src/components/spaces/chat/MessageItem.tsx
 
 import { useState, useRef, useEffect } from 'react';
@@ -6,8 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faReply, faEdit, faTrash, faThumbtack, faBookmark, faEllipsisV,
-  faCopy, faForward, faSmile, faCheck, faCheckDouble,
-  faQuoteLeft, faFile, faDownload, faPlayCircle
+  faCopy, faForward, faSmile,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
 
@@ -15,6 +14,8 @@ interface MessageItemProps {
   message: Message;
   isOwn: boolean;
   showAvatar?: boolean;
+  isFirstInGroup?: boolean;
+  isLastInGroup?: boolean;
   onReply?: (message: Message) => void;
   onEdit?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
@@ -22,14 +23,34 @@ interface MessageItemProps {
   onBookmark?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
+  onScrollToMessage?: (messageId: string) => void;
+  currentUserId?: string;
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+// Custom WhatsApp-style tick components
+const DoubleTick = ({ className }: { className?: string }) => (
+  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className={className}>
+    <path d="M2 6L5 9L13 1" 
+          stroke="currentColor" 
+          strokeWidth="1.8" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"/>
+    <path d="M6 6L9 9L17 1" 
+          stroke="currentColor" 
+          strokeWidth="1.8" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"/>
+  </svg>
+);
 
 export function MessageItem({
   message,
   isOwn,
   showAvatar = true,
+  isFirstInGroup = true,
+  isLastInGroup = true,
   onReply,
   onEdit,
   onDelete,
@@ -37,364 +58,454 @@ export function MessageItem({
   onBookmark,
   onReaction,
   onRemoveReaction,
+  onScrollToMessage,
+  currentUserId,
 }: MessageItemProps) {
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReactionDetails, setShowReactionDetails] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const reactionsRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const reactionDetailsRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
-        setShowActions(false);
+      const isOutside = 
+        (!reactionsRef.current || !reactionsRef.current.contains(e.target as Node)) &&
+        (!menuRef.current || !menuRef.current.contains(e.target as Node)) &&
+        (!actionsRef.current || !actionsRef.current.contains(e.target as Node)) &&
+        (!reactionDetailsRef.current || !reactionDetailsRef.current.contains(e.target as Node));
+      
+      if (isOutside) {
         setShowReactions(false);
+        setShowMenu(false);
+        setShowReactionDetails(false);
       }
     };
+    
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleMouseEnter = () => {
+    setShowActions(true);
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (
+      actionsRef.current?.contains(relatedTarget) ||
+      reactionsRef.current?.contains(relatedTarget) ||
+      menuRef.current?.contains(relatedTarget)
+    ) {
+      return;
+    }
+    setShowActions(false);
+  };
 
   const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatReactionTime = (date: string) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content || '');
-    setShowActions(false);
+    setShowMenu(false);
   };
 
   const groupedReactions = message.reactions?.reduce((acc, r) => {
-    if (!acc[r.reaction]) acc[r.reaction] = [];
-    acc[r.reaction].push(r);
+    const emoji = (r as any).emoji || r.reaction;
+    if (!acc[emoji]) acc[emoji] = [];
+    acc[emoji].push(r);
     return acc;
   }, {} as Record<string, typeof message.reactions>);
 
   const hasUserReacted = (emoji: string) => {
-    return message.reactions?.some(r => r.reaction === emoji && r.user_id === message.sender_id);
+    return message.reactions?.some(r => {
+      const reactionEmoji = (r as any).emoji || r.reaction;
+      return reactionEmoji === emoji && r.user_id === currentUserId;
+    });
   };
 
-  const getMessageGlow = () => {
-    if (isOwn) return 'from-cyan-500/25 via-purple-500/20 to-cyan-500/25';
-    if (message.is_pinned) return 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25';
-    return 'from-gray-500/25 via-gray-500/20 to-gray-500/25';
+  const getBorderRadius = () => {
+    if (isFirstInGroup && isLastInGroup) {
+      return 'rounded-2xl';
+    }
+    if (isFirstInGroup) {
+      return isOwn ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
+    }
+    if (isLastInGroup) {
+      return isOwn ? 'rounded-2xl rounded-tr-md' : 'rounded-2xl rounded-tl-md';
+    }
+    return isOwn ? 'rounded-2xl rounded-r-md' : 'rounded-2xl rounded-l-md';
   };
 
-  const getMessageBorder = () => {
-    if (isOwn) return 'border-cyan-500/30';
-    if (message.is_pinned) return 'border-yellow-500/30';
-    return 'border-gray-500/30';
+  const getBubbleColor = () => {
+    if (isOwn) {
+      return 'bg-gradient-to-br from-purple-600 to-purple-700';
+    }
+    return 'bg-zinc-800/90';
   };
+
+  const getReadStatus = () => {
+    if (!isOwn || message.deleted_at) return null;
+    
+    const hasBeenRead = message.read_receipts && message.read_receipts.length > 0;
+    
+    return {
+      component: DoubleTick,
+      color: hasBeenRead ? 'text-cyan-400' : 'text-gray-400',
+      title: hasBeenRead ? 'Read' : 'Delivered'
+    };
+  };
+
+  const readStatus = getReadStatus();
+
+  // Check if we should show grouped reactions (more than 2 types)
+  const reactionTypes = groupedReactions ? Object.keys(groupedReactions) : [];
+  const shouldGroupReactions = reactionTypes.length > 2;
+  const totalReactionCount = message.reactions?.length || 0;
 
   return (
-    <div className={`group flex gap-3 px-4 py-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
+    <div 
+      ref={containerRef}
+      className={`group flex gap-2 px-3 ${isOwn ? 'flex-row-reverse' : ''} ${
+        isFirstInGroup ? 'mt-2' : 'mt-0.5'
+      }`}
+      id={`message-${message.id}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Avatar */}
-      {showAvatar && (
-        <div className="flex-shrink-0">
+      {showAvatar && isFirstInGroup && !isOwn && (
+        <div className="flex-shrink-0 w-8 h-8">
           {message.sender?.avatar_url ? (
             <img
               src={message.sender.avatar_url}
               alt={message.sender.display_name}
-              className="w-10 h-10 rounded-lg object-cover"
+              className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
               {(message.sender?.display_name || 'U')[0].toUpperCase()}
             </div>
           )}
         </div>
       )}
+      
+      {!isFirstInGroup && !isOwn && <div className="w-8" />}
 
-      {/* Message Content */}
-      <div className={`flex-1 min-w-0 ${isOwn ? 'flex items-end flex-col' : ''}`}>
-        {/* Header */}
-        {showAvatar && (
-          <div className={`flex items-center gap-2 mb-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-medium text-white">
+      <div className={`flex-1 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className="max-w-[65%] relative">
+          {showAvatar && isFirstInGroup && !isOwn && (
+            <div className="text-xs font-medium text-cyan-400 mb-1 ml-3">
               {message.sender?.display_name || 'Unknown'}
-            </span>
-            <span className="text-xs text-gray-500">{formatTime(message.created_at)}</span>
-            {message.edited_at && (
-              <span className="text-xs text-gray-500 italic">(edited)</span>
-            )}
-            {message.is_pinned && (
-              <FontAwesomeIcon icon={faThumbtack} className="text-yellow-400 text-xs" />
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Reply To */}
-        {message.reply_to && (
-          <div className={`mb-2 ${isOwn ? 'ml-auto' : ''}`}>
-            <div className="relative group/reply">
-              <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-purple-500/20 to-cyan-500/25 rounded-lg blur-sm" />
-              <div className="absolute inset-0 rounded-lg border border-cyan-500/30" />
-              <div className="relative px-3 py-2 rounded-lg bg-black/70 backdrop-blur-xl">
-                <p className="text-xs text-gray-500 mb-0.5 flex items-center gap-1">
-                  <FontAwesomeIcon icon={faQuoteLeft} className="text-cyan-400" />
-                  Replying to <span className="font-medium text-cyan-400">{message.reply_to.sender?.display_name}</span>
+          {/* Reply To */}
+          {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
+            <div className={`mb-1 ${isOwn ? 'mr-2' : 'ml-2'}`}>
+              <button
+                onClick={() => onScrollToMessage?.(message.reply_to!.id)}
+                className={`w-full text-left px-3 py-1.5 rounded-lg ${
+                  isOwn 
+                    ? 'bg-purple-800/50 border-l-2 border-purple-400' 
+                    : 'bg-zinc-700/50 border-l-2 border-cyan-400'
+                } hover:opacity-80 transition-opacity`}
+              >
+                <p className="text-xs font-medium text-cyan-400 mb-0.5">
+                  {(message.reply_to.sender as any)?.display_name || 'Unknown'}
                 </p>
-                <p className="text-xs text-gray-400 truncate">
+                <p className="text-xs text-gray-300 truncate">
                   {message.reply_to.content}
                 </p>
-              </div>
+              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Message Card */}
-        <div className={`relative group/msg ${isOwn ? 'ml-auto' : ''}`}>
-          <div className={`relative group/card`}>
-            <div className={`absolute -inset-[1px] bg-gradient-to-r ${getMessageGlow()} rounded-xl blur-sm opacity-0 group-hover/card:opacity-100 transition-opacity`} />
-            <div className={`absolute inset-0 rounded-xl border ${getMessageBorder()} opacity-0 group-hover/card:opacity-100 transition-opacity`} />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover/card:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative px-4 py-3 rounded-xl max-w-2xl backdrop-blur-xl bg-black/70 hover:bg-black/80 transition-all ${
+          {/* Message Bubble */}
+          <div className="relative group/msg">
+            <div className={`relative ${getBorderRadius()} ${getBubbleColor()} px-3 py-1.5 ${
               message.deleted_at ? 'opacity-50' : ''
-            } ${isOwn ? 'bg-cyan-500/10' : ''}`}>
+            } shadow-lg`}>
               {message.deleted_at ? (
                 <p className="text-sm italic text-gray-400">This message was deleted</p>
               ) : (
                 <>
-                  {/* Text Content */}
-                  {message.message_type === 'text' && (
-                    <p className="text-sm text-white whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                  )}
+                  <p className="text-[15px] text-white leading-relaxed whitespace-pre-wrap break-words pb-3 pr-16">
+                    {message.content}
+                  </p>
 
-                  {/* Code Block */}
-                  {message.message_type === 'code' && (
-                    <pre className="text-sm bg-black/50 p-3 rounded-lg overflow-x-auto border border-white/10">
-                      <code className="text-cyan-400">{message.content}</code>
-                    </pre>
-                  )}
-
-                  {/* Image */}
-                  {message.message_type === 'image' && message.attachments?.[0] && (
-                    <div className="space-y-2">
-                      {message.content && <p className="text-sm text-white mb-2">{message.content}</p>}
-                      <img
-                        src={message.attachments[0].url}
-                        alt={message.attachments[0].name}
-                        className="max-w-md rounded-lg cursor-pointer border border-white/10"
-                        onClick={() => window.open(message.attachments![0].url, '_blank')}
-                      />
-                    </div>
-                  )}
-
-                  {/* File */}
-                  {message.message_type === 'file' && message.attachments?.[0] && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faFile} className="text-gray-400" />
+                  <div className="absolute bottom-1 right-2.5 flex items-center gap-1.5">
+                    {message.edited_at && (
+                      <span className="text-[9px] text-gray-400 italic mr-0.5">edited</span>
+                    )}
+                    <span className={`text-[11px] ${isOwn ? 'text-purple-200/80' : 'text-gray-400'}`}>
+                      {formatTime(message.created_at)}
+                    </span>
+                    {readStatus && (
+                      <div className="flex items-center ml-0.5" title={readStatus.title}>
+                        <readStatus.component className={readStatus.color} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{message.attachments[0].name}</p>
-                        <p className="text-xs text-gray-400">
-                          {(message.attachments[0].size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <a
-                        href={message.attachments[0].url}
-                        download
-                        className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faDownload} className="text-sm text-gray-400" />
-                      </a>
-                    </div>
-                  )}
-
-                  {/* Voice Message */}
-                  {message.message_type === 'voice' && message.attachments?.[0] && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-                      <button className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-colors">
-                        <FontAwesomeIcon icon={faPlayCircle} className="text-gray-400" />
-                      </button>
-                      <div className="flex-1 h-2 bg-white/10 rounded-full" />
-                      <span className="text-xs text-gray-400">0:45</span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </>
-              )}
-
-              {/* Read Status */}
-              {isOwn && !message.deleted_at && (
-                <div className="absolute -bottom-1 -right-1">
-                  {message.read_receipts && message.read_receipts.length > 0 ? (
-                    <FontAwesomeIcon icon={faCheckDouble} className="text-cyan-400 text-xs" />
-                  ) : (
-                    <FontAwesomeIcon icon={faCheck} className="text-gray-500 text-xs" />
-                  )}
-                </div>
               )}
             </div>
 
-            {/* Quick Actions (Hover) */}
+            {/* Quick Actions */}
             {!message.deleted_at && (
-              <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover/msg:opacity-100 transition-opacity px-2 z-20`}>
-                <div className="relative group/actions">
-                  <div className="absolute -inset-[1px] bg-gradient-to-r from-gray-500/25 via-gray-500/20 to-gray-500/25 rounded-lg blur-sm" />
-                  <div className="absolute inset-0 rounded-lg border border-gray-500/30" />
-                  <div className="relative flex items-center gap-1 p-1 rounded-lg bg-black/90 backdrop-blur-xl">
+              <div 
+                ref={actionsRef}
+                className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
+                  showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                } transition-opacity px-2 z-20`}
+                onMouseEnter={() => setShowActions(true)}
+                onMouseLeave={(e) => {
+                  const relatedTarget = e.relatedTarget as HTMLElement;
+                  if (
+                    !containerRef.current?.contains(relatedTarget) &&
+                    !reactionsRef.current?.contains(relatedTarget) &&
+                    !menuRef.current?.contains(relatedTarget)
+                  ) {
+                    setShowActions(false);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
+                  <button
+                    onClick={() => setShowReactions(!showReactions)}
+                    className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+                    title="Add reaction"
+                  >
+                    <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs" />
+                  </button>
+                  
+                  {onReply && (
                     <button
-                      onClick={() => setShowReactions(!showReactions)}
+                      onClick={() => onReply(message)}
                       className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                      title="Add reaction"
+                      title="Reply"
                     >
-                      <FontAwesomeIcon icon={faSmile} className="text-pink-400 text-xs" />
+                      <FontAwesomeIcon icon={faReply} className="text-cyan-400 text-xs" />
                     </button>
-                    
-                    {onReply && (
-                      <button
-                        onClick={() => onReply(message)}
-                        className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                        title="Reply"
-                      >
-                        <FontAwesomeIcon icon={faReply} className="text-cyan-400 text-xs" />
-                      </button>
-                    )}
-                    
-                    {isOwn && onEdit && (
-                      <button
-                        onClick={() => onEdit(message)}
-                        className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                        title="Edit"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="text-yellow-400 text-xs" />
-                      </button>
-                    )}
-                    
+                  )}
+                  
+                  {isOwn && onEdit && (
                     <button
-                      onClick={() => setShowActions(!showActions)}
+                      onClick={() => onEdit(message)}
                       className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                      title="More"
+                      title="Edit"
                     >
-                      <FontAwesomeIcon icon={faEllipsisV} className="text-gray-400 text-xs" />
+                      <FontAwesomeIcon icon={faEdit} className="text-purple-400 text-xs" />
                     </button>
-                  </div>
+                  )}
+                  
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+                    title="More"
+                  >
+                    <FontAwesomeIcon icon={faEllipsisV} className="text-gray-400 text-xs" />
+                  </button>
+                </div>
 
-                  {/* Reactions Picker */}
-                  <AnimatePresence>
-                    {showReactions && (
-                      <motion.div
-                        ref={actionsRef}
-                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                        className="absolute top-full mt-2 left-0 z-50"
-                      >
-                        <div className="relative group/picker">
-                          <div className="absolute -inset-[1px] bg-gradient-to-r from-pink-500/25 via-purple-500/20 to-pink-500/25 rounded-lg blur-sm" />
-                          <div className="absolute inset-0 rounded-lg border border-pink-500/30" />
-                          <div className="relative p-2 rounded-lg bg-black/90 backdrop-blur-xl">
-                            <div className="flex gap-1">
-                              {QUICK_REACTIONS.map(emoji => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => {
-                                    onReaction?.(message.id, emoji);
-                                    setShowReactions(false);
-                                  }}
-                                  className="w-8 h-8 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Actions Menu */}
-                  <AnimatePresence>
-                    {showActions && (
-                      <motion.div
-                        ref={actionsRef}
-                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                        className="absolute top-full mt-2 left-0 z-50 min-w-[180px]"
-                      >
-                        <div className="relative group/menu">
-                          <div className="absolute -inset-[1px] bg-gradient-to-r from-gray-500/25 via-gray-500/20 to-gray-500/25 rounded-lg blur-sm" />
-                          <div className="absolute inset-0 rounded-lg border border-gray-500/30" />
-                          <div className="relative rounded-lg bg-black/90 backdrop-blur-xl overflow-hidden">
-                            {(() => {
-                            const actions: Array<{ icon: any; label: string; color: string; onClick: () => void; danger: boolean }> = [
-                              { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false },
-                            ];
-                            if (onBookmark) {
-                              actions.push({ icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); setShowActions(false); }, danger: false });
-                            }
-                            if (onPin) {
-                              actions.push({ icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); setShowActions(false); }, danger: false });
-                            }
-                            actions.push({ icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => setShowActions(false), danger: false });
-                            if (isOwn && onDelete) {
-                              actions.push({ icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); setShowActions(false); }, danger: true });
-                            }
-                            return actions;
-                          })().map(({ icon, label, color, onClick, danger }) => (
+                {/* Reactions Picker */}
+                <AnimatePresence>
+                  {showReactions && (
+                    <motion.div
+                      ref={reactionsRef}
+                      initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                      className="absolute top-full mt-2 left-0 z-50"
+                      onMouseLeave={(e) => {
+                        const relatedTarget = e.relatedTarget as HTMLElement;
+                        if (!actionsRef.current?.contains(relatedTarget)) {
+                          setShowReactions(false);
+                        }
+                      }}
+                    >
+                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
+                        <div className="flex gap-1">
+                          {QUICK_REACTIONS.map(emoji => (
                             <button
-                              key={label}
-                              onClick={onClick}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors border-b border-white/10 last:border-0 ${
-                                danger ? 'hover:bg-red-500/10' : ''
-                              }`}
+                              key={emoji}
+                              onClick={() => {
+                                onReaction?.(message.id, emoji);
+                                setShowReactions(false);
+                              }}
+                              className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg hover:scale-110"
                             >
-                              <FontAwesomeIcon icon={icon} className={`${color} text-sm`} />
-                              <span className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-white'}`}>{label}</span>
+                              {emoji}
                             </button>
                           ))}
-                          </div>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Actions Menu */}
+                <AnimatePresence>
+                  {showMenu && (
+                    <motion.div
+                      ref={menuRef}
+                      initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                      className="absolute top-full mt-2 left-0 z-50 min-w-[180px]"
+                      onMouseLeave={(e) => {
+                        const relatedTarget = e.relatedTarget as HTMLElement;
+                        if (!actionsRef.current?.contains(relatedTarget)) {
+                          setShowMenu(false);
+                        }
+                      }}
+                    >
+                      <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden">
+                        {[
+                          { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false },
+                          onBookmark && { icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); setShowMenu(false); }, danger: false },
+                          onPin && { icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); setShowMenu(false); }, danger: false },
+                          { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => setShowMenu(false), danger: false },
+                          isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); setShowMenu(false); }, danger: true },
+                        ].filter(Boolean).map((action: any) => (
+                          <button
+                            key={action.label}
+                            onClick={action.onClick}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
+                              action.danger ? 'hover:bg-red-500/10' : ''
+                            }`}
+                          >
+                            <FontAwesomeIcon icon={action.icon} className={`${action.color} text-sm`} />
+                            <span className={`text-sm font-medium ${action.danger ? 'text-red-400' : 'text-white'}`}>{action.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>
+
+          {/* Reactions - GROUPED OR INDIVIDUAL */}
+          {groupedReactions && Object.keys(groupedReactions).length > 0 && (
+            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end mr-2' : 'ml-2'} relative`}>
+              {shouldGroupReactions ? (
+                // Grouped view for 3+ reaction types
+                <button
+                  onClick={() => setShowReactionDetails(!showReactionDetails)}
+                  className="px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors text-xs bg-zinc-800/70 border border-zinc-700/50 hover:bg-zinc-700"
+                >
+                  <div className="flex -space-x-1">
+                    {reactionTypes.slice(0, 3).map((emoji, i) => (
+                      <span key={i} className="text-xs">{emoji}</span>
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-400">
+                    {totalReactionCount}
+                  </span>
+                </button>
+              ) : (
+                // Individual pills for 1-2 reaction types
+                <>
+                  {Object.entries(groupedReactions).map(([emoji, reactions]) => (
+                    <button
+                      key={emoji}
+                      onClick={() => {
+                        if (hasUserReacted(emoji)) {
+                          onRemoveReaction?.(message.id, emoji);
+                        } else {
+                          onReaction?.(message.id, emoji);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors text-xs ${
+                        hasUserReacted(emoji)
+                          ? 'bg-purple-500/20 border border-purple-500/40'
+                          : 'bg-zinc-800/70 border border-zinc-700/50 hover:bg-zinc-700'
+                      }`}
+                    >
+                      <span>{emoji}</span>
+                      <span className={`text-[10px] font-medium ${
+                        hasUserReacted(emoji) ? 'text-purple-400' : 'text-gray-400'
+                      }`}>
+                        {reactions?.length}
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Reaction Details Dropdown */}
+              <AnimatePresence>
+                {showReactionDetails && shouldGroupReactions && (
+                  <motion.div
+                    ref={reactionDetailsRef}
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-50 min-w-[220px]`}
+                  >
+                    <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <div className="p-2">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1 mb-1">
+                          Reactions ({totalReactionCount})
+                        </div>
+                        {Object.entries(groupedReactions).map(([emoji, reactions]) => (
+                          <div key={emoji} className="mb-2 last:mb-0">
+                            <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/30 rounded-lg mb-1">
+                              <span className="text-lg">{emoji}</span>
+                              <span className="text-xs text-gray-400">{reactions?.length}</span>
+                            </div>
+                            {reactions?.map((reaction: any) => {
+                              const user = (reaction as any).user || message.sender;
+                              return (
+                                <div 
+                                  key={reaction.id}
+                                  className="flex items-center justify-between px-3 py-1.5 hover:bg-white/5 rounded transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">
+                                      {(user?.display_name || user?.username || 'U')[0].toUpperCase()}
+                                    </div>
+                                    <span className="text-xs text-white font-medium">
+                                      {user?.display_name || user?.username || 'Unknown'}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-gray-500">
+                                    {formatReactionTime(reaction.created_at)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
-
-        {/* Reactions */}
-        {groupedReactions && Object.keys(groupedReactions).length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {Object.entries(groupedReactions).map(([emoji, reactions]) => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  if (hasUserReacted(emoji)) {
-                    onRemoveReaction?.(message.id, emoji);
-                  } else {
-                    onReaction?.(message.id, emoji);
-                  }
-                }}
-                className={`px-2 py-1 rounded-lg flex items-center gap-1.5 transition-colors ${
-                  hasUserReacted(emoji)
-                    ? 'bg-cyan-500/10 border border-cyan-500/30'
-                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <span className="text-sm">{emoji}</span>
-                <span className={`text-xs font-medium ${
-                  hasUserReacted(emoji) ? 'text-cyan-400' : 'text-gray-400'
-                }`}>
-                  {reactions?.length}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Thread Preview */}
-        {message.thread_messages_count && message.thread_messages_count > 0 && (
-          <button className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-cyan-400">
-            <FontAwesomeIcon icon={faReply} />
-            <span>{message.thread_messages_count} replies</span>
-          </button>
-        )}
       </div>
     </div>
   );

@@ -213,59 +213,17 @@ export function createMessageHooks(supabase: SupabaseClient) {
    */
   function useSendMessage() {
     const queryClient = useQueryClient();
-
+  
     return useMutation({
       mutationFn: (input: SendMessageInput) => messagesService.sendMessage(input),
-      onMutate: async (newMessage) => {
-        // Cancel outgoing refetches
-        await queryClient.cancelQueries({ 
-          queryKey: messageKeys.roomMessages(newMessage.room_id) 
-        });
-
-        // Snapshot previous value
-        const previousMessages = queryClient.getQueryData(
-          messageKeys.roomMessages(newMessage.room_id)
-        );
-
-        // Optimistically update
-        queryClient.setQueryData(
-          messageKeys.roomMessages(newMessage.room_id),
-          (old: any) => {
-            if (!old?.pages) return old;
-            return {
-              ...old,
-              pages: old.pages.map((page: Message[], index: number) => 
-                index === old.pages.length - 1
-                  ? [...page, {
-                      id: 'temp-' + Date.now(),
-                      ...newMessage,
-                      sender_id: newMessage.room_id, // Will be replaced by real data
-                      encrypted_content: newMessage.content,
-                      created_at: new Date().toISOString(),
-                      message_type: newMessage.message_type || 'text',
-                    } as Message]
-                  : page
-              ),
-            };
-          }
-        );
-
-        return { previousMessages };
-      },
-      onError: (err, newMessage, context) => {
-        // Rollback on error
-        if (context?.previousMessages) {
-          queryClient.setQueryData(
-            messageKeys.roomMessages(newMessage.room_id),
-            context.previousMessages
-          );
-        }
-      },
-      onSuccess: (message) => {
-        // Invalidate to get real data
+      onSuccess: (message, variables) => {
+        // Just refetch - no optimistic update to prevent flash
         queryClient.invalidateQueries({ 
-          queryKey: messageKeys.roomMessages(message.room_id) 
+          queryKey: messageKeys.roomMessages(variables.room_id) 
         });
+      },
+      onError: (error) => {
+        console.error('Send message error:', error);
       },
     });
   }
