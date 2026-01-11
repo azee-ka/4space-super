@@ -17,6 +17,8 @@ interface RoomsListProps {
   onCreateRoom?: () => void;
   isLoading?: boolean;
   onlineUsers?: Map<string, any>;
+  filterUnread?: boolean; 
+  onFilterChange?: (value: boolean) => void;
 }
 
 export function RoomsList({
@@ -25,10 +27,11 @@ export function RoomsList({
   onSelectRoom,
   onCreateRoom,
   isLoading,
-  onlineUsers = new Map()
+  onlineUsers = new Map(),
+  filterUnread = false, // Add this with default
+  onFilterChange, // Add this
 }: RoomsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterUnread, setFilterUnread] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   // Group rooms by category
@@ -128,18 +131,6 @@ export function RoomsList({
           )}
         </div>
 
-        {/* Filter Button */}
-        <button
-          onClick={() => setFilterUnread(!filterUnread)}
-          className={`w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            filterUnread
-              ? 'bg-cyan-500/10 text-cyan-400'
-              : 'bg-zinc-800/50 text-gray-400 hover:text-white hover:bg-zinc-800/70'
-          }`}
-        >
-          <FontAwesomeIcon icon={faFilter} className="mr-2" />
-          {filterUnread ? 'Showing Unread Only' : 'Show Unread Only'}
-        </button>
       </div>
 
       {/* Rooms List */}
@@ -206,7 +197,7 @@ export function RoomsList({
                           </div>
                           
                           {/* Room Info */}
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 flex flex-col items-start justify-flex-start">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className={`text-sm font-medium truncate ${
                                 isSelected ? 'text-white' : 'text-gray-300'
@@ -236,14 +227,6 @@ export function RoomsList({
             </div>
           );
         })}
-      </div>
-
-      {/* Settings Button */}
-      <div className="flex-shrink-0 p-4 pt-0">
-        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors text-gray-400 hover:text-gray-300 text-sm font-medium">
-          <FontAwesomeIcon icon={faCog} className="text-sm" />
-          <span>Settings</span>
-        </button>
       </div>
     </div>
   );

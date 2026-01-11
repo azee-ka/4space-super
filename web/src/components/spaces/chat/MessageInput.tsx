@@ -197,7 +197,7 @@ export function MessageInput({
                 disabled={disabled || isSending}
                 placeholder={placeholder}
                 rows={1}
-                className="w-full bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-[15px] leading-relaxed max-h-[200px] custom-scrollbar"
+                className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 resize-none text-white placeholder-gray-500 text-[15px] leading-relaxed max-h-[200px] custom-scrollbar"
                 style={{ minHeight: '24px' }}
               />
             </div>

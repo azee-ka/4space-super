@@ -10,7 +10,8 @@ import {
   faImages, faLink, faSlidersH, faShapes,
   faBolt, faCalendar, faFire, faBrain, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faChevronDown, faTrash,
-  faCheck, faLayerGroup
+  faCheck, faLayerGroup,
+  faFilter
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -298,7 +299,7 @@ export function SpaceChatView() {
   return (
     <div className="h-screen flex flex-col bg-black overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
       {/* Header with Separate Island Cards */}
-      <div className="flex-shrink-0 p-4 space-y-3">
+      <div className="flex-shrink-0 pt-2 pl-4 pr-4 pb-0 space-y-3">
         {/* Top Row - Space Info & Actions */}
         <div className="flex items-center justify-between gap-3">
           {/* Space Info Island */}
@@ -392,6 +393,7 @@ export function SpaceChatView() {
             onTabChange={setLeftSidebarTab}
             isLoading={loadingRooms}
             onlineUsers={onlineUsers}
+            onOpenSettings={() => setRightSidebarTab('chat')}
           />
         </motion.div>
 
@@ -484,6 +486,7 @@ interface LeftSidebarProps {
   onTabChange: (tab: LeftSidebarTab) => void;
   isLoading: boolean;
   onlineUsers: Map<string, any>;
+  onOpenSettings?: () => void;
 }
 
 function LeftSidebar({
@@ -497,8 +500,10 @@ function LeftSidebar({
   onTabChange: _onTabChange,
   isLoading,
   onlineUsers,
+  onOpenSettings,
 }: LeftSidebarProps) {
   const [openUtility, setOpenUtility] = useState<Exclude<LeftSidebarTab, 'rooms'> | null>(null);
+  const [filterUnread, setFilterUnread] = useState(false); // Add this state
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const utilityTabs: Array<{ id: Exclude<LeftSidebarTab, 'rooms'>; icon: any; label: string; color: string }> = [
@@ -527,10 +532,36 @@ function LeftSidebar({
       {/* Rooms Section - Takes Most Space */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="px-5 py-4 border-b border-zinc-800/50">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-            <FontAwesomeIcon icon={faHashtag} className="text-cyan-400" />
-            Rooms
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <FontAwesomeIcon icon={faHashtag} className="text-cyan-400" />
+              Rooms
+            </h2>
+            
+            <div className="flex items-center gap-1.5">
+              {/* Filter Unread Button */}
+              <button
+                onClick={() => setFilterUnread(!filterUnread)}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                  filterUnread
+                    ? 'bg-cyan-500/10 text-cyan-400'
+                    : 'bg-zinc-800/50 text-gray-400 hover:text-white hover:bg-zinc-800/70'
+                }`}
+                title={filterUnread ? 'Showing Unread Only' : 'Show All Rooms'}
+              >
+                <FontAwesomeIcon icon={faFilter} className="text-xs" />
+              </button>
+              
+              {/* Settings Button */}
+              <button
+                onClick={() => onOpenSettings?.()}
+                className="w-7 h-7 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors text-gray-400 hover:text-white"
+                title="Room Settings"
+              >
+                <FontAwesomeIcon icon={faCog} className="text-xs" />
+              </button>
+            </div>
+          </div>
         </div>
         
         <div className="flex-1 overflow-hidden">
@@ -569,7 +600,7 @@ function LeftSidebar({
 
         {/* Horizontal Tab Bar */}
         <div className="p-3 pb-4">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 pl-1">
             {utilityTabs.map((tab) => {
               const isOpen = openUtility === tab.id;
               
@@ -630,8 +661,8 @@ function RightSidebar({
   return (
     <div className="h-full flex flex-col">
       {/* Horizontal Tabs - Fixed Overflow */}
-      <div className="flex-shrink-0 p-4 pb-5">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="flex-shrink-0 pb-0 pt-0 pl-4 pr-4">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 pl-1">
           {tabs.map((tab) => (
             <motion.button
               key={tab.id}

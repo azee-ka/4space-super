@@ -137,7 +137,7 @@ export interface CreateRoomInput {
 }
 
 export class MessagesService {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private readonly supabase: SupabaseClient<Database>) {}
 
   // ============================================
   // ROOMS
