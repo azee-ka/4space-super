@@ -1,4 +1,4 @@
-// MessageInput using native textarea
+// MessageInput using native textarea - FIXED FOCUS ISSUE
 // web/src/components/spaces/chat/MessageInput.tsx
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -58,6 +58,20 @@ export function MessageInput({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Simple focus maintenance: refocus when message clears after send
+  useEffect(() => {
+    // If message was cleared (had content before, now empty), refocus
+    if (message === '' && textareaRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (textareaRef.current && document.activeElement !== textareaRef.current) {
+          textareaRef.current.focus();
+          setIsFocused(true);
+        }
+      });
+    }
+  }, [message]);
+
   // Handle text changes and typing indicators
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -78,33 +92,30 @@ export function MessageInput({
   }, [onTyping, onStopTyping]);
 
   const handleSend = useCallback(() => {
-    if (disabled) return;
-    
     const textContent = message.trim();
-    
     if (!textContent && attachedFiles.length === 0) return;
     
-    // Capture content (plain text)
+    // Capture values before clearing
     const messageContent = textContent;
     const filesArray = [...attachedFiles].map(f => f.file);
     
-    // Clear input BEFORE sending (matches reference code pattern where they clear in onSuccess)
-    // Since we can't access onSuccess from here, clear immediately but preserve focus
+    // Clear state immediately - simple and direct
     setMessage('');
     setAttachedFiles([]);
     onStopTyping();
     
-    // Send (fire and forget - matches reference code pattern)
+    // Send message (fire and forget - realtime will handle update)
+    // No blocking, no flags, no delays - just send
     onSend(messageContent, 'text', filesArray);
-  }, [disabled, message, attachedFiles, onSend, onStopTyping]);
+  }, [message, attachedFiles, onSend, onStopTyping]);
 
   // Handle keyboard events (Enter to send, Shift+Enter for newline)
+  // Simple like old project - just prevent default and send
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-    // Shift+Enter will create new line (default behavior)
   }, [handleSend]);
 
   // Set editing message content
@@ -299,7 +310,10 @@ export function MessageInput({
               <button
                 type="button"
                 data-cancel-button
-                onMouseDown={(e) => e.preventDefault()}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={() => {
                   if (editingMessage && onCancelEdit) {
                     setMessage('');
@@ -379,7 +393,10 @@ export function MessageInput({
                 type="button"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onMouseDown={(e) => e.preventDefault()}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                   showEmojiPicker
@@ -428,6 +445,7 @@ export function MessageInput({
                 maxHeight={200}
                 minHeight={40}
                 disabled={disabled}
+                autoFocus
                 className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none py-2 px-1 text-sm"
               />
             </div>
@@ -435,8 +453,13 @@ export function MessageInput({
             {/* File Upload Button with Dropdown */}
             <div className="relative pb-0.5">
               <motion.button
+                type="button"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={() => setShowFileMenu(!showFileMenu)}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                   showFileMenu
@@ -463,6 +486,11 @@ export function MessageInput({
                   >
                     <div className="rounded-xl bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden min-w-[200px]">
                       <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         onClick={() => imageInputRef.current?.click()}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
                       >
@@ -476,6 +504,11 @@ export function MessageInput({
                       </button>
 
                       <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         onClick={() => videoInputRef.current?.click()}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-t border-zinc-800/30"
                       >
@@ -489,6 +522,11 @@ export function MessageInput({
                       </button>
 
                       <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         onClick={() => fileInputRef.current?.click()}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-t border-zinc-800/30"
                       >
@@ -531,9 +569,14 @@ export function MessageInput({
               />
             </div>
             
-            {/* Send Button */}
+            {/* Send Button - Simple like old project */}
             <div className="pb-0.5">
               <motion.button
+                type="button"
+                onMouseDown={(e) => {
+                  // Prevent textarea from losing focus when clicking send
+                  e.preventDefault();
+                }}
                 onClick={handleSend}
                 disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
                 whileHover={message.trim() || attachedFiles.length > 0 ? { scale: 1.05 } : {}}

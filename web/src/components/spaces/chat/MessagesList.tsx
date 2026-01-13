@@ -78,19 +78,21 @@ export function MessagesList({
     });
   }, [isLoading, messages.length, scrollToBottom]);
 
-  // Handle new messages
+  // Handle new messages - simplified for speed
   useEffect(() => {
     if (!hasInitialScrolledRef.current || isLoading) return;
     
-    const totalCount = messages.length + optimisticMessages.length;
+    const totalCount = messages.length;
     const hasNew = totalCount > lastMessageCountRef.current;
     
+    // Only auto-scroll if user is near bottom and new message arrived
     if (hasNew && isNearBottomRef.current && !isLoadingRef.current) {
-      requestAnimationFrame(() => scrollToBottom(true));
+      // Use immediate scroll (not smooth) for instant feedback
+      scrollToBottom(false);
     }
     
     lastMessageCountRef.current = totalCount;
-  }, [messages.length, optimisticMessages.length, isLoading, scrollToBottom]);
+  }, [messages.length, isLoading, scrollToBottom]);
 
   // Restore scroll after loading older messages
   useEffect(() => {

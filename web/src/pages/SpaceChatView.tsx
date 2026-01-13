@@ -273,7 +273,7 @@ const handleSelectRoom = async (roomId: string) => {
     }
   };
 
-// In handleSendMessage, add edit handling - match reference code pattern
+// Industry standard: Simple, fast message sending
 const handleSendMessage = useCallback((
   content: string,
   type: string = 'text',
@@ -281,7 +281,7 @@ const handleSendMessage = useCallback((
 ) => {
   if (!selectedRoomId || !spaceId || !content.trim()) return;
 
-  // If editing, use update mutation instead
+  // If editing, use update mutation
   if (editingMessage) {
     updateMessage.mutate({
       messageId: editingMessage.id,
@@ -291,32 +291,23 @@ const handleSendMessage = useCallback((
         setEditingMessage(null);
       }
     });
-  } else {
-    // Normal send - use mutate() not mutateAsync() (like reference code)
-    sendMessage.mutate({
-      room_id: selectedRoomId,
-      space_id: spaceId,
-      content,
-      message_type: type as any,
-      attachments,
-      reply_to_id: replyTo?.id,
-    }, {
-      onSuccess: () => {
-        setReplyTo(null);
-        
-        // Force scroll to bottom after sending
-        setTimeout(() => {
-          const messagesContainer = document.querySelector('[data-messages-container]') as HTMLElement;
-          if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
-        }, 100);
-      }
-    });
+    return;
   }
-  
-  stopTyping();
-}, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage, stopTyping]);
+
+  // Normal send - fire and forget, realtime will handle the update
+  sendMessage.mutate({
+    room_id: selectedRoomId,
+    space_id: spaceId,
+    content,
+    message_type: type as any,
+    attachments,
+    reply_to_id: replyTo?.id,
+  }, {
+    onSuccess: () => {
+      setReplyTo(null);
+    }
+  });
+}, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage]);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return;
@@ -496,7 +487,6 @@ return (
               onCancelReply={() => setReplyTo(null)}
               editingMessage={editingMessage}
               onCancelEdit={() => setEditingMessage(null)}
-              disabled={sendMessage.isPending}
               placeholder={`Message #${selectedRoom?.name || 'room'}...`}
             />
           </div>

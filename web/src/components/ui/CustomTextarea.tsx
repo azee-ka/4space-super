@@ -23,41 +23,23 @@ const CustomTextarea = forwardRef<HTMLTextAreaElement, CustomTextareaProps>(
     ref
   ) => {
     const innerRef = useRef<HTMLTextAreaElement>(null);
-    
-    // Use callback ref to handle both forwarded ref and internal ref
-    const setRef = (node: HTMLTextAreaElement | null) => {
-      innerRef.current = node;
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref) {
-        (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-      }
-    };
+    // Use forwarded ref if provided, otherwise use inner ref
+    const textareaRef = ref || innerRef;
 
+    // Auto-resize on value change
     useEffect(() => {
-      const el = innerRef.current;
+      const el = (textareaRef as React.RefObject<HTMLTextAreaElement>).current;
       if (!el) return;
-
-      // Preserve focus when value changes (especially when clearing)
-      const wasFocused = document.activeElement === el;
-
+      
       el.style.height = "auto";
-
       const scrollHeight = el.scrollHeight;
       const finalHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
       el.style.height = `${finalHeight}px`;
-
-      // Restore focus if it was focused before (helps with rapid sending)
-      if (wasFocused && document.activeElement !== el) {
-        requestAnimationFrame(() => {
-          el?.focus();
-        });
-      }
-    }, [value, maxHeight, minHeight]);
+    }, [value, maxHeight, minHeight, textareaRef]);
 
     return (
       <textarea
-        ref={setRef}
+        ref={textareaRef as any}
         className={className}
         value={value}
         onChange={onChange}
