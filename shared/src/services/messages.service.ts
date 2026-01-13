@@ -283,18 +283,18 @@ export class MessagesService {
         if (msg.reply_to_id) {
           const { data: replyMsg } = await this.supabase
             .from('messages')
-            .select('id, content')
+            .select('id, content, sender_id')
             .eq('id', msg.reply_to_id)
             .single();
   
           if (replyMsg) {
             const { data: replySender } = await this.supabase
               .from('profiles')
-              .select('username, display_name, avatar_url')
+              .select('id, username, display_name, avatar_url')
               .eq('id', replyMsg.sender_id)
               .single();
             
-            reply_to = { ...replyMsg, sender: replySender };
+            reply_to = { ...replyMsg, sender: replySender || null };
           }
         }
   
@@ -425,9 +425,38 @@ export class MessagesService {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // First, check if user already has a reaction on this message
+    const { data: existingReaction } = await this.supabase
+      .from('message_reactions')
+      .select('emoji')
+      .eq('message_id', messageId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existingReaction) {
+      // If user already reacted with a different emoji, remove the old one first
+      if (existingReaction.emoji !== reaction) {
+        await this.supabase
+          .from('message_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('user_id', user.id);
+      } else {
+        // User already reacted with the same emoji, remove it (toggle off)
+        await this.supabase
+          .from('message_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('user_id', user.id)
+          .eq('emoji', reaction);
+        return;
+      }
+    }
+
+    // Add the new reaction
     const { error } = await this.supabase
       .from('message_reactions')
-      .upsert({
+      .insert({
         message_id: messageId,
         user_id: user.id,
         emoji: reaction,

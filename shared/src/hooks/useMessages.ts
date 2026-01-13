@@ -216,13 +216,89 @@ export function createMessageHooks(supabase: SupabaseClient) {
   
     return useMutation({
       mutationFn: (input: SendMessageInput) => messagesService.sendMessage(input),
-      onSuccess: (message, variables) => {
-        // Just refetch - no optimistic update to prevent flash
-        queryClient.invalidateQueries({ 
+      onMutate: async (variables) => {
+        // Cancel outgoing refetches
+        await queryClient.cancelQueries({ 
           queryKey: messageKeys.roomMessages(variables.room_id) 
         });
+
+        // Snapshot previous value
+        const previousMessages = queryClient.getQueryData(messageKeys.roomMessages(variables.room_id));
+
+        // Get current user ID for optimistic message  
+        // Access supabase through the service instance
+        let currentUserId = '';
+        try {
+          const { data: { user } } = await (messagesService as any).supabase.auth.getUser();
+          currentUserId = user?.id || '';
+        } catch (e) {
+          // If we can't get user, will be updated when server responds
+        }
+
+        // Optimistically add temporary message
+        queryClient.setQueryData(messageKeys.roomMessages(variables.room_id), (old: any) => {
+          if (!old?.pages) return old;
+          
+          const tempMessage: Message = {
+            id: `temp-${Date.now()}`,
+            room_id: variables.room_id,
+            space_id: variables.space_id,
+            sender_id: currentUserId, // Set current user ID so it's identified as "sent"
+            content: variables.content,
+            message_type: variables.message_type,
+            reply_to_id: variables.reply_to_id,
+            is_pinned: false,
+            is_system: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            attachments: variables.attachments || [],
+            read_receipts: [], // Empty = single tick (gray)
+          };
+
+          // Append to the first page (which contains newest messages)
+          // getRoomMessages returns [oldest, ..., newest] per page
+          // pages[0] is the initial load (newest messages), pages[1+] are older messages
+          // We append to page[0] because it contains the newest messages
+          const newPages = [...old.pages];
+          if (newPages[0]) {
+            newPages[0] = [...newPages[0], tempMessage];
+          } else {
+            newPages[0] = [tempMessage];
+          }
+
+          return {
+            ...old,
+            pages: newPages,
+          };
+        });
+
+        return { previousMessages };
       },
-      onError: (error) => {
+      onSuccess: (message, variables) => {
+        // Replace optimistic message with real one
+        queryClient.setQueryData(messageKeys.roomMessages(variables.room_id), (old: any) => {
+          if (!old?.pages) return old;
+          
+          const newPages = old.pages.map((page: Message[]) =>
+            page.map(msg => 
+              msg.id.startsWith('temp-') ? message : msg
+            )
+          );
+
+          return {
+            ...old,
+            pages: newPages,
+          };
+        });
+      },
+      onError: (error, variables, context) => {
+        // Rollback on error
+        if (context?.previousMessages) {
+          queryClient.setQueryData(
+            messageKeys.roomMessages(variables.room_id),
+            context.previousMessages
+          );
+        }
         console.error('Send message error:', error);
       },
     });

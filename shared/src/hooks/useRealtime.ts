@@ -32,22 +32,30 @@ export function useRealtimeMessages(
           (old: any) => {
             if (!old?.pages) return old;
             
-            // Add to the last page
+            // Check if message already exists (prevent duplicates)
+            const alreadyExists = old.pages.some((page: Message[]) =>
+              page.some((msg: Message) => msg.id === message.id)
+            );
+            if (alreadyExists) return old;
+            
+            // Add to the first page (which contains newest messages)
+            // getRoomMessages returns messages in descending order (newest first)
+            // So pages[0] is the newest page
+            const newPages = [...old.pages];
+            if (newPages[0]) {
+              // Prepend to the first page (newest messages first)
+              newPages[0] = [message, ...newPages[0]];
+            } else {
+              newPages[0] = [message];
+            }
+            
             return {
               ...old,
-              pages: old.pages.map((page: Message[], index: number) =>
-                index === old.pages.length - 1
-                  ? [...page, message]
-                  : page
-              ),
+              pages: newPages,
             };
           }
         );
-
-        // Invalidate to ensure fresh data
-        queryClient.invalidateQueries({ 
-          queryKey: messageKeys.roomMessages(roomId) 
-        });
+        // DO NOT invalidate queries - that causes refetches and defeats realtime updates
       },
 
       // Message updated (edit)

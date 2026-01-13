@@ -11,11 +11,12 @@ import {
   faBolt, faCalendar, faFire, faBrain, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faChevronDown, faTrash,
   faCheck, faLayerGroup,
-  faFilter
+  faFilter, faBold
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { useSpace } from '../hooks/useSpaces';
 import {
   useSpaceRooms,
@@ -46,6 +47,7 @@ export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { formattingButtonsEnabled } = useChatSettingsStore();
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
   const [replyTo, setReplyTo] = useState<MessageType | null>(null);
@@ -84,7 +86,11 @@ export function SpaceChatView() {
   } = useRoomMessages(selectedRoomId);
   
   // Flatten messages from infinite query
-  const messages = messagesData?.pages.flat() || [];
+  // Each page has messages in ascending order (oldest to newest) after getRoomMessages reverses
+  // Pages are: [page0 (newest 50), page1 (older 50), page2 (even older 50), ...]
+  // We need: [oldest from page2, ..., newest from page2, oldest from page1, ..., newest from page1, oldest from page0, ..., newest from page0]
+  // So we reverse pages, then flatten
+  const messages = messagesData?.pages.slice().reverse().flat() || [];
   
   // Mutations
   const sendMessage = useSendMessage();
@@ -200,69 +206,6 @@ export function SpaceChatView() {
 
 
 
-  // Real-time features
-useEffect(() => {
-  if (!selectedRoomId || !spaceId || !user?.id) return;
-
-  console.log('[SpaceChatView] Setting up realtime for room:', selectedRoomId);
-
-  // Subscribe to room changes
-  const channel = supabase
-    .channel(`room:${selectedRoomId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `room_id=eq.${selectedRoomId}`,
-      },
-      (payload) => {
-        console.log('[Realtime] New message:', payload.new);
-        // Refetch messages
-        queryClient.invalidateQueries({
-          queryKey: messageKeys.roomMessages(selectedRoomId),
-        });
-      }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `room_id=eq.${selectedRoomId}`,
-      },
-      (payload) => {
-        console.log('[Realtime] Message updated:', payload.new);
-        queryClient.invalidateQueries({
-          queryKey: messageKeys.roomMessages(selectedRoomId),
-        });
-      }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'messages',
-        filter: `room_id=eq.${selectedRoomId}`,
-      },
-      () => {
-        console.log('[Realtime] Message deleted');
-        queryClient.invalidateQueries({
-          queryKey: messageKeys.roomMessages(selectedRoomId),
-        });
-      }
-    )
-    .subscribe();
-
-  return () => {
-    console.log('[SpaceChatView] Cleaning up realtime');
-    supabase.removeChannel(channel);
-  };
-}, [selectedRoomId, spaceId, user?.id]);
-
 
 
 
@@ -330,39 +273,49 @@ const handleSelectRoom = async (roomId: string) => {
     }
   };
 
-// In handleSendMessage, add edit handling
-const handleSendMessage = useCallback(async (
+// In handleSendMessage, add edit handling - match reference code pattern
+const handleSendMessage = useCallback((
   content: string,
   type: string = 'text',
   attachments: any[] = []
 ) => {
   if (!selectedRoomId || !spaceId || !content.trim()) return;
 
-  try {
-    // If editing, use update mutation instead
-    if (editingMessage) {
-      await updateMessage.mutateAsync({
-        messageId: editingMessage.id,
-        content: content.trim(),
-      });
-      setEditingMessage(null);
-    } else {
-      // Normal send
-      await sendMessage.mutateAsync({
-        room_id: selectedRoomId,
-        space_id: spaceId,
-        content,
-        message_type: type as any,
-        attachments,
-        reply_to_id: replyTo?.id,
-      });
-      setReplyTo(null);
-    }
-    
-    stopTyping();
-  } catch (error) {
-    console.error('Failed to send/edit message:', error);
+  // If editing, use update mutation instead
+  if (editingMessage) {
+    updateMessage.mutate({
+      messageId: editingMessage.id,
+      content: content.trim(),
+    }, {
+      onSuccess: () => {
+        setEditingMessage(null);
+      }
+    });
+  } else {
+    // Normal send - use mutate() not mutateAsync() (like reference code)
+    sendMessage.mutate({
+      room_id: selectedRoomId,
+      space_id: spaceId,
+      content,
+      message_type: type as any,
+      attachments,
+      reply_to_id: replyTo?.id,
+    }, {
+      onSuccess: () => {
+        setReplyTo(null);
+        
+        // Force scroll to bottom after sending
+        setTimeout(() => {
+          const messagesContainer = document.querySelector('[data-messages-container]') as HTMLElement;
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+        }, 100);
+      }
+    });
   }
+  
+  stopTyping();
 }, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage, stopTyping]);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
@@ -635,15 +588,15 @@ return (
             <div className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
               <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-sm" />
               <div>
-                <p className="text-xs font-bold text-cyan-400">{messages.length}</p>
+                <p className="text-xs font-bold text-cyan-400">{selectedRoom?.message_count ?? messages.length}</p>
                 <p className="text-[9px] text-gray-500 uppercase">Messages</p>
               </div>
             </div>
             <div className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center gap-2">
               <FontAwesomeIcon icon={faUsers} className="text-purple-400 text-sm" />
               <div>
-                <p className="text-xs font-bold text-purple-400">{selectedRoom.member_count || 0}</p>
-                <p className="text-[9px] text-gray-500 uppercase">Members</p>
+                <p className="text-xs font-bold text-purple-400">{onlineCount}</p>
+                <p className="text-[9px] text-gray-500 uppercase">Online</p>
               </div>
             </div>
           </div>
@@ -1044,30 +997,66 @@ function NotesTab() {
 }
 
 function ChatSettingsTab() {
+  const { formattingButtonsEnabled, setFormattingButtonsEnabled } = useChatSettingsStore();
+
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center gap-2.5 mb-2">
-        <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-          <FontAwesomeIcon icon={faCog} className="text-cyan-400" />
-        </div>
-        <h3 className="text-xs font-bold text-white">Room Settings</h3>
-      </div>
-      
-      <div className="space-y-2">
-        {[
-          { label: 'Notifications', value: 'All Messages', icon: faBell },
-          { label: 'Mute Room', value: 'Off', icon: faBell },
-          { label: 'Auto-delete Messages', value: 'Never', icon: faClock },
-          { label: 'Message History', value: 'Unlimited', icon: faStickyNote },
-        ].map((setting) => (
-          <div key={setting.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={setting.icon} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">{setting.label}</span>
-            </div>
-            <span className="text-xs text-gray-400">{setting.value}</span>
+    <div className="p-4 space-y-4">
+      {/* Room Settings */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+            <FontAwesomeIcon icon={faCog} className="text-cyan-400" />
           </div>
-        ))}
+          <h3 className="text-xs font-bold text-white">Room Settings</h3>
+        </div>
+        
+        <div className="space-y-2">
+          {[
+            { label: 'Notifications', value: 'All Messages', icon: faBell },
+            { label: 'Mute Room', value: 'Off', icon: faBell },
+            { label: 'Auto-delete Messages', value: 'Never', icon: faClock },
+            { label: 'Message History', value: 'Unlimited', icon: faStickyNote },
+          ].map((setting) => (
+            <div key={setting.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <FontAwesomeIcon icon={setting.icon} className="text-gray-400 text-sm" />
+                <span className="text-sm text-white font-medium">{setting.label}</span>
+              </div>
+              <span className="text-xs text-gray-400">{setting.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Settings */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <FontAwesomeIcon icon={faCog} className="text-purple-400" />
+          </div>
+          <h3 className="text-xs font-bold text-white">Chat Settings</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faBold} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Formatting Buttons</span>
+            </div>
+            <button
+              onClick={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                formattingButtonsEnabled ? 'bg-cyan-500' : 'bg-zinc-600'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                  formattingButtonsEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

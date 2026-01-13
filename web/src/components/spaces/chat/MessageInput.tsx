@@ -1,17 +1,19 @@
-// Beautiful Message Input Component
+// MessageInput using native textarea
 // web/src/components/spaces/chat/MessageInput.tsx
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faImage, faFile, faSmile, faMicrophone,
-  faTimes, faCode, faBold, faItalic
+  faPaperPlane, faSmile, faTimes, faFileAlt,
+  faImage, faVideo, faFile, faPlus, faChevronUp
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Message } from '@4space/shared/src/services/messages.service';
+import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react';
+import CustomTextarea from '../../ui/CustomTextarea';
 
 interface MessageInputProps {
-  onSend: (content: string, type?: string, attachments?: any[]) => Promise<void>;
+  onSend: (content: string, type?: string, attachments?: any[]) => void;
   onTyping: () => void;
   onStopTyping: () => void;
   replyTo?: Message | null;
@@ -20,6 +22,13 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
   disabled?: boolean;
   placeholder?: string;
+}
+
+interface AttachedFile {
+  id: string;
+  file: File;
+  preview?: string;
+  type: 'image' | 'video' | 'document';
 }
 
 export function MessageInput({
@@ -35,37 +44,31 @@ export function MessageInput({
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFileMenu, setShowFileMenu] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Set editing message content when editing
-  useEffect(() => {
-    if (editingMessage) {
-      setMessage(editingMessage.content ?? '');
-      textareaRef.current?.focus();
-    }
-  }, [editingMessage]);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setMessage(value);
-
-    // Auto-resize textarea - optimized
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 200);
-      textareaRef.current.style.height = `${newHeight}px`;
-    }
-
-    // Typing indicator with debounce
-    if (value.length > 0) {
+  // Handle text changes and typing indicators
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setMessage(text);
+    
+    // Typing indicator
+    if (text.trim().length > 0) {
       onTyping();
-      
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
       typingTimeoutRef.current = setTimeout(() => {
         onStopTyping();
       }, 1000);
@@ -74,50 +77,198 @@ export function MessageInput({
     }
   }, [onTyping, onStopTyping]);
 
-  const handleSend = useCallback(async () => {
-    if (!message.trim() || disabled || isSending) return;
-  
-    const messageToSend = message.trim();
-    setIsSending(true);
+  const handleSend = useCallback(() => {
+    if (disabled) return;
     
-    try {
-      await onSend(messageToSend);
-      // Only clear after successful send
-      setMessage('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-      onStopTyping();
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      // Show error to user
-      alert(`Failed to send message: ${error.message}`);
-    } finally {
-      setIsSending(false);
-    }
-  }, [message, disabled, isSending, onSend, onStopTyping]);
+    const textContent = message.trim();
+    
+    if (!textContent && attachedFiles.length === 0) return;
+    
+    // Capture content (plain text)
+    const messageContent = textContent;
+    const filesArray = [...attachedFiles].map(f => f.file);
+    
+    // Clear input BEFORE sending (matches reference code pattern where they clear in onSuccess)
+    // Since we can't access onSuccess from here, clear immediately but preserve focus
+    setMessage('');
+    setAttachedFiles([]);
+    onStopTyping();
+    
+    // Send (fire and forget - matches reference code pattern)
+    onSend(messageContent, 'text', filesArray);
+  }, [disabled, message, attachedFiles, onSend, onStopTyping]);
 
+  // Handle keyboard events (Enter to send, Shift+Enter for newline)
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+    // Shift+Enter will create new line (default behavior)
   }, [handleSend]);
 
-  const handleFileUpload = () => {
-    alert('File upload coming soon!');
+  // Set editing message content
+  useEffect(() => {
+    if (editingMessage && textareaRef.current) {
+      // Strip HTML tags if content is HTML (for backward compatibility)
+      const content = editingMessage.content ?? '';
+      const textContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+      setMessage(textContent);
+      // Focus and move cursor to end after state update
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(textContent.length, textContent.length);
+        }
+      }, 0);
+    }
+  }, [editingMessage]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const clickedInsidePicker = emojiPickerRef.current?.contains(target);
+      const clickedOnEmojiButton = emojiButtonRef.current?.contains(target);
+      
+      if (!clickedInsidePicker && !clickedOnEmojiButton) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    if (!textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = message;
+    const newText = text.substring(0, start) + emojiData.emoji + text.substring(end);
+    
+    setMessage(newText);
+    
+    // Set cursor position after emoji
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + emojiData.emoji.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
-  const handleImageUpload = () => {
-    alert('Image upload coming soon!');
+  // File handling
+  const handleFileSelect = async (files: FileList | null, type?: 'image' | 'video' | 'document') => {
+    if (!files) return;
+    
+    const newFiles: AttachedFile[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileType = type || (
+        file.type.startsWith('image/') ? 'image' :
+        file.type.startsWith('video/') ? 'video' :
+        'document'
+      );
+      
+      const attachedFile: AttachedFile = {
+        id: Math.random().toString(36),
+        file,
+        type: fileType,
+      };
+      
+      // Create preview for images
+      if (fileType === 'image') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          attachedFile.preview = e.target?.result as string;
+          setAttachedFiles(prev => [...prev, attachedFile]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        newFiles.push(attachedFile);
+      }
+    }
+    
+    if (newFiles.length > 0) {
+      setAttachedFiles(prev => [...prev, ...newFiles]);
+    }
+    
+    setShowFileMenu(false);
   };
 
-  const handleVoiceRecord = () => {
-    alert('Voice recording coming soon!');
+  // Drag & drop
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === containerRef.current) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    handleFileSelect(files);
+  };
+
+  const removeFile = (id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
   };
 
   return (
-    <div className="border-t border-zinc-800/50 bg-black/20">
+    <div 
+      ref={containerRef}
+      className="border-t border-zinc-800/50 bg-black/20"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-cyan-500/10 border-2 border-dashed border-cyan-500 rounded-2xl z-50 flex items-center justify-center backdrop-blur-sm"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                <FontAwesomeIcon icon={faImage} className="text-3xl text-cyan-400" />
+              </div>
+              <p className="text-lg font-bold text-white">Drop files to upload</p>
+              <p className="text-sm text-gray-400 mt-1">Images, videos, and documents</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Reply/Edit Bar */}
       <AnimatePresence>
         {(replyTo || editingMessage) && (
@@ -125,7 +276,7 @@ export function MessageInput({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="px-6 pt-3 overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800/50">
@@ -146,11 +297,66 @@ export function MessageInput({
                 </p>
               </div>
               <button
-                onClick={editingMessage ? onCancelEdit : onCancelReply}
+                type="button"
+                data-cancel-button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (editingMessage && onCancelEdit) {
+                    setMessage('');
+                    onCancelEdit();
+                  } else if (onCancelReply) {
+                    onCancelReply();
+                  }
+                }}
                 className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors ml-3"
               >
                 <FontAwesomeIcon icon={faTimes} className="text-red-400 text-sm" />
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Attached Files Preview */}
+      <AnimatePresence>
+        {attachedFiles.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="px-6 pt-3 overflow-hidden"
+          >
+            <div className="flex flex-wrap gap-2">
+              {attachedFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="relative group"
+                >
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
+                    {file.preview ? (
+                      <img src={file.preview} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <FontAwesomeIcon 
+                        icon={file.type === 'video' ? faVideo : faFileAlt} 
+                        className="text-2xl text-gray-400" 
+                      />
+                    )}
+                  </div>
+                  <button
+                    onClick={() => removeFile(file.id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="text-white text-xs" />
+                  </button>
+                  <div className="absolute bottom-0 inset-x-0 bg-black/70 backdrop-blur-sm px-1 py-0.5">
+                    <p className="text-[9px] text-white truncate">{file.file.name}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -165,118 +371,189 @@ export function MessageInput({
               : 'border-zinc-800/50'
           }`}
         >
-          <div className="flex items-end gap-2.5 p-3">
-            {/* Attachment Buttons */}
-            <div className="flex gap-1 pb-0.5">
+          <div className="flex items-end gap-2 p-3">
+            {/* Emoji Button */}
+            <div className="relative pb-0.5">
               <motion.button
+                ref={emojiButtonRef}
+                type="button"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleImageUpload}
-                className="w-9 h-9 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 flex items-center justify-center transition-all group"
-                title="Upload image"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  showEmojiPicker
+                    ? 'bg-yellow-500/20 border-2 border-yellow-500/50'
+                    : 'bg-yellow-500/10 hover:bg-yellow-500/20'
+                }`}
+                title="Emoji"
               >
-                <FontAwesomeIcon icon={faImage} className="text-pink-400 text-sm group-hover:scale-110 transition-transform" />
+                <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-lg" />
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleFileUpload}
-                className="w-9 h-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center transition-all group"
-                title="Upload file"
-              >
-                <FontAwesomeIcon icon={faFile} className="text-purple-400 text-sm group-hover:scale-110 transition-transform" />
-              </motion.button>
+
+              {/* Emoji Picker */}
+              <AnimatePresence>
+                {showEmojiPicker && (
+                  <motion.div
+                    ref={emojiPickerRef}
+                    data-emoji-picker
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute bottom-full left-0 mb-2 z-50"
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <EmojiPicker
+                        onEmojiClick={handleEmojiClick}
+                        width={350}
+                        height={400}
+                        theme={Theme.DARK}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Text Input */}
+            {/* Textarea */}
             <div className="flex-1 min-w-0">
-              <textarea
+              <CustomTextarea
                 ref={textareaRef}
                 value={message}
-                onChange={handleInputChange}
+                onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                disabled={disabled || isSending}
                 placeholder={placeholder}
-                rows={1}
-                className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 resize-none text-white placeholder-gray-500 text-[15px] leading-relaxed max-h-[200px] custom-scrollbar"
-                style={{ minHeight: '24px' }}
+                maxHeight={200}
+                minHeight={40}
+                disabled={disabled}
+                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none py-2 px-1 text-sm"
               />
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-1 pb-0.5">
+            {/* File Upload Button with Dropdown */}
+            <div className="relative pb-0.5">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleVoiceRecord}
-                className="w-9 h-9 rounded-xl bg-green-500/10 hover:bg-green-500/20 flex items-center justify-center transition-all group"
-                title="Voice message"
+                onClick={() => setShowFileMenu(!showFileMenu)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  showFileMenu
+                    ? 'bg-purple-500/20 border-2 border-purple-500/50'
+                    : 'bg-purple-500/10 hover:bg-purple-500/20'
+                }`}
+                title="Attach file"
               >
-                <FontAwesomeIcon icon={faMicrophone} className="text-green-400 text-sm group-hover:scale-110 transition-transform" />
+                <FontAwesomeIcon 
+                  icon={showFileMenu ? faChevronUp : faPlus} 
+                  className="text-purple-400 text-sm" 
+                />
               </motion.button>
-              
-              {/* Send Button */}
+
+              {/* File Menu Dropdown */}
+              <AnimatePresence>
+                {showFileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute bottom-full right-0 mb-2 z-50"
+                  >
+                    <div className="rounded-xl bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden min-w-[200px]">
+                      <button
+                        onClick={() => imageInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faImage} className="text-pink-400" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white">Image</p>
+                          <p className="text-xs text-gray-400">Upload photos</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => videoInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-t border-zinc-800/30"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faVideo} className="text-red-400" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white">Video</p>
+                          <p className="text-xs text-gray-400">Upload videos</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-t border-zinc-800/30"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faFile} className="text-blue-400" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white">Document</p>
+                          <p className="text-xs text-gray-400">Upload any file</p>
+                        </div>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Hidden file inputs */}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleFileSelect(e.target.files, 'image')}
+                className="hidden"
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                multiple
+                onChange={(e) => handleFileSelect(e.target.files, 'video')}
+                className="hidden"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => handleFileSelect(e.target.files, 'document')}
+                className="hidden"
+              />
+            </div>
+            
+            {/* Send Button */}
+            <div className="pb-0.5">
               <motion.button
                 onClick={handleSend}
-                disabled={!message.trim() || disabled || isSending}
-                whileHover={message.trim() && !disabled && !isSending ? { scale: 1.05 } : {}}
-                whileTap={message.trim() && !disabled && !isSending ? { scale: 0.95 } : {}}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  message.trim() && !disabled && !isSending
+                disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
+                whileHover={message.trim() || attachedFiles.length > 0 ? { scale: 1.05 } : {}}
+                whileTap={message.trim() || attachedFiles.length > 0 ? { scale: 0.95 } : {}}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  (message.trim() || attachedFiles.length > 0) && !disabled
                     ? 'bg-cyan-500 hover:bg-cyan-600 shadow-lg shadow-cyan-500/30'
                     : 'bg-zinc-800/50 cursor-not-allowed opacity-50'
                 }`}
                 title="Send message"
               >
-                {isSending ? (
-                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <FontAwesomeIcon
-                    icon={faPaperPlane}
-                    className={`text-sm transition-colors ${
-                      message.trim() && !disabled ? 'text-white' : 'text-gray-600'
-                    }`}
-                  />
-                )}
+                <FontAwesomeIcon
+                  icon={faPaperPlane}
+                  className={`text-sm transition-colors ${
+                    (message.trim() || attachedFiles.length > 0) && !disabled ? 'text-white' : 'text-gray-600'
+                  }`}
+                />
               </motion.button>
             </div>
           </div>
-
-          {/* Formatting Bar (when focused and typing) */}
-          <AnimatePresence>
-            {isFocused && message.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="border-t border-zinc-800/50 px-3 py-2 overflow-hidden"
-              >
-                <div className="flex items-center gap-1">
-                  <button className="w-7 h-7 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 flex items-center justify-center transition-colors group">
-                    <FontAwesomeIcon icon={faBold} className="text-blue-400 text-xs group-hover:scale-110 transition-transform" />
-                  </button>
-                  <button className="w-7 h-7 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center transition-colors group">
-                    <FontAwesomeIcon icon={faItalic} className="text-purple-400 text-xs group-hover:scale-110 transition-transform" />
-                  </button>
-                  <button className="w-7 h-7 rounded-lg bg-green-500/10 hover:bg-green-500/20 flex items-center justify-center transition-colors group">
-                    <FontAwesomeIcon icon={faCode} className="text-green-400 text-xs group-hover:scale-110 transition-transform" />
-                  </button>
-                  <button className="w-7 h-7 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 flex items-center justify-center transition-colors group">
-                    <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs group-hover:scale-110 transition-transform" />
-                  </button>
-                  
-                  <div className="flex-1" />
-                  
-                  <span className="text-xs text-gray-500">
-                    {message.length} / 2000
-                  </span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* Helper Text */}

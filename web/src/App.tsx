@@ -29,7 +29,7 @@ function LoadingScreen() {
             />
           </svg>
         </div>
-        <p className="text-slate-400 font-medium">Loading your universe...</p>
+        <p className="text-slate-400 font-medium">Loading your space...</p>
       </div>
     </div>
   );
@@ -141,7 +141,7 @@ function RootRedirect() {
 
   // If authenticated, go to dashboard
   // If not authenticated, go to landing page
-  return <Navigate to={user ? '/dashboard' : '/landing'} replace />;
+  return <Navigate to={user ? '/dashboard' : '/'} replace />;
 }
 
 // Component to render a single route
@@ -189,7 +189,7 @@ function App() {
 
   useEffect(() => {
     initialize();
-  }, [initialize]);
+  }, []);
 
   return (
     <ErrorBoundary>

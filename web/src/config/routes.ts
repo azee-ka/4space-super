@@ -30,7 +30,8 @@ export const publicRoutes: RouteConfig[] = [
   {
     path: '/',
     element: Landing,
-    isProtected: false,
+    // isProtected: false,
+    isPublicOnly: true,
   },
   {
     path: '/login',
@@ -45,6 +46,11 @@ export const publicRoutes: RouteConfig[] = [
 ];
 
 export const protectedRoutes: RouteConfig[] = [
+  {
+    path: '/',
+    element: Spaces,
+    isProtected: true,
+  },
   {
     path: '/dashboard',
     element: Spaces,

@@ -420,15 +420,25 @@ export class RealtimeService {
       clearTimeout(this.typingTimeouts.get(key)!);
     }
 
-    // Insert/update typing indicator
-    await this.supabase
+    // Upsert typing indicator using the unique constraint
+    const { error } = await this.supabase
       .from('typing_indicators')
       .upsert({
         room_id: roomId,
         space_id: spaceId,
         user_id: userId,
         started_at: new Date().toISOString(),
+      }, {
+        onConflict: 'room_id,user_id'
       });
+    
+    if (error) {
+      // Silently ignore typing indicator errors to avoid console spam
+      // 23505 = unique_violation (expected), PGRST116 = no rows returned
+      if (error.code !== '23505' && error.code !== 'PGRST116' && error.code !== '42P10') {
+        console.error('Typing indicator error:', error);
+      }
+    }
 
     // Auto-remove after 5 seconds of inactivity
     const timeout = setTimeout(async () => {

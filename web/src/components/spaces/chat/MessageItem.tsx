@@ -9,6 +9,7 @@ import {
   faCopy, faForward, faSmile,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
+import DOMPurify from 'dompurify';
 
 interface MessageItemProps {
   message: Message;
@@ -31,7 +32,7 @@ const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 // Custom WhatsApp-style tick components
 const DoubleTick = ({ className }: { className?: string }) => (
-  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className={className}>
+  <svg viewBox="0 0 18 12" fill="none" className={className || "w-[18px] h-[12px]"} preserveAspectRatio="xMidYMid meet">
     <path d="M2 6L5 9L13 1" 
           stroke="currentColor" 
           strokeWidth="1.8" 
@@ -95,11 +96,15 @@ export function MessageItem({
   };
 
   const handleMouseLeave = (e: React.MouseEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement;
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (!relatedTarget) {
+      setShowActions(false);
+      return;
+    }
     if (
-      actionsRef.current?.contains(relatedTarget) ||
-      reactionsRef.current?.contains(relatedTarget) ||
-      menuRef.current?.contains(relatedTarget)
+      (actionsRef.current && actionsRef.current.contains(relatedTarget)) ||
+      (reactionsRef.current && reactionsRef.current.contains(relatedTarget)) ||
+      (menuRef.current && menuRef.current.contains(relatedTarget))
     ) {
       return;
     }
@@ -211,32 +216,11 @@ export function MessageItem({
       
       {!isFirstInGroup && !isOwn && <div className="w-8" />}
 
-      <div className={`flex-1 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-        <div className="max-w-[65%] relative">
+      <div className={`flex-1 flex ${isOwn ? 'justify-end' : 'justify-start'} min-w-0`}>
+        <div className="max-w-[65%] relative min-w-0">
           {showAvatar && isFirstInGroup && !isOwn && (
             <div className="text-xs font-medium text-cyan-400 mb-1 ml-3">
               {message.sender?.display_name || 'Unknown'}
-            </div>
-          )}
-
-          {/* Reply To */}
-          {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
-            <div className={`mb-1 ${isOwn ? 'mr-2' : 'ml-2'}`}>
-              <button
-                onClick={() => onScrollToMessage?.(message.reply_to!.id)}
-                className={`w-full text-left px-3 py-1.5 rounded-lg ${
-                  isOwn 
-                    ? 'bg-purple-800/50 border-l-2 border-purple-400' 
-                    : 'bg-zinc-700/50 border-l-2 border-cyan-400'
-                } hover:opacity-80 transition-opacity`}
-              >
-                <p className="text-xs font-medium text-cyan-400 mb-0.5">
-                  {(message.reply_to.sender as any)?.display_name || 'Unknown'}
-                </p>
-                <p className="text-xs text-gray-300 truncate">
-                  {message.reply_to.content}
-                </p>
-              </button>
             </div>
           )}
 
@@ -245,24 +229,52 @@ export function MessageItem({
             <div className={`relative ${getBorderRadius()} ${getBubbleColor()} px-3 py-1.5 ${
               message.deleted_at ? 'opacity-50' : ''
             } shadow-lg`}>
+              {/* Reply To - Inside bubble */}
+              {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
+                <button
+                  onClick={() => onScrollToMessage?.(message.reply_to!.id)}
+                  className={`w-full text-left px-2 py-1.5 mb-2 mt-1 rounded-lg border-l-2 ${
+                    isOwn 
+                      ? 'bg-purple-700/40 border-purple-300/50 hover:bg-purple-700/60' 
+                      : 'bg-zinc-700/40 border-cyan-400/50 hover:bg-zinc-700/60'
+                  } transition-colors`}
+                >
+                  <p className="text-xs font-medium text-cyan-300 mb-0.5 truncate">
+                    {message.reply_to.sender?.display_name || message.reply_to.sender?.username || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-white/70 truncate">
+                    {typeof message.reply_to.content === 'string' 
+                      ? message.reply_to.content.replace(/<[^>]*>/g, '').substring(0, 50)
+                      : String(message.reply_to.content || '').substring(0, 50)}
+                    {(typeof message.reply_to.content === 'string' ? message.reply_to.content.length : String(message.reply_to.content || '').length) > 50 ? '...' : ''}
+                  </p>
+                </button>
+              )}
               {message.deleted_at ? (
                 <p className="text-sm italic text-gray-400">This message was deleted</p>
               ) : (
                 <>
-                  <p className="text-[15px] text-white leading-relaxed whitespace-pre-wrap break-words pb-3 pr-16">
-                    {message.content}
-                  </p>
+                  <div 
+                    className="text-[15px] text-white leading-relaxed whitespace-pre-wrap break-words pb-1"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(message.content || '', {
+                        ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'p', 'br'],
+                        ALLOWED_ATTR: ['href', 'target'],
+                        ALLOW_DATA_ATTR: false,
+                      })
+                    }}
+                  />
 
-                  <div className="absolute bottom-1 right-2.5 flex items-center gap-1.5">
+                  <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {message.edited_at && (
-                      <span className="text-[9px] text-gray-400 italic mr-0.5">edited</span>
+                      <span className="text-[9px] text-gray-400 italic">edited</span>
                     )}
-                    <span className={`text-[11px] ${isOwn ? 'text-purple-200/80' : 'text-gray-400'}`}>
+                    <span className={`text-[10px] ${isOwn ? 'text-purple-200/70' : 'text-gray-400'}`}>
                       {formatTime(message.created_at)}
                     </span>
                     {readStatus && (
-                      <div className="flex items-center ml-0.5" title={readStatus.title}>
-                        <readStatus.component className={readStatus.color} />
+                      <div className="flex items-center" title={readStatus.title}>
+                        <readStatus.component className={`${readStatus.color} w-3.5 h-2.5`} />
                       </div>
                     )}
                   </div>
