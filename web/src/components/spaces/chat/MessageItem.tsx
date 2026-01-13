@@ -2,11 +2,12 @@
 // web/src/components/spaces/chat/MessageItem.tsx
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import DropdownButton from '../../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faReply, faEdit, faTrash, faThumbtack, faBookmark, faEllipsisV,
-  faCopy, faForward, faSmile,
+  faCopy, faForward, faSmile, faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import DOMPurify from 'dompurify';
@@ -73,16 +74,11 @@ export function MessageItem({
   currentUserId,
 }: MessageItemProps) {
   const [showActions, setShowActions] = useState(false);
-  const [showReactions, setShowReactions] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [showReactionDetails, setShowReactionDetails] = useState(false);
-  const [selectedReactionEmoji, setSelectedReactionEmoji] = useState<string | null>(null);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
+  const openDropdownsCountRef = useRef(0);
   const actionsRef = useRef<HTMLDivElement>(null);
-  const reactionsRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const reactionDetailsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const reactionsContainerRef = useRef<HTMLDivElement>(null);
 
   // Use timeout refs to manage hover delays
   const showActionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,15 +103,9 @@ export function MessageItem({
       const target = e.target as Node;
       
       const isInsideActions = actionsRef.current?.contains(target);
-      const isInsideReactions = reactionsRef.current?.contains(target);
-      const isInsideMenu = menuRef.current?.contains(target);
-      const isInsideReactionDetails = reactionDetailsRef.current?.contains(target);
       const isInsideContainer = containerRef.current?.contains(target);
       
-      if (!isInsideActions && !isInsideReactions && !isInsideMenu && !isInsideReactionDetails && !isInsideContainer) {
-        setShowReactions(false);
-        setShowMenu(false);
-        setShowReactionDetails(false);
+      if (!isInsideActions && !isInsideContainer && openDropdownsCountRef.current === 0) {
         setShowActions(false);
       }
     };
@@ -129,17 +119,31 @@ export function MessageItem({
 
   const handleMouseEnter = () => {
     clearAllTimeouts();
-    // Add small delay before showing to prevent flicker when rapidly moving cursor
-    showActionsTimeoutRef.current = setTimeout(() => {
-      setShowActions(true);
-    }, 100);
+    // Show immediately when hovering - no delay to prevent flicker
+    setShowActions(true);
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (e: React.MouseEvent) => {
     clearAllTimeouts();
-    // Hide immediately when not hovering (no delay)
-    if (!showReactions && !showMenu) {
+    // Check if mouse is moving to actions bar
+    const relatedTarget = e.relatedTarget as Node;
+    const isMovingToActions = actionsRef.current?.contains(relatedTarget);
+    
+    // Check if mouse is moving to another message container (rapid hover)
+    const isMovingToAnotherMessage = relatedTarget && 
+      !containerRef.current?.contains(relatedTarget) && 
+      !actionsRef.current?.contains(relatedTarget) &&
+      (relatedTarget as Element)?.closest('[id^="message-"]') !== null;
+    
+    // If moving to another message or no dropdowns open and not moving to actions, hide quickly
+    if (isMovingToAnotherMessage) {
+      // Hide immediately when moving to another message
       setShowActions(false);
+    } else if (openDropdownsCountRef.current === 0 && !isMovingToActions) {
+      // Small delay only when moving away normally
+      hideActionsTimeoutRef.current = setTimeout(() => {
+        setShowActions(false);
+      }, 100);
     }
   };
 
@@ -163,18 +167,25 @@ export function MessageItem({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content || '');
-    setShowMenu(false);
   };
 
   // Use optimistic reactions if available, otherwise use message reactions
   const reactionsToUse = optimisticReactions || message.reactions;
 
+  // Group reactions if there is 1 or more reactions
+  // Group reactions by emoji
   const groupedReactions = reactionsToUse?.reduce((acc, r) => {
     const emoji = (r as any).emoji || r.reaction;
     if (!acc[emoji]) acc[emoji] = [];
     acc[emoji].push(r);
     return acc;
-  }, {} as Record<string, typeof reactionsToUse>);
+  }, {} as Record<string, typeof reactionsToUse>) || null;
+
+  // Get unique emojis and limit to 3 for preview
+  const uniqueEmojis = groupedReactions ? Object.keys(groupedReactions) : [];
+  const previewEmojis = uniqueEmojis.slice(0, 3);
+  const remainingEmojis = uniqueEmojis.slice(3);
+  const remainingCount = remainingEmojis.reduce((sum, emoji) => sum + ((groupedReactions && groupedReactions[emoji])?.length || 0), 0);
 
   const hasUserReacted = (emoji: string) => {
     return reactionsToUse?.some(r => {
@@ -183,43 +194,96 @@ export function MessageItem({
     });
   };
 
-  // Handle optimistic reaction update
+  // Handle optimistic reaction update - users can only have one reaction at a time
   const handleReaction = (emoji: string) => {
     if (!currentUserId) return;
     
-    const currentReactions = reactionsToUse || [];
-    const hasReacted = hasUserReacted(emoji);
+    // Get current reactions from message (not optimistic) to ensure we have the base state
+    const baseReactions = message.reactions || [];
+    const currentOptimistic = optimisticReactions;
     
-    if (hasReacted) {
-      // Remove reaction optimistically
-      const updated = currentReactions.filter((r: any) => {
-        const reactionEmoji = (r as any).emoji || r.reaction;
-        return !(reactionEmoji === emoji && r.user_id === currentUserId);
-      });
-      setOptimisticReactions(updated.length > 0 ? updated : null);
-      onRemoveReaction?.(message.id, emoji);
+    // Use optimistic if available, otherwise use base
+    const currentReactions = currentOptimistic || baseReactions;
+    const userReaction = currentReactions.find((r: any) => r.user_id === currentUserId);
+    const clickedEmoji = emoji;
+    
+    if (userReaction) {
+      const userEmoji = (userReaction as any).emoji || userReaction.reaction;
+      
+      if (userEmoji === clickedEmoji) {
+        // User clicked their own reaction - remove it
+        const updated = currentReactions.filter((r: any) => r.user_id !== currentUserId);
+        setOptimisticReactions(updated.length > 0 ? updated : null);
+        onRemoveReaction?.(message.id, clickedEmoji);
+      } else {
+        // User has a different reaction - replace it
+        const updated = currentReactions
+          .filter((r: any) => r.user_id !== currentUserId) // Remove old reaction
+          .concat([{
+            id: `optimistic-${Date.now()}`,
+            message_id: message.id,
+            user_id: currentUserId,
+            reaction: clickedEmoji,
+            emoji: clickedEmoji,
+            created_at: new Date().toISOString(),
+            user: { id: currentUserId, display_name: 'You', username: 'you' },
+          } as any]);
+        setOptimisticReactions(updated);
+        // Remove old reaction and add new one
+        onRemoveReaction?.(message.id, userEmoji);
+        onReaction?.(message.id, clickedEmoji);
+      }
     } else {
-      // Add reaction optimistically
+      // User has no reaction - add new one
       const newReaction = {
         id: `optimistic-${Date.now()}`,
         message_id: message.id,
         user_id: currentUserId,
-        reaction: emoji,
-        emoji: emoji,
+        reaction: clickedEmoji,
+        emoji: clickedEmoji,
         created_at: new Date().toISOString(),
         user: { id: currentUserId, display_name: 'You', username: 'you' },
       };
       setOptimisticReactions([...currentReactions, newReaction as any]);
-      onReaction?.(message.id, emoji);
+      onReaction?.(message.id, clickedEmoji);
     }
   };
 
   // Sync optimistic reactions with actual reactions when message updates
   useEffect(() => {
-    if (message.reactions && !optimisticReactions) {
-      setOptimisticReactions(null);
+    if (!currentUserId) return;
+    
+    // When message reactions update from server, check if they match our optimistic state
+    if (message.reactions && optimisticReactions) {
+      // Find the user's reaction in optimistic state
+      const optimisticUserReaction = optimisticReactions.find((r: any) => r.user_id === currentUserId);
+      
+      if (!optimisticUserReaction) {
+        // We optimistically removed the reaction - check if server confirms
+        const serverUserReaction = message.reactions.find((r: any) => r.user_id === currentUserId);
+        if (!serverUserReaction) {
+          // Server confirms removal - clear optimistic state
+          setOptimisticReactions(null);
+        }
+        // Otherwise keep optimistic state (server hasn't caught up yet)
+      } else {
+        // We optimistically added/changed a reaction - check if server confirms
+        const optimisticEmoji = (optimisticUserReaction as any).emoji || optimisticUserReaction.reaction;
+        const serverUserReaction = message.reactions.find((r: any) => r.user_id === currentUserId);
+        
+        if (serverUserReaction) {
+          const serverEmoji = (serverUserReaction as any).emoji || serverUserReaction.reaction;
+          // Only clear if the server reaction matches our optimistic reaction
+          if (serverEmoji === optimisticEmoji) {
+            // Server confirms our optimistic state - clear it to use server data
+            setOptimisticReactions(null);
+          }
+          // Otherwise keep optimistic state (server has different/old reaction)
+        }
+        // If no server reaction yet, keep optimistic state
+      }
     }
-  }, [message.reactions]);
+  }, [message.reactions, optimisticReactions, currentUserId]);
 
   const getBorderRadius = () => {
     if (isFirstInGroup && isLastInGroup) {
@@ -268,24 +332,19 @@ export function MessageItem({
   const readStatus = getReadStatus();
   const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
 
-  // Check if we should show grouped reactions (more than 2 types)
-  const reactionTypes = groupedReactions ? Object.keys(groupedReactions) : [];
-  const shouldGroupReactions = reactionTypes.length > 2;
-  const totalReactionCount = message.reactions?.length || 0;
-
-  // Determine if menus are open for z-index management
-  const hasOpenMenus = showActions || showReactions || showMenu || showReactionDetails;
+  // Get all reactions in a flat list for the dropdown
+  const allReactions = reactionsToUse || [];
+  const totalReactionCount = allReactions.length;
 
   return (
     <div 
       ref={containerRef}
       className={`group flex gap-2 px-3 ${isOwn ? 'flex-row-reverse' : ''} ${
         isFirstInGroup ? 'mt-3' : 'mt-1.5'
-      } relative`}
-      style={{ zIndex: hasOpenMenus ? 10000 : 'auto' }}
+      } ${reactionsToUse && reactionsToUse.length > 0 ? 'mb-5' : ''} relative`}
       id={`message-${message.id}`}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={(e) => handleMouseLeave(e)}
     >
       {/* Avatar */}
       {showAvatar && isFirstInGroup && !isOwn && (
@@ -384,6 +443,121 @@ export function MessageItem({
                   </div>
                 </>
               )}
+
+              {/* Reactions - Positioned to half-overlap bottom of bubble */}
+              {reactionsToUse && reactionsToUse.length > 0 && (
+                <div 
+                  ref={reactionsContainerRef}
+                  className={`absolute ${isOwn ? 'right-2' : 'left-2'} flex flex-wrap gap-1`}
+                  style={{ 
+                    zIndex: 100,
+                    bottom: '-15px', // Half-overlap: half outside, half inside
+                  }}
+                >
+                  {/* Render reactions - show up to 3 unique emojis in one pill, then "+X more" if needed */}
+                  {groupedReactions && uniqueEmojis.length > 0 ? (
+                    <>
+                      {/* Show grouped reactions pill with up to 3 emojis */}
+                      <DropdownButton
+                        placement={isOwn ? 'bottom-end' : 'bottom-start'}
+                        onToggle={(isOpen) => {
+                          if (isOpen) {
+                            openDropdownsCountRef.current++;
+                            setShowActions(true);
+                            clearAllTimeouts();
+                          } else {
+                            openDropdownsCountRef.current = Math.max(0, openDropdownsCountRef.current - 1);
+                          }
+                        }}
+                        toggleContent={
+                          <button
+                            className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-all text-xs backdrop-blur-sm border ${
+                              previewEmojis.some(emoji => hasUserReacted(emoji))
+                                ? 'bg-purple-500/30 border-purple-400/50 shadow-md'
+                                : 'bg-black/40 border-zinc-600/50 hover:bg-black/60 hover:border-zinc-500/70'
+                            }`}
+                          >
+                            {/* Show up to 3 emojis */}
+                            {previewEmojis.map((emoji) => {
+                              const reactions = groupedReactions[emoji];
+                              return (
+                                <span key={emoji} className="flex items-center gap-0.5">
+                                  <span>{emoji}</span>
+                                  {reactions && reactions.length > 1 && (
+                                    <span className={`text-[9px] font-medium ${
+                                      hasUserReacted(emoji) ? 'text-purple-200' : 'text-gray-300'
+                                    }`}>
+                                      {reactions.length}
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                            {/* Show "+X more" if there are more than 3 unique emojis */}
+                            {remainingEmojis.length > 0 && (
+                              <span className="text-[10px] font-medium text-gray-300 ml-0.5">
+                                +{remainingCount}
+                              </span>
+                            )}
+                          </button>
+                        }
+                      >
+                            {({ closeDropdown }: { closeDropdown: () => void }) => (
+                              <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar min-w-[240px]">
+                                <div className="p-2">
+                                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 mb-1.5 border-b border-zinc-800/50">
+                                    Reactions ({totalReactionCount})
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {allReactions.map((reaction: any) => {
+                                      const user = (reaction as any).user || message.sender;
+                                      const reactionEmoji = (reaction as any).emoji || reaction.reaction;
+                                      const isCurrentUser = reaction.user_id === currentUserId;
+                                      
+                                      return (
+                                        <div 
+                                          key={reaction.id}
+                                          className="flex items-center justify-between px-2 py-1 hover:bg-white/5 rounded transition-colors group"
+                                        >
+                                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <span className="text-sm flex-shrink-0">{reactionEmoji}</span>
+                                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+                                              {(user?.display_name || user?.username || 'U')[0].toUpperCase()}
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              <span className="text-xs text-white font-medium truncate">
+                                                {isCurrentUser ? 'You' : (user?.display_name || user?.username || 'Unknown')}
+                                              </span>
+                                              <span className="text-[9px] text-gray-500 flex-shrink-0">
+                                                {formatReactionTime(reaction.created_at)}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {isCurrentUser && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleReaction(reactionEmoji);
+                                                closeDropdown();
+                                              }}
+                                              className="ml-1.5 w-5 h-5 rounded hover:bg-red-500/20 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                              title="Remove reaction"
+                                            >
+                                              <FontAwesomeIcon icon={faTimes} className="text-red-400 text-[10px]" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </DropdownButton>
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* Quick Actions - Centered vertically with proper hover behavior */}
@@ -391,33 +565,83 @@ export function MessageItem({
               <div 
                 ref={actionsRef}
                 className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
-                  showActions || showMenu || showReactions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  showActions || openDropdownsCountRef.current > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 } px-2`}
-                style={{ zIndex: 10001 }}
+                style={{ zIndex: 10 }}
                 onMouseEnter={() => {
                   clearAllTimeouts();
                   // Show immediately when hovering over actions bar (no delay)
                   setShowActions(true);
                 }}
-                onMouseLeave={() => {
+                onMouseLeave={(e) => {
                   clearAllTimeouts();
-                  // Hide immediately when leaving actions bar
-                  if (!showReactions && !showMenu) {
+                  // Check if mouse is moving back to container
+                  const relatedTarget = e.relatedTarget as Node;
+                  const isMovingToContainer = containerRef.current?.contains(relatedTarget);
+                  
+                  // Check if moving to another message
+                  const isMovingToAnotherMessage = relatedTarget && 
+                    !containerRef.current?.contains(relatedTarget) && 
+                    (relatedTarget as Element)?.closest('[id^="message-"]') !== null;
+                  
+                  // If moving to another message, hide immediately
+                  if (isMovingToAnotherMessage) {
                     setShowActions(false);
+                  } else if (openDropdownsCountRef.current === 0 && !isMovingToContainer) {
+                    // Small delay only when moving away normally
+                    hideActionsTimeoutRef.current = setTimeout(() => {
+                      setShowActions(false);
+                    }, 100);
                   }
                 }}
               >
                 <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
-                  <button
-                    onClick={() => {
-                      setShowReactions(!showReactions);
-                      if (showMenu) setShowMenu(false);
+                  {/* Reactions Picker */}
+                  <DropdownButton
+                    placement={isOwn ? 'top-start' : 'top-start'}
+                    onToggle={(isOpen) => {
+                      if (isOpen) {
+                        openDropdownsCountRef.current++;
+                        setShowActions(true);
+                      } else {
+                        openDropdownsCountRef.current = Math.max(0, openDropdownsCountRef.current - 1);
+                        // Hide actions if all dropdowns are closed and mouse is not over
+                        if (openDropdownsCountRef.current === 0) {
+                          clearAllTimeouts();
+                          hideActionsTimeoutRef.current = setTimeout(() => {
+                            setShowActions(false);
+                          }, 150);
+                        }
+                      }
                     }}
-                    className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                    title="Add reaction"
+                    toggleContent={
+                      <button
+                        className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+                        title="Add reaction"
+                      >
+                        <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs" />
+                      </button>
+                    }
                   >
-                    <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs" />
-                  </button>
+                    {({ closeDropdown }: { closeDropdown: () => void }) => (
+                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
+                        <div className="flex gap-1">
+                          {QUICK_REACTIONS.map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => {
+                                handleReaction(emoji);
+                                closeDropdown();
+                              }}
+                              className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg hover:scale-110"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </DropdownButton>
                   
                   {onReply && (
                     <button
@@ -439,103 +663,41 @@ export function MessageItem({
                     </button>
                   )}
                   
-                  <button
-                    onClick={() => {
-                      setShowMenu(!showMenu);
-                      if (showReactions) setShowReactions(false);
+                  {/* Actions Menu */}
+                  <DropdownButton
+                    placement={isOwn ? 'top-end' : 'top-start'}
+                    onToggle={(isOpen) => {
+                      if (isOpen) {
+                        openDropdownsCountRef.current++;
+                        setShowActions(true);
+                      } else {
+                        openDropdownsCountRef.current = Math.max(0, openDropdownsCountRef.current - 1);
+                        // Hide actions if all dropdowns are closed and mouse is not over
+                        if (openDropdownsCountRef.current === 0) {
+                          clearAllTimeouts();
+                          hideActionsTimeoutRef.current = setTimeout(() => {
+                            setShowActions(false);
+                          }, 150);
+                        }
+                      }
                     }}
-                    className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                    title="More"
+                    toggleContent={
+                      <button
+                        className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+                        title="More"
+                      >
+                        <FontAwesomeIcon icon={faEllipsisV} className="text-gray-400 text-xs" />
+                      </button>
+                    }
                   >
-                    <FontAwesomeIcon icon={faEllipsisV} className="text-gray-400 text-xs" />
-                  </button>
-                </div>
-
-                {/* Reactions Picker - Fixed hover behavior */}
-                <AnimatePresence>
-                  {showReactions && (
-                    <motion.div
-                      ref={reactionsRef}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.1 }}
-                      className={`absolute ${isOwn ? 'right-0' : 'left-0'}`}
-                      style={{ 
-                        zIndex: 10002,
-                        bottom: '100%',
-                        marginBottom: '8px'
-                      }}
-                      onMouseEnter={() => {
-                        clearAllTimeouts();
-                        setShowReactions(true);
-                        setShowActions(true);
-                      }}
-                      onMouseLeave={() => {
-                        clearAllTimeouts();
-                        // Hide immediately when leaving reactions picker
-                        setShowReactions(false);
-                        if (!showMenu) {
-                          setShowActions(false);
-                        }
-                      }}
-                    >
-                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
-                        <div className="flex gap-1">
-                          {QUICK_REACTIONS.map(emoji => (
-                            <button
-                              key={emoji}
-                              onClick={() => {
-                                onReaction?.(message.id, emoji);
-                                setShowReactions(false);
-                              }}
-                              className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg hover:scale-110"
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Actions Menu - Fixed hover behavior */}
-                <AnimatePresence>
-                  {showMenu && (
-                    <motion.div
-                      ref={menuRef}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.1 }}
-                      className={`absolute ${isOwn ? 'right-0' : 'left-0'} min-w-[180px]`}
-                      style={{ 
-                        zIndex: 100,
-                        bottom: '100%',
-                        marginBottom: '8px'
-                      }}
-                      onMouseEnter={() => {
-                        clearAllTimeouts();
-                        setShowMenu(true);
-                        setShowActions(true);
-                      }}
-                      onMouseLeave={() => {
-                        clearAllTimeouts();
-                        // Hide immediately when leaving menu dropdown
-                        setShowMenu(false);
-                        if (!showReactions) {
-                          setShowActions(false);
-                        }
-                      }}
-                    >
-                      <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden">
+                    {({ closeDropdown }: { closeDropdown: () => void }) => (
+                      <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[180px]">
                         {[
                           { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false },
-                          onBookmark && { icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); setShowMenu(false); }, danger: false },
-                          onPin && { icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); setShowMenu(false); }, danger: false },
-                          { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => setShowMenu(false), danger: false },
-                          isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); setShowMenu(false); }, danger: true },
+                          onBookmark && { icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); closeDropdown(); }, danger: false },
+                          onPin && { icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); closeDropdown(); }, danger: false },
+                          { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => closeDropdown(), danger: false },
+                          isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); closeDropdown(); }, danger: true },
                         ].filter(Boolean).map((action: any) => (
                           <button
                             key={action.label}
@@ -549,112 +711,12 @@ export function MessageItem({
                           </button>
                         ))}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    )}
+                  </DropdownButton>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Reactions - GROUPED OR INDIVIDUAL */}
-          {groupedReactions && Object.keys(groupedReactions).length > 0 && (
-            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end mr-2' : 'ml-2'} relative`}>
-              {shouldGroupReactions ? (
-                // Grouped view for 3+ reaction types
-                <button
-                  onClick={() => setShowReactionDetails(!showReactionDetails)}
-                  className="px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors text-xs bg-zinc-800/70 border border-zinc-700/50 hover:bg-zinc-700"
-                >
-                  <div className="flex -space-x-1">
-                    {reactionTypes.slice(0, 3).map((emoji, i) => (
-                      <span key={i} className="text-xs">{emoji}</span>
-                    ))}
-                  </div>
-                  <span className="text-[10px] font-medium text-gray-400">
-                    {totalReactionCount}
-                  </span>
-                </button>
-              ) : (
-                // Individual pills for 1-2 reaction types
-                <>
-                  {Object.entries(groupedReactions).map(([emoji, reactions]) => (
-                    <button
-                      key={emoji}
-                      onClick={() => {
-                        if (hasUserReacted(emoji)) {
-                          onRemoveReaction?.(message.id, emoji);
-                        } else {
-                          onReaction?.(message.id, emoji);
-                        }
-                      }}
-                      className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors text-xs ${
-                        hasUserReacted(emoji)
-                          ? 'bg-purple-500/20 border border-purple-500/40'
-                          : 'bg-zinc-800/70 border border-zinc-700/50 hover:bg-zinc-700'
-                      }`}
-                    >
-                      <span>{emoji}</span>
-                      <span className={`text-[10px] font-medium ${
-                        hasUserReacted(emoji) ? 'text-purple-400' : 'text-gray-400'
-                      }`}>
-                        {reactions?.length}
-                      </span>
-                    </button>
-                  ))}
-                </>
-              )}
-
-              {/* Reaction Details Dropdown */}
-              <AnimatePresence>
-                {showReactionDetails && shouldGroupReactions && (
-                  <motion.div
-                    ref={reactionDetailsRef}
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-[150] min-w-[220px]`}
-                  >
-                    <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
-                      <div className="p-2">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1 mb-1">
-                          Reactions ({totalReactionCount})
-                        </div>
-                        {Object.entries(groupedReactions).map(([emoji, reactions]) => (
-                          <div key={emoji} className="mb-2 last:mb-0">
-                            <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/30 rounded-lg mb-1">
-                              <span className="text-lg">{emoji}</span>
-                              <span className="text-xs text-gray-400">{reactions?.length}</span>
-                            </div>
-                            {reactions?.map((reaction: any) => {
-                              const user = (reaction as any).user || message.sender;
-                              return (
-                                <div 
-                                  key={reaction.id}
-                                  className="flex items-center justify-between px-3 py-1.5 hover:bg-white/5 rounded transition-colors"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">
-                                      {(user?.display_name || user?.username || 'U')[0].toUpperCase()}
-                                    </div>
-                                    <span className="text-xs text-white font-medium">
-                                      {user?.display_name || user?.username || 'Unknown'}
-                                    </span>
-                                  </div>
-                                  <span className="text-[10px] text-gray-500">
-                                    {formatReactionTime(reaction.created_at)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
         </div>
       </div>
     </div>
