@@ -314,25 +314,31 @@ export function MessagesList({
 
             {/* Messages in this date group */}
             <AnimatePresence initial={false} mode="popLayout">
-              {group.messages.map(({ message, isFirstInGroup, isLastInGroup, isOptimistic }) => {
+              {group.messages.map(({ message, isFirstInGroup, isLastInGroup }) => {
                 const isOwn = message.sender_id === currentUserId;
+                
+                // Create stable key for smooth transition from optimistic to real
+                // Use content + sender + created_at so React sees it as same component
+                const stableKey = `${message.content}-${message.sender_id}-${message.created_at}`;
 
                 return (
                   <motion.div
-                    key={message.id || `optimistic-${message.created_at}`}
-                    layout
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ 
-                      opacity: isOptimistic ? 0.7 : 1, 
-                      y: 0, 
-                      scale: 1 
+                    key={stableKey}
+                    initial={{ 
+                      opacity: 0,
                     }}
-                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                    animate={{ 
+                      opacity: 1,
+                    }}
+                    exit={{ 
+                      opacity: 0,
+                      transition: { duration: 0.15 } 
+                    }}
                     transition={{ 
-                      type: 'spring',
-                      stiffness: 500,
-                      damping: 35,
-                      mass: 0.5
+                      opacity: { 
+                        duration: 0.2,
+                        ease: [0.16, 1, 0.3, 1]
+                      }
                     }}
                   >
                     <MessageItem

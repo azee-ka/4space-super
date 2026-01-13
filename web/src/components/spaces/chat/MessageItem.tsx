@@ -31,6 +31,16 @@ interface MessageItemProps {
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 // Custom WhatsApp-style tick components
+const SingleTick = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 18 12" fill="none" className={className || "w-[18px] h-[12px]"} preserveAspectRatio="xMidYMid meet">
+    <path d="M2 6L5 9L13 1" 
+          stroke="currentColor" 
+          strokeWidth="1.8" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"/>
+  </svg>
+);
+
 const DoubleTick = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 18 12" fill="none" className={className || "w-[18px] h-[12px]"} preserveAspectRatio="xMidYMid meet">
     <path d="M2 6L5 9L13 1" 
@@ -171,6 +181,18 @@ export function MessageItem({
   const getReadStatus = () => {
     if (!isOwn || message.deleted_at) return null;
     
+    // Check if message is still sending (optimistic message)
+    const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
+    
+    if (isOptimistic) {
+      return {
+        component: SingleTick,
+        color: 'text-gray-500',
+        title: 'Sending...'
+      };
+    }
+    
+    // Message is sent - show double tick
     const hasBeenRead = message.read_receipts && message.read_receipts.length > 0;
     
     return {
@@ -181,6 +203,7 @@ export function MessageItem({
   };
 
   const readStatus = getReadStatus();
+  const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
 
   // Check if we should show grouped reactions (more than 2 types)
   const reactionTypes = groupedReactions ? Object.keys(groupedReactions) : [];
@@ -226,9 +249,11 @@ export function MessageItem({
 
           {/* Message Bubble */}
           <div className="relative group/msg">
-            <div className={`relative ${getBorderRadius()} ${getBubbleColor()} px-3 py-1.5 ${
-              message.deleted_at ? 'opacity-50' : ''
-            } shadow-lg`}>
+            <div 
+              className={`relative ${getBorderRadius()} ${getBubbleColor()} px-3 py-1.5 ${
+                message.deleted_at ? 'opacity-50' : ''
+              } shadow-lg`}
+            >
               {/* Reply To - Inside bubble */}
               {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
                 <button
@@ -273,20 +298,32 @@ export function MessageItem({
                       {formatTime(message.created_at)}
                     </span>
                     {readStatus && (
-                      <div className="flex items-center" title={readStatus.title}>
-                        <readStatus.component className={`${readStatus.color} w-3.5 h-2.5`} />
-                      </div>
+                      <motion.div 
+                        className="flex items-center" 
+                        title={readStatus.title}
+                        key={isOptimistic ? 'sending' : 'sent'}
+                        initial={{ scale: 0.9, opacity: 0.8 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 35,
+                          mass: 0.5
+                        }}
+                      >
+                        <readStatus.component className={`${readStatus.color} w-3.5 h-2.5 transition-colors duration-300`} />
+                      </motion.div>
                     )}
                   </div>
                 </>
               )}
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions - Centered vertically */}
             {!message.deleted_at && (
               <div 
                 ref={actionsRef}
-                className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
+                className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
                   showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 } transition-opacity px-2 z-20`}
                 onMouseEnter={() => setShowActions(true)}
@@ -347,7 +384,7 @@ export function MessageItem({
                       initial={{ opacity: 0, scale: 0.9, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                      className="absolute top-full mt-2 left-0 z-50"
+                      className="absolute top-full mt-2 left-0 z-[100]"
                       onMouseLeave={(e) => {
                         const relatedTarget = e.relatedTarget as HTMLElement;
                         if (!actionsRef.current?.contains(relatedTarget)) {
@@ -380,7 +417,7 @@ export function MessageItem({
                   {showMenu && (
                     <motion.div
                       ref={menuRef}
-                      initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9, y: -10 }}
                       className="absolute top-full mt-2 left-0 z-50 min-w-[180px]"
@@ -474,7 +511,7 @@ export function MessageItem({
                     initial={{ opacity: 0, scale: 0.95, y: -10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-50 min-w-[220px]`}
+                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-[100] min-w-[220px]`}
                   >
                     <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
                       <div className="p-2">

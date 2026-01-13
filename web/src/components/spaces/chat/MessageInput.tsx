@@ -446,7 +446,7 @@ export function MessageInput({
                 minHeight={40}
                 disabled={disabled}
                 autoFocus
-                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none py-2 px-1 text-sm"
+                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:ring-offset-0 resize-none py-2 px-1 text-sm"
               />
             </div>
 

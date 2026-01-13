@@ -50,7 +50,10 @@ const CustomTextarea = forwardRef<HTMLTextAreaElement, CustomTextareaProps>(
           maxHeight: `${maxHeight}px`,
           overflowY: "auto",
           resize: "none",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
+          outline: "none !important",
+          border: "none !important",
+          boxShadow: "none !important",
         }}
         {...props}
       />
