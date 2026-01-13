@@ -29,7 +29,7 @@ export function useRealtimeChat(
   const [typingUsers, setTypingUsers] = useState<Map<string, any>>(new Map());
   const [onlineUsers, setOnlineUsers] = useState<Map<string, any>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!enabled || !roomId || !spaceId || !userId) return;
@@ -76,13 +76,13 @@ export function useRealtimeChat(
           queryClient.setQueryData(messageKeys.roomMessages(roomId), (old: any) => {
             if (!old?.pages) return old;
             
-            // Check if this is replacing an optimistic message
-            const exists = old.pages.some((page: Message[]) =>
+            // Check if message already exists by ID (real message already in cache)
+            const existsById = old.pages.some((page: Message[]) =>
               page.some(msg => msg.id === enrichedMessage.id)
             );
             
-            if (exists) {
-              console.log('[Realtime] Replacing optimistic with real message');
+            if (existsById) {
+              console.log('[Realtime] Message already exists, updating');
               return {
                 ...old,
                 pages: old.pages.map((page: Message[]) =>
@@ -93,24 +93,23 @@ export function useRealtimeChat(
               };
             }
 
-            // Check if this is an optimistic message that needs replacing (temp- or optimistic- prefix)
-            const hasOptimistic = old.pages.some((page: Message[]) =>
-              page.some(msg => 
+            // Check if this is an optimistic message that needs replacing
+            // Match by content and sender (for rapid sends, multiple optimistic messages)
+            const optimisticMatch = old.pages
+              .flatMap((page: Message[]) => page)
+              .find((msg: Message) => 
                 (msg.id.startsWith('optimistic-') || msg.id.startsWith('temp-')) && 
                 msg.content === enrichedMessage.content &&
                 msg.sender_id === enrichedMessage.sender_id
-              )
-            );
+              );
 
-            if (hasOptimistic) {
+            if (optimisticMatch) {
               console.log('[Realtime] Replacing optimistic message with real one');
               return {
                 ...old,
                 pages: old.pages.map((page: Message[]) =>
                   page.map(msg =>
-                    (msg.id.startsWith('optimistic-') || msg.id.startsWith('temp-')) && 
-                    msg.content === enrichedMessage.content &&
-                    msg.sender_id === enrichedMessage.sender_id
+                    msg.id === optimisticMatch.id
                       ? enrichedMessage
                       : msg
                   )
@@ -118,8 +117,7 @@ export function useRealtimeChat(
               };
             }
 
-            // Add as new message
-            console.log('[Realtime] Adding new message from other user');
+            // Add as new message - simple append, database order is correct
             // getRoomMessages returns messages in descending order (newest first)
             // Pages are reversed then flattened, so page[0] messages appear LAST (at bottom)
             // To add new message at bottom, append to page[0] (which will be last after reverse/flatten)
@@ -227,7 +225,7 @@ export function useRealtimeChat(
         
         if (user_id === userId) return; // Ignore self
         
-        setTypingUsers(prev => {
+        setTypingUsers((prev: Map<string, any>) => {
           const next = new Map(prev);
           if (typing) {
             next.set(user_id, { user_id, username, display_name, user: { username, display_name } });
@@ -258,7 +256,7 @@ export function useRealtimeChat(
         setOnlineUsers(users);
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
-        setOnlineUsers(prev => {
+        setOnlineUsers((prev: Map<string, any>) => {
           const next = new Map(prev);
           newPresences.forEach((presence: any) => {
             next.set(presence.user_id, {
@@ -271,7 +269,7 @@ export function useRealtimeChat(
         });
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        setOnlineUsers(prev => {
+        setOnlineUsers((prev: Map<string, any>) => {
           const next = new Map(prev);
           leftPresences.forEach((presence: any) => {
             next.delete(presence.user_id);

@@ -216,17 +216,88 @@ export function createMessageHooks(supabase: SupabaseClient) {
   
     return useMutation({
       mutationFn: (input: SendMessageInput) => messagesService.sendMessage(input),
-      // Industry standard: No optimistic updates - let realtime handle it
-      // This is faster and smoother because realtime updates are instant
-      onSuccess: () => {
-        // Just invalidate to ensure fresh data (realtime will update anyway)
-        queryClient.invalidateQueries({ 
-          queryKey: messageKeys.all 
+      
+      // Optimistic update: Show message immediately
+      onMutate: async (variables) => {
+        // Cancel outgoing refetches
+        await queryClient.cancelQueries({ 
+          queryKey: messageKeys.roomMessages(variables.room_id) 
         });
+
+        // Snapshot previous value
+        const previousMessages = queryClient.getQueryData(
+          messageKeys.roomMessages(variables.room_id)
+        );
+
+        // Get current user for optimistic message
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { previousMessages };
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        // Create optimistic message with temporary ID
+        const optimisticMessage: Message = {
+          id: `optimistic-${Date.now()}-${Math.random()}`,
+          room_id: variables.room_id,
+          space_id: variables.space_id,
+          sender_id: user.id,
+          content: variables.content,
+          message_type: variables.message_type || 'text',
+          reply_to_id: variables.reply_to_id,
+          is_pinned: false,
+          is_system: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          attachments: variables.attachments || [],
+          sender: profile || undefined,
+          read_receipts: [],
+          reactions: [],
+        };
+
+        // Add optimistic message to cache immediately
+        queryClient.setQueryData(
+          messageKeys.roomMessages(variables.room_id),
+          (old: any) => {
+            if (!old?.pages) return old;
+            
+            // Append to page[0] (newest messages)
+            const newPages = [...old.pages];
+            if (newPages[0]) {
+              newPages[0] = [...newPages[0], optimisticMessage];
+            } else {
+              newPages[0] = [optimisticMessage];
+            }
+            
+            return { ...old, pages: newPages };
+          }
+        );
+
+        return { previousMessages };
       },
-      onError: (error) => {
+
+      // On success: Real message will come via realtime and replace optimistic
+      onSuccess: () => {
+        // Real message will arrive via realtime and replace optimistic one
+        // No need to invalidate - realtime handles it
+      },
+
+      // On error: Rollback optimistic update
+      onError: (error, variables, context) => {
         console.error('Send message error:', error);
-        // Show user-friendly error (you can customize this)
+        
+        // Rollback optimistic update
+        if (context?.previousMessages) {
+          queryClient.setQueryData(
+            messageKeys.roomMessages(variables.room_id),
+            context.previousMessages
+          );
+        }
+        
+        // Show error
         alert('Failed to send message. Please try again.');
       },
     });
