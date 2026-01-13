@@ -335,7 +335,7 @@ const acceptInvitation = async (invitationId: string) => {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+    <div className={`h-screen flex flex-col ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
       <Navbar />
 
       <div className="flex-1 flex overflow-hidden pt-16">

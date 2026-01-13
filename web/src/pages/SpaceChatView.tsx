@@ -361,7 +361,7 @@ const handleSendMessage = useCallback((
 
   if (loadingSpace) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black">
+      <div className="h-screen flex items-center justify-center bg-transparent">
         <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
       </div>
     );
@@ -369,7 +369,7 @@ const handleSendMessage = useCallback((
 
   if (!space) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black">
+      <div className="h-screen flex items-center justify-center bg-transparent">
         <div className="text-center p-8 rounded-xl backdrop-blur-xl bg-black/70">
           <p className="text-white text-xl font-bold mb-6">Space not found</p>
           <button
@@ -387,7 +387,7 @@ const handleSendMessage = useCallback((
 // Replace the return statement in SpaceChatView.tsx starting from the main return
 
 return (
-  <div className="h-screen flex bg-black overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
+  <div className="h-screen flex bg-transparent overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
     {/* LEFT PANEL - Space Info + Rooms Sidebar */}
     <motion.div
       initial={{ x: -200, opacity: 0 }}

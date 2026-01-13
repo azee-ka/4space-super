@@ -9,7 +9,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Message } from '@4space/shared/src/services/messages.service';
-import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import CustomTextarea from '../../ui/CustomTextarea';
 
 interface MessageInputProps {
@@ -159,21 +160,22 @@ export function MessageInput({
     };
   }, [showEmojiPicker]);
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
+  const handleEmojiSelect = (emoji: any) => {
     if (!textareaRef.current) return;
     
     const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = message;
-    const newText = text.substring(0, start) + emojiData.emoji + text.substring(end);
+    const emojiText = emoji.native || emoji.emoji || '';
+    const newText = text.substring(0, start) + emojiText + text.substring(end);
     
     setMessage(newText);
     
     // Set cursor position after emoji
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + emojiData.emoji.length;
+      const newCursorPos = start + emojiText.length;
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
   };
@@ -421,11 +423,11 @@ export function MessageInput({
                     className="absolute bottom-full left-0 mb-2 z-50"
                     onMouseDown={(e) => e.preventDefault()}
                   >
-                    <EmojiPicker
-                        onEmojiClick={handleEmojiClick}
-                        width={350}
-                        height={400}
-                        theme={Theme.DARK}
+                    <Picker
+                      data={data}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="dark"
+                      previewPosition="none"
                     />
                   </motion.div>
                 )}
@@ -433,7 +435,7 @@ export function MessageInput({
             </div>
 
             {/* Textarea */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 items-end flex">
               <CustomTextarea
                 ref={textareaRef}
                 value={message}
@@ -446,7 +448,7 @@ export function MessageInput({
                 minHeight={40}
                 disabled={disabled}
                 autoFocus
-                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:ring-offset-0 resize-none py-2 px-1 text-sm"
+                className=" h-full w-full bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:ring-offset-0 resize-none py-3 px-1 text-sm"
               />
             </div>
 

@@ -7,10 +7,12 @@ import DropdownButton from '../../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faReply, faEdit, faTrash, faThumbtack, faBookmark, faEllipsisV,
-  faCopy, faForward, faSmile, faTimes,
+  faCopy, faForward, faSmile, faTimes, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import DOMPurify from 'dompurify';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
 interface MessageItemProps {
   message: Message;
@@ -75,10 +77,12 @@ export function MessageItem({
 }: MessageItemProps) {
   const [showActions, setShowActions] = useState(false);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const openDropdownsCountRef = useRef(0);
   const actionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const reactionsContainerRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // Use timeout refs to manage hover delays
   const showActionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,6 +108,9 @@ export function MessageItem({
       
       const isInsideActions = actionsRef.current?.contains(target);
       const isInsideContainer = containerRef.current?.contains(target);
+      const isInsideEmojiPicker = emojiPickerRef.current?.contains(target);
+      
+      if (isInsideEmojiPicker) return;
       
       if (!isInsideActions && !isInsideContainer && openDropdownsCountRef.current === 0) {
         setShowActions(false);
@@ -116,6 +123,27 @@ export function MessageItem({
       clearAllTimeouts();
     };
   }, []);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   const handleMouseEnter = () => {
     clearAllTimeouts();
@@ -213,7 +241,8 @@ export function MessageItem({
       if (userEmoji === clickedEmoji) {
         // User clicked their own reaction - remove it
         const updated = currentReactions.filter((r: any) => r.user_id !== currentUserId);
-        setOptimisticReactions(updated.length > 0 ? updated : null);
+        // Use empty array instead of null to track removal for sync logic
+        setOptimisticReactions(updated);
         onRemoveReaction?.(message.id, clickedEmoji);
       } else {
         // User has a different reaction - replace it
@@ -254,13 +283,14 @@ export function MessageItem({
     if (!currentUserId) return;
     
     // When message reactions update from server, check if they match our optimistic state
-    if (message.reactions && optimisticReactions) {
+    if (optimisticReactions !== null && optimisticReactions !== undefined) {
       // Find the user's reaction in optimistic state
       const optimisticUserReaction = optimisticReactions.find((r: any) => r.user_id === currentUserId);
       
-      if (!optimisticUserReaction) {
+      if (!optimisticUserReaction) {  
         // We optimistically removed the reaction - check if server confirms
-        const serverUserReaction = message.reactions.find((r: any) => r.user_id === currentUserId);
+        const serverReactions = message.reactions || [];
+        const serverUserReaction = serverReactions.find((r: any) => r.user_id === currentUserId);
         if (!serverUserReaction) {
           // Server confirms removal - clear optimistic state
           setOptimisticReactions(null);
@@ -269,7 +299,8 @@ export function MessageItem({
       } else {
         // We optimistically added/changed a reaction - check if server confirms
         const optimisticEmoji = (optimisticUserReaction as any).emoji || optimisticUserReaction.reaction;
-        const serverUserReaction = message.reactions.find((r: any) => r.user_id === currentUserId);
+        const serverReactions = message.reactions || [];
+        const serverUserReaction = serverReactions.find((r: any) => r.user_id === currentUserId);
         
         if (serverUserReaction) {
           const serverEmoji = (serverUserReaction as any).emoji || serverUserReaction.reaction;
@@ -406,7 +437,7 @@ export function MessageItem({
               ) : (
                 <>
                   <div 
-                    className="text-[15px] text-white leading-relaxed whitespace-pre-wrap break-words pb-1"
+                    className="text-[15px] text-white whitespace-pre-wrap break-words pb-0 leading-[1.3]"
                     dangerouslySetInnerHTML={{ 
                       __html: DOMPurify.sanitize(message.content || '', {
                         ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'p', 'br'],
@@ -416,9 +447,9 @@ export function MessageItem({
                     }}
                   />
 
-                  <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex items-center gap-1 mt-0 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {message.edited_at && (
-                      <span className="text-[9px] text-gray-400 italic">edited</span>
+                      <span className="text-[9px] text-white/40 italic">edited</span>
                     )}
                     <span className={`text-[10px] ${isOwn ? 'text-purple-200/70' : 'text-gray-400'}`}>
                       {formatTime(message.created_at)}
@@ -598,7 +629,7 @@ export function MessageItem({
                 <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
                   {/* Reactions Picker */}
                   <DropdownButton
-                    placement={isOwn ? 'top-start' : 'top-start'}
+                    placement={isOwn ? 'top-end' : 'top-start'}
                     onToggle={(isOpen) => {
                       if (isOpen) {
                         openDropdownsCountRef.current++;
@@ -624,7 +655,7 @@ export function MessageItem({
                     }
                   >
                     {({ closeDropdown }: { closeDropdown: () => void }) => (
-                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
+                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl relative">
                         <div className="flex gap-1">
                           {QUICK_REACTIONS.map(emoji => (
                             <button
@@ -638,7 +669,35 @@ export function MessageItem({
                               {emoji}
                             </button>
                           ))}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowEmojiPicker(!showEmojiPicker);
+                            }}
+                            className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-sm hover:scale-110 border border-zinc-600/50"
+                            title="More emojis"
+                          >
+                            <FontAwesomeIcon icon={faPlus} className="text-gray-400" />
+                          </button>
                         </div>
+                        {showEmojiPicker && (
+                          <div
+                            ref={emojiPickerRef}
+                            className="absolute bottom-full left-0 mb-2 z-50"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <Picker
+                              data={data}
+                              onEmojiSelect={(emoji: any) => {
+                                handleReaction(emoji.native);
+                                setShowEmojiPicker(false);
+                                closeDropdown();
+                              }}
+                              theme="dark"
+                              previewPosition="none"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </DropdownButton>
