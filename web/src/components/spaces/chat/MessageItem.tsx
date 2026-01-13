@@ -1,4 +1,4 @@
-// WhatsApp-Style Message Bubble - GROUPED REACTIONS & DROPDOWN
+// WhatsApp-Style Message Bubble - FIXED HOVER & Z-INDEX
 // web/src/components/spaces/chat/MessageItem.tsx
 
 import { useState, useRef, useEffect } from 'react';
@@ -76,49 +76,71 @@ export function MessageItem({
   const [showReactions, setShowReactions] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionDetails, setShowReactionDetails] = useState(false);
+  const [selectedReactionEmoji, setSelectedReactionEmoji] = useState<string | null>(null);
+  const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const reactionsRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const reactionDetailsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Use timeout refs to manage hover delays
+  const showActionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideActionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideReactionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideMenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAllTimeouts = () => {
+    if (showActionsTimeoutRef.current) clearTimeout(showActionsTimeoutRef.current);
+    if (hideActionsTimeoutRef.current) clearTimeout(hideActionsTimeoutRef.current);
+    if (hideReactionsTimeoutRef.current) clearTimeout(hideReactionsTimeoutRef.current);
+    if (hideMenuTimeoutRef.current) clearTimeout(hideMenuTimeoutRef.current);
+    showActionsTimeoutRef.current = null;
+    hideActionsTimeoutRef.current = null;
+    hideReactionsTimeoutRef.current = null;
+    hideMenuTimeoutRef.current = null;
+  };
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const isOutside = 
-        (!reactionsRef.current || !reactionsRef.current.contains(e.target as Node)) &&
-        (!menuRef.current || !menuRef.current.contains(e.target as Node)) &&
-        (!actionsRef.current || !actionsRef.current.contains(e.target as Node)) &&
-        (!reactionDetailsRef.current || !reactionDetailsRef.current.contains(e.target as Node));
+      const target = e.target as Node;
       
-      if (isOutside) {
+      const isInsideActions = actionsRef.current?.contains(target);
+      const isInsideReactions = reactionsRef.current?.contains(target);
+      const isInsideMenu = menuRef.current?.contains(target);
+      const isInsideReactionDetails = reactionDetailsRef.current?.contains(target);
+      const isInsideContainer = containerRef.current?.contains(target);
+      
+      if (!isInsideActions && !isInsideReactions && !isInsideMenu && !isInsideReactionDetails && !isInsideContainer) {
         setShowReactions(false);
         setShowMenu(false);
         setShowReactionDetails(false);
+        setShowActions(false);
       }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      clearAllTimeouts();
+    };
   }, []);
 
   const handleMouseEnter = () => {
-    setShowActions(true);
+    clearAllTimeouts();
+    // Add small delay before showing to prevent flicker when rapidly moving cursor
+    showActionsTimeoutRef.current = setTimeout(() => {
+      setShowActions(true);
+    }, 100);
   };
 
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-    if (!relatedTarget) {
+  const handleMouseLeave = () => {
+    clearAllTimeouts();
+    // Hide immediately when not hovering (no delay)
+    if (!showReactions && !showMenu) {
       setShowActions(false);
-      return;
     }
-    if (
-      (actionsRef.current && actionsRef.current.contains(relatedTarget)) ||
-      (reactionsRef.current && reactionsRef.current.contains(relatedTarget)) ||
-      (menuRef.current && menuRef.current.contains(relatedTarget))
-    ) {
-      return;
-    }
-    setShowActions(false);
   };
 
   const formatTime = (date: string) => {
@@ -144,19 +166,60 @@ export function MessageItem({
     setShowMenu(false);
   };
 
-  const groupedReactions = message.reactions?.reduce((acc, r) => {
+  // Use optimistic reactions if available, otherwise use message reactions
+  const reactionsToUse = optimisticReactions || message.reactions;
+
+  const groupedReactions = reactionsToUse?.reduce((acc, r) => {
     const emoji = (r as any).emoji || r.reaction;
     if (!acc[emoji]) acc[emoji] = [];
     acc[emoji].push(r);
     return acc;
-  }, {} as Record<string, typeof message.reactions>);
+  }, {} as Record<string, typeof reactionsToUse>);
 
   const hasUserReacted = (emoji: string) => {
-    return message.reactions?.some(r => {
+    return reactionsToUse?.some(r => {
       const reactionEmoji = (r as any).emoji || r.reaction;
       return reactionEmoji === emoji && r.user_id === currentUserId;
     });
   };
+
+  // Handle optimistic reaction update
+  const handleReaction = (emoji: string) => {
+    if (!currentUserId) return;
+    
+    const currentReactions = reactionsToUse || [];
+    const hasReacted = hasUserReacted(emoji);
+    
+    if (hasReacted) {
+      // Remove reaction optimistically
+      const updated = currentReactions.filter((r: any) => {
+        const reactionEmoji = (r as any).emoji || r.reaction;
+        return !(reactionEmoji === emoji && r.user_id === currentUserId);
+      });
+      setOptimisticReactions(updated.length > 0 ? updated : null);
+      onRemoveReaction?.(message.id, emoji);
+    } else {
+      // Add reaction optimistically
+      const newReaction = {
+        id: `optimistic-${Date.now()}`,
+        message_id: message.id,
+        user_id: currentUserId,
+        reaction: emoji,
+        emoji: emoji,
+        created_at: new Date().toISOString(),
+        user: { id: currentUserId, display_name: 'You', username: 'you' },
+      };
+      setOptimisticReactions([...currentReactions, newReaction as any]);
+      onReaction?.(message.id, emoji);
+    }
+  };
+
+  // Sync optimistic reactions with actual reactions when message updates
+  useEffect(() => {
+    if (message.reactions && !optimisticReactions) {
+      setOptimisticReactions(null);
+    }
+  }, [message.reactions]);
 
   const getBorderRadius = () => {
     if (isFirstInGroup && isLastInGroup) {
@@ -210,12 +273,16 @@ export function MessageItem({
   const shouldGroupReactions = reactionTypes.length > 2;
   const totalReactionCount = message.reactions?.length || 0;
 
+  // Determine if menus are open for z-index management
+  const hasOpenMenus = showActions || showReactions || showMenu || showReactionDetails;
+
   return (
     <div 
       ref={containerRef}
       className={`group flex gap-2 px-3 ${isOwn ? 'flex-row-reverse' : ''} ${
-        isFirstInGroup ? 'mt-2' : 'mt-0.5'
-      }`}
+        isFirstInGroup ? 'mt-3' : 'mt-1.5'
+      } relative`}
+      style={{ zIndex: hasOpenMenus ? 10000 : 'auto' }}
       id={`message-${message.id}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -290,7 +357,7 @@ export function MessageItem({
                     }}
                   />
 
-                  <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {message.edited_at && (
                       <span className="text-[9px] text-gray-400 italic">edited</span>
                     )}
@@ -319,28 +386,33 @@ export function MessageItem({
               )}
             </div>
 
-            {/* Quick Actions - Centered vertically */}
+            {/* Quick Actions - Centered vertically with proper hover behavior */}
             {!message.deleted_at && (
               <div 
                 ref={actionsRef}
                 className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
-                  showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                } transition-opacity px-2 z-20`}
-                onMouseEnter={() => setShowActions(true)}
-                onMouseLeave={(e) => {
-                  const relatedTarget = e.relatedTarget as HTMLElement;
-                  if (
-                    !containerRef.current?.contains(relatedTarget) &&
-                    !reactionsRef.current?.contains(relatedTarget) &&
-                    !menuRef.current?.contains(relatedTarget)
-                  ) {
+                  showActions || showMenu || showReactions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                } px-2`}
+                style={{ zIndex: 10001 }}
+                onMouseEnter={() => {
+                  clearAllTimeouts();
+                  // Show immediately when hovering over actions bar (no delay)
+                  setShowActions(true);
+                }}
+                onMouseLeave={() => {
+                  clearAllTimeouts();
+                  // Hide immediately when leaving actions bar
+                  if (!showReactions && !showMenu) {
                     setShowActions(false);
                   }
                 }}
               >
                 <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
                   <button
-                    onClick={() => setShowReactions(!showReactions)}
+                    onClick={() => {
+                      setShowReactions(!showReactions);
+                      if (showMenu) setShowMenu(false);
+                    }}
                     className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
                     title="Add reaction"
                   >
@@ -368,7 +440,10 @@ export function MessageItem({
                   )}
                   
                   <button
-                    onClick={() => setShowMenu(!showMenu)}
+                    onClick={() => {
+                      setShowMenu(!showMenu);
+                      if (showReactions) setShowReactions(false);
+                    }}
                     className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
                     title="More"
                   >
@@ -376,19 +451,32 @@ export function MessageItem({
                   </button>
                 </div>
 
-                {/* Reactions Picker */}
+                {/* Reactions Picker - Fixed hover behavior */}
                 <AnimatePresence>
                   {showReactions && (
                     <motion.div
                       ref={reactionsRef}
-                      initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                      className="absolute top-full mt-2 left-0 z-[100]"
-                      onMouseLeave={(e) => {
-                        const relatedTarget = e.relatedTarget as HTMLElement;
-                        if (!actionsRef.current?.contains(relatedTarget)) {
-                          setShowReactions(false);
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      className={`absolute ${isOwn ? 'right-0' : 'left-0'}`}
+                      style={{ 
+                        zIndex: 10002,
+                        bottom: '100%',
+                        marginBottom: '8px'
+                      }}
+                      onMouseEnter={() => {
+                        clearAllTimeouts();
+                        setShowReactions(true);
+                        setShowActions(true);
+                      }}
+                      onMouseLeave={() => {
+                        clearAllTimeouts();
+                        // Hide immediately when leaving reactions picker
+                        setShowReactions(false);
+                        if (!showMenu) {
+                          setShowActions(false);
                         }
                       }}
                     >
@@ -412,19 +500,32 @@ export function MessageItem({
                   )}
                 </AnimatePresence>
 
-                {/* Actions Menu */}
+                {/* Actions Menu - Fixed hover behavior */}
                 <AnimatePresence>
                   {showMenu && (
                     <motion.div
                       ref={menuRef}
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                      className="absolute top-full mt-2 left-0 z-50 min-w-[180px]"
-                      onMouseLeave={(e) => {
-                        const relatedTarget = e.relatedTarget as HTMLElement;
-                        if (!actionsRef.current?.contains(relatedTarget)) {
-                          setShowMenu(false);
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      className={`absolute ${isOwn ? 'right-0' : 'left-0'} min-w-[180px]`}
+                      style={{ 
+                        zIndex: 100,
+                        bottom: '100%',
+                        marginBottom: '8px'
+                      }}
+                      onMouseEnter={() => {
+                        clearAllTimeouts();
+                        setShowMenu(true);
+                        setShowActions(true);
+                      }}
+                      onMouseLeave={() => {
+                        clearAllTimeouts();
+                        // Hide immediately when leaving menu dropdown
+                        setShowMenu(false);
+                        if (!showReactions) {
+                          setShowActions(false);
                         }
                       }}
                     >
@@ -511,7 +612,7 @@ export function MessageItem({
                     initial={{ opacity: 0, scale: 0.95, y: -10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-[100] min-w-[220px]`}
+                    className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-2 z-[150] min-w-[220px]`}
                   >
                     <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
                       <div className="p-2">

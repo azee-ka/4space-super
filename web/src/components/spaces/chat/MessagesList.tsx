@@ -317,28 +317,52 @@ export function MessagesList({
               {group.messages.map(({ message, isFirstInGroup, isLastInGroup }) => {
                 const isOwn = message.sender_id === currentUserId;
                 
-                // Create stable key for smooth transition from optimistic to real
-                // Use content + sender + created_at so React sees it as same component
-                const stableKey = `${message.content}-${message.sender_id}-${message.created_at}`;
+                // Use message ID as key - each message (optimistic or real) has unique ID
+                // Smooth animation handles the transition when optimistic is replaced by real
+                const stableKey = message.id;
 
                 return (
                   <motion.div
                     key={stableKey}
+                    layout
                     initial={{ 
                       opacity: 0,
+                      y: 6,
+                      scale: 0.97,
                     }}
                     animate={{ 
                       opacity: 1,
+                      y: 0,
+                      scale: 1,
                     }}
                     exit={{ 
                       opacity: 0,
+                      y: -4,
+                      scale: 0.98,
                       transition: { duration: 0.15 } 
                     }}
                     transition={{ 
+                      layout: {
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 40,
+                        mass: 0.5
+                      },
                       opacity: { 
                         duration: 0.2,
-                        ease: [0.16, 1, 0.3, 1]
+                        ease: [0.22, 1, 0.36, 1]
+                      },
+                      y: {
+                        duration: 0.25,
+                        ease: [0.22, 1, 0.36, 1]
+                      },
+                      scale: {
+                        duration: 0.25,
+                        ease: [0.22, 1, 0.36, 1]
                       }
+                    }}
+                    style={{
+                      willChange: 'transform, opacity'
                     }}
                   >
                     <MessageItem
