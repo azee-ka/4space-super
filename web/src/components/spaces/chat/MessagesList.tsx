@@ -259,7 +259,7 @@ export function MessagesList({
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-black">
+      <div className="h-full flex items-center justify-center bg-transparent">
         <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
       </div>
     );
@@ -270,7 +270,7 @@ export function MessagesList({
       ref={containerRef}
       onScroll={handleScroll}
       data-messages-container
-      className="h-full overflow-y-auto bg-black"
+      className="h-full overflow-y-auto bg-transparent"
       style={{
         scrollbarWidth: 'thin',
         scrollbarColor: '#6b7280 transparent',

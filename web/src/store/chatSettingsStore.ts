@@ -3,11 +3,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface ChatTheme {
-  background: string;
-  messageBubbleShape: string;
+export type BackgroundType = 'solid' | 'gradient' | 'pattern' | 'image';
+export type BubbleShapePreset = 'square' | 'rounded' | 'pill' | 'extra-rounded' | 'custom';
+
+export interface ChatTheme {
+  // Background settings
+  backgroundType: BackgroundType;
+  backgroundColor: string; // solid color or gradient colors
+  backgroundColor2?: string; // for gradients
+  backgroundImage?: string; // base64 or URL
+  backgroundPattern?: string; // pattern name
+  
+  // Bubble settings
+  sentBubbleColor: string;
+  receivedBubbleColor: string;
+  bubbleShapePreset: BubbleShapePreset;
+  bubbleBorderRadius: number; // 0-24 for custom radius
   accentColor: string;
-  messagePattern: string;
+  
+  // Text colors for readability
+  sentTextColor?: string; // text color in sent bubbles
+  receivedTextColor?: string; // text color in received bubbles
 }
 
 interface ChatSettingsState {
@@ -68,10 +84,15 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
       fontSize: 14,
       messageDensity: 'comfortable',
       theme: {
-        background: 'black',
-        messageBubbleShape: 'rounded-xl',
-        accentColor: 'cyan',
-        messagePattern: 'none',
+        backgroundType: 'solid',
+        backgroundColor: '#000000',
+        sentBubbleColor: '#7c3aed', // Purple - original default
+        receivedBubbleColor: '#27272a',
+        bubbleShapePreset: 'pill',
+        bubbleBorderRadius: 12,
+        accentColor: 'purple',
+        sentTextColor: '#ffffff',
+        receivedTextColor: '#ffffff',
       },
       
       // Setters

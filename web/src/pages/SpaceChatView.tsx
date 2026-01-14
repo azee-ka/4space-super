@@ -11,12 +11,15 @@ import {
   faBolt, faCalendar, faFire, faBrain, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faChevronDown, faTrash,
   faCheck, faLayerGroup,
-  faFilter, faBold, faVolumeMute, faBellSlash, faEye, faEyeSlash, faUser
+  faFilter, faBold, faVolumeMute, faBellSlash, faEye, faEyeSlash, faUser,
+  faUpload, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
-import { useChatSettingsStore } from '../store/chatSettingsStore';
+import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset } from '../store/chatSettingsStore';
+import { getBackgroundStyle, getAmbientBackgroundStyle } from '../utils/themeUtils';
+import { patternBackgrounds } from '../utils/patternBackgrounds';
 import { useSpace } from '../hooks/useSpaces';
 import {
   useSpaceRooms,
@@ -36,6 +39,7 @@ import { useRealtimeChat } from '../hooks/useRealtime';
 import { RoomsList } from '../components/spaces/chat/RoomList';
 import { MessagesList } from '../components/spaces/chat/MessagesList';
 import { MessageInput } from '../components/spaces/chat/MessageInput';
+import { CustomizationTab } from '../components/spaces/chat/CustomizationTab';
 import DropdownButton from '../components/ui/DropdownButton';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { queryClient } from '../lib/queryClient';
@@ -48,7 +52,7 @@ export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { formattingButtonsEnabled } = useChatSettingsStore();
+  const { formattingButtonsEnabled, theme } = useChatSettingsStore();
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
   const [replyTo, setReplyTo] = useState<MessageType | null>(null);
@@ -57,16 +61,6 @@ export function SpaceChatView() {
   // Sidebar states
   const [leftSidebarTab, setLeftSidebarTab] = useState<LeftSidebarTab>('rooms');
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('chat');
-  
-  // Customization states
-  const [chatTheme, setChatTheme] = useState({
-    background: 'black',
-    messageBubbleShape: 'rounded-xl',
-    messageBubbleColor: 'cyan-500/10',
-    ownMessageColor: 'cyan-500/20',
-    textColor: 'white',
-    accentColor: 'cyan',
-  });
 
   // Fetch space data
   const { data: space, isLoading: loadingSpace } = useSpace(spaceId);
@@ -387,14 +381,23 @@ const handleSendMessage = useCallback((
 // Three Vertical Panels - NO NAVBAR, just panels from top to bottom
 // Replace the return statement in SpaceChatView.tsx starting from the main return
 
+  const centerPanelBackgroundStyle = getBackgroundStyle(theme);
+  const ambientBackgroundStyle = getAmbientBackgroundStyle(theme);
+
 return (
-  <div className="h-screen flex bg-transparent overflow-hidden" style={{ backgroundColor: chatTheme.background }}>
+  <div className="h-screen flex bg-transparent overflow-hidden relative">
+    {/* Ambient Background Overlay for Side Panels */}
+    <div 
+      className="absolute inset-0 pointer-events-none z-0"
+      style={ambientBackgroundStyle}
+    />
+    
     {/* LEFT PANEL - Space Info + Rooms Sidebar */}
     <motion.div
       initial={{ x: -200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/30 flex flex-col"
+      className="w-80 flex-shrink-0 bg-zinc-950/40 backdrop-blur-sm flex flex-col relative z-10"
     >
       {/* Space Info at Top of Left Panel */}
       <div className="flex-shrink-0 p-4">
@@ -454,7 +457,8 @@ return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 flex flex-col overflow-hidden"
+      className="flex-1 flex flex-col overflow-hidden relative z-10"
+      style={centerPanelBackgroundStyle}
     >
       {selectedRoomId ? (
         <>
@@ -512,7 +516,7 @@ return (
       initial={{ x: 200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/30 flex flex-col"
+      className="w-80 flex-shrink-0 bg-zinc-950/40 backdrop-blur-sm flex flex-col relative z-10"
     >
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (
@@ -599,8 +603,8 @@ return (
         <RightSidebar
           activeTab={rightSidebarTab}
           onTabChange={setRightSidebarTab}
-          theme={chatTheme}
-          onThemeChange={setChatTheme}
+          theme={theme}
+          onThemeChange={(newTheme) => useChatSettingsStore.getState().setTheme(newTheme)}
         />
       </div>
     </motion.div>
@@ -1254,198 +1258,3 @@ function LinksTab() {
   );
 }
 
-function CustomizationTab({ theme, onThemeChange }: any) {
-  const {
-    fontSize, setFontSize,
-    messageDensity, setMessageDensity,
-    theme: storeTheme, setTheme: setStoreTheme,
-  } = useChatSettingsStore();
-  
-  const handleThemeChange = (newTheme: any) => {
-    setStoreTheme(newTheme);
-    onThemeChange(newTheme);
-  };
-  
-  const bubbleShapes = [
-    { value: 'rounded-lg', label: 'Rounded', preview: 'rounded-lg' },
-    { value: 'rounded-xl', label: 'Pill', preview: 'rounded-xl' },
-    { value: 'rounded-2xl', label: 'Extra', preview: 'rounded-2xl' },
-    { value: 'rounded-none', label: 'Square', preview: 'rounded-none' },
-  ];
-  
-  const accentColors = [
-    { value: 'cyan', label: 'Cyan', color: 'bg-cyan-500', light: 'bg-cyan-400' },
-    { value: 'purple', label: 'Purple', color: 'bg-purple-500', light: 'bg-purple-400' },
-    { value: 'pink', label: 'Pink', color: 'bg-pink-500', light: 'bg-pink-400' },
-    { value: 'green', label: 'Green', color: 'bg-green-500', light: 'bg-green-400' },
-    { value: 'yellow', label: 'Yellow', color: 'bg-yellow-500', light: 'bg-yellow-400' },
-    { value: 'blue', label: 'Blue', color: 'bg-blue-500', light: 'bg-blue-400' },
-    { value: 'orange', label: 'Orange', color: 'bg-orange-500', light: 'bg-orange-400' },
-    { value: 'red', label: 'Red', color: 'bg-red-500', light: 'bg-red-400' },
-  ];
-  
-  const backgrounds = [
-    { value: 'black', label: 'Black', preview: 'bg-black' },
-    { value: 'dark', label: 'Dark', preview: 'bg-gray-900' },
-    { value: 'darker', label: 'Darker', preview: 'bg-zinc-950' },
-    { value: 'navy', label: 'Navy', preview: 'bg-slate-900' },
-  ];
-
-  const messagePatterns = [
-    { value: 'none', label: 'None', preview: 'bg-gradient-to-r from-zinc-800 to-zinc-800' },
-    { value: 'gradient', label: 'Gradient', preview: 'bg-gradient-to-br from-zinc-800 to-zinc-900' },
-    { value: 'subtle', label: 'Subtle', preview: 'bg-gradient-to-tr from-zinc-800 via-zinc-800 to-zinc-700' },
-  ];
-
-  return (
-    <div className="p-5 space-y-6">
-      {/* Theme Colors */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-          <FontAwesomeIcon icon={faPalette} className="text-purple-400" />
-          Background Theme
-        </h3>
-        
-        <div className="grid grid-cols-2 gap-2">
-          {backgrounds.map((bg) => (
-            <button
-              key={bg.value}
-              onClick={() => handleThemeChange({ ...theme, background: bg.value })}
-              className={`p-3 rounded-xl transition-all ${
-                theme.background === bg.value
-                  ? 'bg-purple-500/10 ring-2 ring-purple-500/50'
-                  : 'bg-zinc-800/50 hover:bg-zinc-800/70'
-              }`}
-            >
-              <div className={`w-full h-14 rounded-lg ${bg.preview} mb-2 shadow-lg`} />
-              <span className="text-xs text-gray-300 font-medium">{bg.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Accent Color */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3">Accent Color</h3>
-        <div className="grid grid-cols-4 gap-2">
-          {accentColors.map((accent) => (
-            <button
-              key={accent.value}
-              onClick={() => handleThemeChange({ ...theme, accentColor: accent.value })}
-              className={`p-3 rounded-xl transition-all ${
-                theme.accentColor === accent.value
-                  ? 'ring-2 ring-white/30 bg-zinc-800/70'
-                  : 'bg-zinc-800/50 hover:bg-zinc-800/70'
-              }`}
-            >
-              <div className={`w-full h-10 rounded-lg ${accent.color} mb-2 shadow-lg`} />
-              <span className="text-xs text-gray-300 font-medium">{accent.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Message Bubble Style */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3">Message Bubble Shape</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {bubbleShapes.map((shape) => (
-            <button
-              key={shape.value}
-              onClick={() => handleThemeChange({ ...theme, messageBubbleShape: shape.value })}
-              className={`p-3 rounded-xl transition-all ${
-                theme.messageBubbleShape === shape.value
-                  ? 'bg-cyan-500/10 ring-2 ring-cyan-500/50'
-                  : 'bg-zinc-800/50 hover:bg-zinc-800/70'
-              }`}
-            >
-              <div className={`w-full h-10 bg-cyan-500/20 ${shape.preview} mb-2`} />
-              <span className="text-xs text-gray-300 font-medium">{shape.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Message Pattern */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3">Message Background</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {messagePatterns.map((pattern) => (
-            <button
-              key={pattern.value}
-              onClick={() => handleThemeChange({ ...theme, messagePattern: pattern.value })}
-              className={`p-3 rounded-xl transition-all ${
-                theme.messagePattern === pattern.value
-                  ? 'ring-2 ring-purple-500/50 bg-zinc-800/70'
-                  : 'bg-zinc-800/50 hover:bg-zinc-800/70'
-              }`}
-            >
-              <div className={`w-full h-10 ${pattern.preview} rounded-lg mb-2`} />
-              <span className="text-xs text-gray-300 font-medium">{pattern.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Font Size Slider */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-white">Font Size</h3>
-          <span className="text-xs text-cyan-400 font-bold">{fontSize}px</span>
-        </div>
-        <input
-          type="range"
-          min="12"
-          max="18"
-          value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value))}
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-        />
-        <div className="flex justify-between mt-2 text-xs text-gray-500">
-          <span>Small</span>
-          <span>Medium</span>
-          <span>Large</span>
-        </div>
-      </div>
-
-      {/* Message Density */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3">Message Density</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {(['compact', 'comfortable', 'spacious'] as const).map((density) => (
-            <button
-              key={density}
-              onClick={() => setMessageDensity(density)}
-              className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                messageDensity === density
-                  ? 'bg-green-500/10 text-green-400 ring-2 ring-green-500/50'
-                  : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70 hover:text-white'
-              }`}
-            >
-              {density.charAt(0).toUpperCase() + density.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Reset Button */}
-      <button 
-        onClick={() => {
-          const defaultTheme = {
-            background: 'black',
-            messageBubbleShape: 'rounded-xl',
-            accentColor: 'cyan',
-            messagePattern: 'none',
-          };
-          handleThemeChange(defaultTheme);
-          setFontSize(14);
-          setMessageDensity('comfortable');
-        }}
-        className="w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-colors flex items-center justify-center gap-2"
-      >
-        <FontAwesomeIcon icon={faTrash} />
-        Reset to Defaults
-      </button>
-    </div>
-  );
-}

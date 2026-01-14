@@ -13,6 +13,7 @@ import type { Message } from '@4space/shared/src/services/messages.service';
 import DOMPurify from 'dompurify';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 
 interface MessageItemProps {
   message: Message;
@@ -75,6 +76,7 @@ export function MessageItem({
   onScrollToMessage,
   currentUserId,
 }: MessageItemProps) {
+  const { theme } = useChatSettingsStore();
   const [showActions, setShowActions] = useState(false);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -317,23 +319,56 @@ export function MessageItem({
   }, [message.reactions, optimisticReactions, currentUserId]);
 
   const getBorderRadius = () => {
+    const radius = theme.bubbleShapePreset === 'custom' 
+      ? theme.bubbleBorderRadius 
+      : theme.bubbleShapePreset === 'square' ? 0
+      : theme.bubbleShapePreset === 'rounded' ? 8
+      : theme.bubbleShapePreset === 'pill' ? 12
+      : theme.bubbleShapePreset === 'extra-rounded' ? 20
+      : 12;
+    
+    // For square bubbles, no grouping effect needed
+    if (radius === 0) {
+      return { borderRadius: '0px' };
+    }
+    
+    // Subtle reduction for connecting sides - only 2-3px less, much more subtle
+    const connectionReduction = Math.max(2, Math.min(3, radius * 0.15)); // 2-3px or 15% of radius, whichever is more appropriate
+    const connectionRadius = Math.max(radius - connectionReduction, radius * 0.7); // Never go below 70% of original
+    
     if (isFirstInGroup && isLastInGroup) {
-      return 'rounded-2xl';
+      // Single message - full rounded corners
+      return { borderRadius: `${radius}px` };
     }
     if (isFirstInGroup) {
-      return isOwn ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
+      // First in group - rounded on all sides except bottom (connection side)
+      return isOwn 
+        ? { borderRadius: `${radius}px ${radius}px ${connectionRadius}px ${radius}px` }
+        : { borderRadius: `${radius}px ${radius}px ${radius}px ${connectionRadius}px` };
     }
     if (isLastInGroup) {
-      return isOwn ? 'rounded-2xl rounded-tr-md' : 'rounded-2xl rounded-tl-md';
+      // Last in group - rounded on all sides except top (connection side)
+      return isOwn 
+        ? { borderRadius: `${connectionRadius}px ${radius}px ${radius}px ${radius}px` }
+        : { borderRadius: `${radius}px ${connectionRadius}px ${radius}px ${radius}px` };
     }
-    return isOwn ? 'rounded-2xl rounded-r-md' : 'rounded-2xl rounded-l-md';
+    // Middle in group - slightly less rounded on connection sides
+    return isOwn 
+      ? { borderRadius: `${connectionRadius}px ${radius}px ${connectionRadius}px ${radius}px` }
+      : { borderRadius: `${radius}px ${connectionRadius}px ${connectionRadius}px ${radius}px` };
   };
 
   const getBubbleColor = () => {
     if (isOwn) {
-      return 'bg-gradient-to-br from-purple-600 to-purple-700';
+      return { backgroundColor: theme.sentBubbleColor };
     }
-    return 'bg-zinc-800/90';
+    return { backgroundColor: theme.receivedBubbleColor };
+  };
+
+  const getTextColor = () => {
+    return isOwn 
+      ? (theme.sentTextColor || '#ffffff') 
+      : (theme.receivedTextColor || '#ffffff');
   };
 
   const getReadStatus = () => {
@@ -407,9 +442,13 @@ export function MessageItem({
           {/* Message Bubble */}
           <div className="relative group/msg">
             <div 
-              className={`relative ${getBorderRadius()} ${getBubbleColor()} px-3 py-1.5 ${
+              className={`relative px-3 py-1.5 ${
                 message.deleted_at ? 'opacity-50' : ''
               } shadow-lg`}
+              style={{
+                ...getBorderRadius(),
+                ...getBubbleColor(),
+              }}
             >
               {/* Reply To - Inside bubble */}
               {message.reply_to && typeof message.reply_to === 'object' && 'content' in message.reply_to && (
@@ -449,9 +488,17 @@ export function MessageItem({
 
                   <div className={`flex items-center gap-1 mt-0 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {message.edited_at && (
-                      <span className="text-[9px] text-white/40 italic">edited</span>
+                      <span 
+                        className="text-[9px] opacity-40 italic"
+                        style={{ color: getTextColor() }}
+                      >
+                        edited
+                      </span>
                     )}
-                    <span className={`text-[10px] ${isOwn ? 'text-purple-200/70' : 'text-gray-400'}`}>
+                    <span 
+                      className="text-[10px] opacity-70"
+                      style={{ color: getTextColor() }}
+                    >
                       {formatTime(message.created_at)}
                     </span>
                     {readStatus && (

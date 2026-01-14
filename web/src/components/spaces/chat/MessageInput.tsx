@@ -256,7 +256,7 @@ export function MessageInput({
   return (
     <div 
       ref={containerRef}
-      className="border-t border-zinc-800/50 bg-black/20"
+      className="border-t border-zinc-800/50 bg-transparent"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
