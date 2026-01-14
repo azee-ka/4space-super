@@ -427,7 +427,7 @@ return (
       initial={{ x: -200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/40 backdrop-blur-sm flex flex-col relative z-10"
+      className="w-80 flex-shrink-0 bg-zinc-950/60 backdrop-blur-md flex flex-col relative z-10"
     >
       {/* Space Info at Top of Left Panel */}
       <div className="flex-shrink-0 p-4">
@@ -490,6 +490,27 @@ return (
       className="flex-1 flex flex-col overflow-hidden relative z-10"
       style={centerPanelBackgroundStyle}
     >
+      {/* For featured themes, add alternating mirrored pattern using absolute positioned divs */}
+      {theme.backgroundType === 'featured' && theme.backgroundImage && (
+        <>
+          {/* Tiled pattern using actual img elements for proper sizing - BEHIND everything */}
+          <div className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden" style={{ gap: 0 }}>
+            {[...Array(30)].map((_, i) => (
+              <img
+                key={i}
+                src={i % 2 === 0 ? theme.backgroundImage : (theme.backgroundImage || '').replace('.png', '-mirror.png')}
+                alt=""
+                className="h-full w-auto flex-shrink-0 block"
+                style={{ display: 'block', margin: 0, padding: 0, verticalAlign: 'bottom' }}
+              />
+            ))}
+          </div>
+          
+          {/* Subtle dark overlay on top of images but behind content */}
+          <div className="absolute inset-0 bg-black/15 pointer-events-none -z-[9]" />
+        </>
+      )}
+      
       {selectedRoomId ? (
         <>
           {/* Messages Area - FULL HEIGHT */}
@@ -546,7 +567,7 @@ return (
       initial={{ x: 200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/40 backdrop-blur-sm flex flex-col relative z-10"
+      className="w-80 flex-shrink-0 bg-zinc-950/60 backdrop-blur-md flex flex-col relative z-10"
     >
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (

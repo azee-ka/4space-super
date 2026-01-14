@@ -393,7 +393,7 @@ export function MessageInput({
       {/* Input Area */}
       <div className="p-4">
         <div
-          className={`rounded-2xl bg-zinc-900/50 border transition-all ${
+          className={`rounded-2xl bg-black border transition-all ${
             isFocused
               ? 'border-cyan-500/50 shadow-lg shadow-cyan-500/10'
               : 'border-zinc-800/50'

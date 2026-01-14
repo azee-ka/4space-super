@@ -53,6 +53,12 @@ export function getBackgroundStyle(theme: ChatTheme): Record<string, string> {
         style.backgroundRepeat = 'no-repeat';
       }
       break;
+    
+    case 'featured':
+      // Featured themes - background is handled in component with alternating tiles
+      // Just set the base background color here
+      style.backgroundColor = theme.backgroundColor;
+      break;
   }
 
   return style;
@@ -149,6 +155,25 @@ export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = t
         radial-gradient(ellipse at 75% 65%, rgba(99, 102, 241, ${0.08 * intensityFactor}) 0%, transparent 45%),
         radial-gradient(circle at 50% 50%, rgba(59, 130, 246, ${0.06 * intensityFactor}) 0%, transparent 55%),
         #0a0a0a
+      `;
+      break;
+    
+    case 'featured':
+      // For featured themes, minimal subtle ambient lighting
+      const sentColor = theme.sentBubbleColor || '#8b5cf6';
+      const receivedColor = theme.receivedBubbleColor || '#1e1b4b';
+      
+      // Subtle, minimal ambient - not too intense
+      const featBright1 = Math.round(15 * intensityFactor);
+      const featBright2 = Math.round(12 * intensityFactor);
+      const featBright3 = Math.round(8 * intensityFactor);
+      
+      // Create subtle color hints from bubble colors
+      style.background = `
+        radial-gradient(ellipse at 15% 25%, ${adjustColor(sentColor, featBright1)} 0%, transparent ${50 + (30 * (1 - intensityFactor))}%),
+        radial-gradient(ellipse at 85% 75%, ${adjustColor(receivedColor, featBright2)} 0%, transparent ${50 + (30 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 50% 50%, ${adjustColor(sentColor, featBright3)} 0%, transparent ${60 + (25 * (1 - intensityFactor))}%),
+        linear-gradient(135deg, #0a0a0a 0%, #0f0a0f 50%, #0a0a0a 100%)
       `;
       break;
   }

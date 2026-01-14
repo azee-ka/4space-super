@@ -221,12 +221,12 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
         </div>
       </div>
 
-      {/* Featured Gradient Bubble Themes */}
+      {/* Featured Premium Themes */}
       {theme.backgroundType === 'featured' && (
         <div>
-          <h3 className="text-sm font-bold text-white mb-2">Featured Gradient Bubble Themes</h3>
-          <p className="text-xs text-gray-400 mb-3">Beautiful gradient bubbles on solid backgrounds</p>
-          <div className="grid grid-cols-2 gap-3">
+          <h3 className="text-sm font-bold text-white mb-2">Featured Premium Themes</h3>
+          <p className="text-xs text-gray-400 mb-3">Standalone premium themes with custom backgrounds & gradient bubbles</p>
+          <div className="grid grid-cols-3 gap-3">
             {getThemesByCategory('featured').map((preset) => (
               <button
                 key={preset.id}
@@ -236,7 +236,15 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
                     ? 'ring-2 ring-purple-500/50 scale-105'
                     : 'hover:scale-105'
                 }`}
-                style={{ backgroundColor: preset.theme.backgroundColor }}
+                style={{
+                  backgroundColor: preset.theme.backgroundColor,
+                  backgroundImage: preset.theme.backgroundImage 
+                    ? `linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)), url(${preset.theme.backgroundImage}), url(${preset.theme.backgroundImage.replace('.png', '-mirror.png')})`
+                    : 'none',
+                  backgroundSize: preset.theme.backgroundImage ? 'cover, auto 100%, auto 100%' : 'cover',
+                  backgroundPosition: preset.theme.backgroundImage ? 'center, center center, center center' : 'center',
+                  backgroundRepeat: preset.theme.backgroundImage ? 'no-repeat, repeat-x, repeat-x' : 'no-repeat',
+                }}
               >
                 {/* Bubble Preview */}
                 <div className="absolute bottom-2 right-2 flex gap-1">
@@ -270,8 +278,8 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
               </button>
             ))}
           </div>
-          <div className="mt-4 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-            <p className="text-xs text-cyan-400">💡 These presets set both bubble colors AND text colors for perfect readability</p>
+          <div className="mt-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <p className="text-xs text-purple-400">✨ Standalone premium themes with unique backgrounds and gradient bubbles</p>
           </div>
         </div>
       )}
