@@ -36,17 +36,23 @@ import {
   messageKeys,
 } from '../hooks/useMessages';
 import { useRealtimeChat } from '../hooks/useRealtime';
-import { RoomsList } from '../components/spaces/chat/RoomList';
 import { MessagesList } from '../components/spaces/chat/MessagesList';
 import { MessageInput } from '../components/spaces/chat/MessageInput';
 import { CustomizationTab } from '../components/spaces/chat/CustomizationTab';
+import { RoomMetrics } from '../components/spaces/chat/RoomMetrics';
+import { RoomMetadataTab } from '../components/spaces/chat/RoomMetadataTab';
+import { ChatSettingsTab } from '../components/spaces/chat/ChatSettingsTab';
+import { SearchMessages } from '../components/spaces/chat/SearchMessages';
+import { PinnedMessages } from '../components/spaces/chat/PinnedMessages';
+import { RoomsList } from '../components/spaces/chat/RoomList';
 import DropdownButton from '../components/ui/DropdownButton';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { queryClient } from '../lib/queryClient';
 import { useUpdateMessage } from '../hooks/useMessages';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
-type RightSidebarTab = 'chat' | 'media' | 'links' | 'customization';
+type RightSidebarTab = 'chat' | 'metadata' | 'customization';
+type OverlayView = 'search' | 'pins' | 'call' | null;
 
 export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
@@ -54,7 +60,13 @@ export function SpaceChatView() {
   const { user } = useAuthStore();
   const chatSettings = useChatSettingsStore();
   
-  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
+  // Get room from URL hash
+  const getRoomFromHash = () => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || undefined;
+  };
+  
+  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>(getRoomFromHash());
   
   // Get settings for current room
   const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId);
@@ -66,6 +78,7 @@ export function SpaceChatView() {
   // Sidebar states
   const [leftSidebarTab, setLeftSidebarTab] = useState<LeftSidebarTab>('rooms');
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('chat');
+  const [overlayView, setOverlayView] = useState<OverlayView>(null);
 
   // Fetch space data
   const { data: space, isLoading: loadingSpace } = useSpace(spaceId);
@@ -215,6 +228,26 @@ export function SpaceChatView() {
       markRoomAsRead.mutate(selectedRoomId);
     }
   }, [selectedRoomId, user?.id]);
+
+  // Update URL hash when room changes
+  useEffect(() => {
+    if (selectedRoomId) {
+      window.location.hash = selectedRoomId;
+    }
+  }, [selectedRoomId]);
+
+  // Listen for hash changes (browser back/forward)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const roomId = getRoomFromHash();
+      if (roomId && roomId !== selectedRoomId) {
+        setSelectedRoomId(roomId);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [selectedRoomId]);
 
 const handleSelectRoom = async (roomId: string) => {
   setSelectedRoomId(roomId);
@@ -1013,213 +1046,213 @@ const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: 
   </button>
 ));
 
-function ChatSettingsTab() {
-  const {
-    formattingButtonsEnabled, setFormattingButtonsEnabled,
-    showLinkPreviews, setShowLinkPreviews,
-    groupMessages, setGroupMessages,
-    messageAnimations, setMessageAnimations,
-    notifications, setNotifications,
-    muteRoom, setMuteRoom,
-    autoDeleteMessages, setAutoDeleteMessages,
-    messageHistory, setMessageHistory,
-  } = useChatSettingsStore();
+// function ChatSettingsTab() {
+//   const {
+//     formattingButtonsEnabled, setFormattingButtonsEnabled,
+//     showLinkPreviews, setShowLinkPreviews,
+//     groupMessages, setGroupMessages,
+//     messageAnimations, setMessageAnimations,
+//     notifications, setNotifications,
+//     muteRoom, setMuteRoom,
+//     autoDeleteMessages, setAutoDeleteMessages,
+//     messageHistory, setMessageHistory,
+//   } = useChatSettingsStore();
 
-  // Format value for display
-  const formatValue = (value: string) => {
-    if (value === 'all') return 'All Messages';
-    if (value === 'mentions') return 'Mentions Only';
-    if (value === 'none') return 'Off';
-    if (value === 'never') return 'Never';
-    if (value === '7days') return '7 Days';
-    if (value === '30days') return '30 Days';
-    if (value === '90days') return '90 Days';
-    if (value === '1year') return '1 Year';
-    if (value === 'unlimited') return 'Unlimited';
-    return value;
-  };
+//   // Format value for display
+//   const formatValue = (value: string) => {
+//     if (value === 'all') return 'All Messages';
+//     if (value === 'mentions') return 'Mentions Only';
+//     if (value === 'none') return 'Off';
+//     if (value === 'never') return 'Never';
+//     if (value === '7days') return '7 Days';
+//     if (value === '30days') return '30 Days';
+//     if (value === '90days') return '90 Days';
+//     if (value === '1year') return '1 Year';
+//     if (value === 'unlimited') return 'Unlimited';
+//     return value;
+//   };
 
-  return (
-    <div className="p-4 space-y-4">
-      {/* Room Settings */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-            <FontAwesomeIcon icon={faCog} className="text-cyan-400" />
-          </div>
-          <h3 className="text-xs font-bold text-white">Room Settings</h3>
-        </div>
+//   return (
+//     <div className="p-4 space-y-4">
+//       {/* Room Settings */}
+//       <div>
+//         <div className="flex items-center gap-2.5 mb-2">
+//           <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+//             <FontAwesomeIcon icon={faCog} className="text-cyan-400" />
+//           </div>
+//           <h3 className="text-xs font-bold text-white">Room Settings</h3>
+//         </div>
         
-        <div className="space-y-2">
-          {/* Notifications */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={muteRoom ? faBellSlash : faBell} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Notifications</span>
-            </div>
-            <DropdownButton
-              placement="bottom-end"
-              toggleContent={
-                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-                  {formatValue(notifications)}
-                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-                </button>
-              }
-            >
-              {({ closeDropdown }) => (
-                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[160px]">
-                  {(['all', 'mentions', 'none'] as const).map((value) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setNotifications(value);
-                        closeDropdown();
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-                        notifications === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-                      }`}
-                    >
-                      {formatValue(value)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </DropdownButton>
-          </div>
+//         <div className="space-y-2">
+//           {/* Notifications */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={muteRoom ? faBellSlash : faBell} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Notifications</span>
+//             </div>
+//             <DropdownButton
+//               placement="bottom-end"
+//               toggleContent={
+//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+//                   {formatValue(notifications)}
+//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+//                 </button>
+//               }
+//             >
+//               {({ closeDropdown }) => (
+//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[160px]">
+//                   {(['all', 'mentions', 'none'] as const).map((value) => (
+//                     <button
+//                       key={value}
+//                       onClick={() => {
+//                         setNotifications(value);
+//                         closeDropdown();
+//                       }}
+//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+//                         notifications === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+//                       }`}
+//                     >
+//                       {formatValue(value)}
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </DropdownButton>
+//           </div>
 
-          {/* Mute Room */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={muteRoom ? faVolumeMute : faBell} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Mute Room</span>
-            </div>
-            <ToggleSwitch enabled={muteRoom} onToggle={() => setMuteRoom(!muteRoom)} />
-          </div>
+//           {/* Mute Room */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={muteRoom ? faVolumeMute : faBell} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Mute Room</span>
+//             </div>
+//             <ToggleSwitch enabled={muteRoom} onToggle={() => setMuteRoom(!muteRoom)} />
+//           </div>
 
-          {/* Auto-delete Messages */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faClock} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Auto-delete Messages</span>
-            </div>
-            <DropdownButton
-              placement="bottom-end"
-              toggleContent={
-                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-                  {formatValue(autoDeleteMessages)}
-                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-                </button>
-              }
-            >
-              {({ closeDropdown }) => (
-                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
-                  {(['never', '7days', '30days', '1year'] as const).map((value) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setAutoDeleteMessages(value);
-                        closeDropdown();
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-                        autoDeleteMessages === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-                      }`}
-                    >
-                      {formatValue(value)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </DropdownButton>
-          </div>
+//           {/* Auto-delete Messages */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faClock} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Auto-delete Messages</span>
+//             </div>
+//             <DropdownButton
+//               placement="bottom-end"
+//               toggleContent={
+//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+//                   {formatValue(autoDeleteMessages)}
+//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+//                 </button>
+//               }
+//             >
+//               {({ closeDropdown }) => (
+//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
+//                   {(['never', '7days', '30days', '1year'] as const).map((value) => (
+//                     <button
+//                       key={value}
+//                       onClick={() => {
+//                         setAutoDeleteMessages(value);
+//                         closeDropdown();
+//                       }}
+//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+//                         autoDeleteMessages === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+//                       }`}
+//                     >
+//                       {formatValue(value)}
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </DropdownButton>
+//           </div>
 
-          {/* Message History */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faStickyNote} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Message History</span>
-            </div>
-            <DropdownButton
-              placement="bottom-end"
-              toggleContent={
-                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-                  {formatValue(messageHistory)}
-                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-                </button>
-              }
-            >
-              {({ closeDropdown }) => (
-                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
-                  {(['unlimited', '30days', '90days', '1year'] as const).map((value) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setMessageHistory(value);
-                        closeDropdown();
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-                        messageHistory === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-                      }`}
-                    >
-                      {formatValue(value)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </DropdownButton>
-          </div>
-        </div>
-      </div>
+//           {/* Message History */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faStickyNote} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Message History</span>
+//             </div>
+//             <DropdownButton
+//               placement="bottom-end"
+//               toggleContent={
+//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+//                   {formatValue(messageHistory)}
+//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+//                 </button>
+//               }
+//             >
+//               {({ closeDropdown }) => (
+//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
+//                   {(['unlimited', '30days', '90days', '1year'] as const).map((value) => (
+//                     <button
+//                       key={value}
+//                       onClick={() => {
+//                         setMessageHistory(value);
+//                         closeDropdown();
+//                       }}
+//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+//                         messageHistory === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+//                       }`}
+//                     >
+//                       {formatValue(value)}
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </DropdownButton>
+//           </div>
+//         </div>
+//       </div>
 
-      {/* Chat Settings */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            <FontAwesomeIcon icon={faCog} className="text-purple-400" />
-          </div>
-          <h3 className="text-xs font-bold text-white">Chat Settings</h3>
-        </div>
+//       {/* Chat Settings */}
+//       <div>
+//         <div className="flex items-center gap-2.5 mb-2">
+//           <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+//             <FontAwesomeIcon icon={faCog} className="text-purple-400" />
+//           </div>
+//           <h3 className="text-xs font-bold text-white">Chat Settings</h3>
+//         </div>
         
-        <div className="space-y-2">
-          {/* Formatting Buttons */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faBold} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Formatting Buttons</span>
-            </div>
-            <ToggleSwitch enabled={formattingButtonsEnabled} onToggle={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)} />
-          </div>
+//         <div className="space-y-2">
+//           {/* Formatting Buttons */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faBold} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Formatting Buttons</span>
+//             </div>
+//             <ToggleSwitch enabled={formattingButtonsEnabled} onToggle={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)} />
+//           </div>
 
-          {/* Show Link Previews */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faLink} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Show Link Previews</span>
-            </div>
-            <ToggleSwitch enabled={showLinkPreviews} onToggle={() => setShowLinkPreviews(!showLinkPreviews)} />
-          </div>
+//           {/* Show Link Previews */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faLink} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Show Link Previews</span>
+//             </div>
+//             <ToggleSwitch enabled={showLinkPreviews} onToggle={() => setShowLinkPreviews(!showLinkPreviews)} />
+//           </div>
 
-          {/* Group Messages */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Group Messages</span>
-            </div>
-            <ToggleSwitch enabled={groupMessages} onToggle={() => setGroupMessages(!groupMessages)} />
-          </div>
+//           {/* Group Messages */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Group Messages</span>
+//             </div>
+//             <ToggleSwitch enabled={groupMessages} onToggle={() => setGroupMessages(!groupMessages)} />
+//           </div>
 
-          {/* Message Animations */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <FontAwesomeIcon icon={faBolt} className="text-gray-400 text-sm" />
-              <span className="text-sm text-white font-medium">Message Animations</span>
-            </div>
-            <ToggleSwitch enabled={messageAnimations} onToggle={() => setMessageAnimations(!messageAnimations)} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+//           {/* Message Animations */}
+//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+//             <div className="flex items-center gap-2.5">
+//               <FontAwesomeIcon icon={faBolt} className="text-gray-400 text-sm" />
+//               <span className="text-sm text-white font-medium">Message Animations</span>
+//             </div>
+//             <ToggleSwitch enabled={messageAnimations} onToggle={() => setMessageAnimations(!messageAnimations)} />
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 function MediaTab() {
   return (
