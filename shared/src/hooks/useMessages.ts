@@ -239,6 +239,31 @@ export function createMessageHooks(supabase: SupabaseClient) {
           .eq('id', user.id)
           .single();
 
+        // Fetch reply_to message if replying (for optimistic preview)
+        let reply_to: Message | undefined = undefined;
+        if (variables.reply_to_id) {
+          const { data: replyMsg } = await supabase
+            .from('messages')
+            .select('id, content, sender_id, room_id, space_id, created_at, updated_at, message_type, is_pinned, is_system')
+            .eq('id', variables.reply_to_id)
+            .single();
+
+          if (replyMsg) {
+            const { data: replySender } = await supabase
+              .from('profiles')
+              .select('id, username, display_name, avatar_url')
+              .eq('id', replyMsg.sender_id)
+              .single();
+            
+            reply_to = { 
+              ...replyMsg,
+              sender: replySender || undefined,
+              reactions: [],
+              read_receipts: [],
+            } as Message;
+          }
+        }
+
         // Create optimistic message with temporary ID
         const optimisticMessage: Message = {
           id: `optimistic-${Date.now()}-${Math.random()}`,
@@ -248,6 +273,7 @@ export function createMessageHooks(supabase: SupabaseClient) {
           content: variables.content,
           message_type: variables.message_type || 'text',
           reply_to_id: variables.reply_to_id,
+          reply_to: reply_to,
           is_pinned: false,
           is_system: false,
           created_at: new Date().toISOString(),

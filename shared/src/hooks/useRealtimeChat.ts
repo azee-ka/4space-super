@@ -65,9 +65,30 @@ export function useRealtimeChat(
             .eq('id', payload.new.sender_id)
             .single();
 
+          // Fetch reply_to if exists
+          let reply_to = null;
+          if (payload.new.reply_to_id) {
+            const { data: replyMsg } = await supabase
+              .from('messages')
+              .select('id, content, sender_id')
+              .eq('id', payload.new.reply_to_id)
+              .single();
+
+            if (replyMsg) {
+              const { data: replySender } = await supabase
+                .from('profiles')
+                .select('id, username, display_name, avatar_url')
+                .eq('id', replyMsg.sender_id)
+                .single();
+              
+              reply_to = { ...replyMsg, sender: replySender || null };
+            }
+          }
+
           const enrichedMessage: Message = {
             ...payload.new as any,
             sender,
+            reply_to,
             read_receipts: [],
             reactions: [],
           };
@@ -149,7 +170,27 @@ export function useRealtimeChat(
             .eq('id', payload.new.sender_id)
             .single();
 
-          const updatedMessage = { ...payload.new as any, sender };
+          // Fetch reply_to if exists
+          let reply_to = null;
+          if (payload.new.reply_to_id) {
+            const { data: replyMsg } = await supabase
+              .from('messages')
+              .select('id, content, sender_id')
+              .eq('id', payload.new.reply_to_id)
+              .single();
+
+            if (replyMsg) {
+              const { data: replySender } = await supabase
+                .from('profiles')
+                .select('id, username, display_name, avatar_url')
+                .eq('id', replyMsg.sender_id)
+                .single();
+              
+              reply_to = { ...replyMsg, sender: replySender || null };
+            }
+          }
+
+          const updatedMessage = { ...payload.new as any, sender, reply_to };
 
           queryClient.setQueryData(messageKeys.roomMessages(roomId), (old: any) => {
             if (!old?.pages) return old;

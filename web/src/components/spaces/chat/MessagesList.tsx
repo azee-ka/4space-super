@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import { MessageItem } from './MessageItem';
 
@@ -46,6 +48,7 @@ export function MessagesList({
   const prevScrollHeightRef = useRef(0);
   const prevScrollTopRef = useRef(0);
   const wasFetchingRef = useRef(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Scroll to bottom helper
   const scrollToBottom = useCallback((smooth = false) => {
@@ -57,12 +60,6 @@ export function MessagesList({
     isNearBottomRef.current = true;
   }, []);
 
-  // Check if user is near bottom
-  const checkIfNearBottom = useCallback(() => {
-    if (!containerRef.current) return false;
-    const { scrollHeight, scrollTop, clientHeight } = containerRef.current;
-    return scrollHeight - scrollTop - clientHeight < 100;
-  }, []);
 
   // Initial scroll to bottom
   useEffect(() => {
@@ -95,13 +92,18 @@ export function MessagesList({
   }, [messages.length, isLoading, scrollToBottom]);
 
 
-  // Handle scroll
+  // Handle scroll - combined functionality
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
-    const { scrollTop, scrollHeight } = containerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    
+    // Show scroll-to-bottom button if user has scrolled up more than 200px from bottom
+    setShowScrollButton(distanceFromBottom > 200);
     
     // Track if near bottom
-    isNearBottomRef.current = checkIfNearBottom();
+    isNearBottomRef.current = distanceFromBottom < 100;
     
     // Load more when near top
     if (scrollTop < 200 && hasMore && !isFetchingMore) {
@@ -111,7 +113,7 @@ export function MessagesList({
       wasFetchingRef.current = true;
       onLoadMore();
     }
-  }, [hasMore, isFetchingMore, onLoadMore, checkIfNearBottom]);
+  }, [hasMore, isFetchingMore, onLoadMore]);
 
   // Restore scroll position after loading older messages
   // Use useLayoutEffect to adjust scroll synchronously before browser paint
@@ -137,6 +139,15 @@ export function MessagesList({
     prevScrollTopRef.current = 0;
   }, [isFetchingMore, messages.length]);
 
+  // Attach scroll listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   // Scroll to specific message
   const scrollToMessage = useCallback((messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
@@ -156,6 +167,8 @@ export function MessagesList({
     
     const groups: Array<{
       date: string;
+      time?: string; // Time separator within same day
+      showTimeSeparator: boolean;
       messages: Array<{
         message: Message;
         isFirstInGroup: boolean;
@@ -179,20 +192,50 @@ export function MessagesList({
       const messageDateStr = messageDate.toLocaleDateString();
       const messageTime = messageDate.getTime();
       const isOptimistic = !message.id || message.id.startsWith('optimistic-');
+      
+      // Time gap thresholds
+      const TIME_GAP_SEPARATOR = 3600000; // 1 hour in ms - show time separator
+      const BUBBLE_GAP_THRESHOLD = 300000; // 5 minutes in ms - just spacing
 
-      // Check if we need a new date separator
+      // Check if we need a new date separator (different day)
       if (messageDateStr !== currentDate) {
         if (currentGroup.length > 0) {
-          groups.push({ date: currentDate, messages: currentGroup });
+          groups.push({ 
+            date: currentDate, 
+            messages: currentGroup,
+            showTimeSeparator: false 
+          });
           currentGroup = [];
         }
         currentDate = messageDateStr;
+        currentSender = ''; // Reset sender on date change
+        lastMessageTime = 0;
       }
 
-      // Determine if this starts a new message group (5 minutes gap or different sender)
+      // Check if we need a time separator (same day but large gap)
+      const timeSinceLastMessage = messageTime - lastMessageTime;
+      const needsTimeSeparator = lastMessageTime > 0 && timeSinceLastMessage >= TIME_GAP_SEPARATOR;
+
+      if (needsTimeSeparator && currentGroup.length > 0) {
+        // Push current group with time separator
+        groups.push({ 
+          date: currentDate, 
+          time: messageDate.toLocaleTimeString(undefined, { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          messages: currentGroup,
+          showTimeSeparator: true
+        });
+        currentGroup = [];
+        currentSender = ''; // Reset to start new visual group
+      }
+
+      // Determine if this starts a new message bubble group
       const isNewGroup = 
         message.sender_id !== currentSender || 
-        messageTime - lastMessageTime > 300000; // 5 minutes
+        timeSinceLastMessage > BUBBLE_GAP_THRESHOLD;
 
       if (isNewGroup && currentGroup.length > 0) {
         // Mark last message in previous group
@@ -216,7 +259,11 @@ export function MessagesList({
     });
 
     if (currentGroup.length > 0) {
-      groups.push({ date: currentDate, messages: currentGroup });
+      groups.push({ 
+        date: currentDate, 
+        messages: currentGroup,
+        showTimeSeparator: false
+      });
     }
 
     return groups;
@@ -227,17 +274,37 @@ export function MessagesList({
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+    
+    const now = new Date();
+    const hoursDiff = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Today';
+      // For today, just show "Today" or with time if recent
+      if (hoursDiff < 6) {
+        return 'Today';
+      } else {
+        return `Today at ${date.toLocaleTimeString(undefined, { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        })}`;
+      }
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+      return `Yesterday at ${date.toLocaleTimeString(undefined, { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      })}`;
     } else {
+      // For older dates, show full date with time
       return date.toLocaleDateString(undefined, { 
-        weekday: 'long', 
+        weekday: 'short', 
         year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
       });
     }
   };
@@ -317,6 +384,21 @@ export function MessagesList({
                 </span>
               </div>
             </motion.div>
+
+            {/* Time Separator (within same day, for large gaps) */}
+            {group.showTimeSeparator && group.time && (
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-center my-4"
+              >
+                <div className="px-3 py-1 rounded-full bg-zinc-800/60 backdrop-blur-sm border border-zinc-700/50">
+                  <span className="text-[10px] font-medium text-gray-500">
+                    {group.time}
+                  </span>
+                </div>
+              </motion.div>
+            )}
 
             {/* Messages in this date group */}
             <AnimatePresence initial={false} mode="popLayout">
@@ -419,6 +501,26 @@ export function MessagesList({
           </div>
         </motion.div>
       )}
+
+      {/* Scroll to Bottom Button */}
+      <AnimatePresence>
+        {showScrollButton && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            onClick={() => scrollToBottom(true)}
+            className="fixed bottom-24 right-8 z-50 w-12 h-12 rounded-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 shadow-lg shadow-purple-900/50 flex items-center justify-center transition-colors group"
+            title="Scroll to bottom"
+          >
+            <FontAwesomeIcon 
+              icon={faChevronDown} 
+              className="text-white text-lg group-hover:animate-bounce" 
+            />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

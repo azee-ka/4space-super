@@ -12,7 +12,6 @@ import type { Message } from '@4space/shared/src/services/messages.service';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import CustomTextarea from '../../ui/CustomTextarea';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 
 interface MessageInputProps {
   onSend: (content: string, type?: string, attachments?: any[]) => void;
@@ -53,7 +52,6 @@ export function MessageInput({
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme } = useChatSettingsStore(); // Get theme for textarea adaptation
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,6 +72,18 @@ export function MessageInput({
       });
     }
   }, [message]);
+
+  // Auto-focus when replyTo changes
+  useEffect(() => {
+    if (replyTo && textareaRef.current) {
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          setIsFocused(true);
+        }
+      });
+    }
+  }, [replyTo]);
 
   // Handle text changes and typing indicators
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
