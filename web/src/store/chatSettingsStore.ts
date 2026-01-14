@@ -46,6 +46,8 @@ interface ChatSettingsState {
   fontSize: number;
   messageDensity: 'compact' | 'comfortable' | 'spacious';
   theme: ChatTheme;
+  ambientLighting: boolean; // Ambient lighting for sidebars
+  applyToAllRooms: boolean; // Apply settings to all rooms
   
   // Setters
   setFormattingButtonsEnabled: (enabled: boolean) => void;
@@ -62,6 +64,8 @@ interface ChatSettingsState {
   setFontSize: (size: number) => void;
   setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious') => void;
   setTheme: (theme: ChatTheme) => void;
+  setAmbientLighting: (enabled: boolean) => void;
+  setApplyToAllRooms: (apply: boolean) => void;
 }
 
 export const useChatSettingsStore = create<ChatSettingsState>()(
@@ -94,6 +98,8 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
         sentTextColor: '#ffffff',
         receivedTextColor: '#ffffff',
       },
+      ambientLighting: true, // Enabled by default for nice effect
+      applyToAllRooms: false, // By default, settings apply to current room only
       
       // Setters
       setFormattingButtonsEnabled: (enabled: boolean) => {
@@ -137,6 +143,12 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
       },
       setTheme: (theme: ChatTheme) => {
         set({ theme });
+      },
+      setAmbientLighting: (enabled: boolean) => {
+        set({ ambientLighting: enabled });
+      },
+      setApplyToAllRooms: (apply: boolean) => {
+        set({ applyToAllRooms: apply });
       },
     }),
     {

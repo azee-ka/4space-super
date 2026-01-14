@@ -76,7 +76,7 @@ export function MessageItem({
   onScrollToMessage,
   currentUserId,
 }: MessageItemProps) {
-  const { theme } = useChatSettingsStore();
+  const { theme, fontSize, messageDensity } = useChatSettingsStore();
   const [showActions, setShowActions] = useState(false);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);

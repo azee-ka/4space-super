@@ -41,31 +41,46 @@ export function getBackgroundStyle(theme: ChatTheme): Record<string, string> {
   return style;
 }
 
-// Get ambient background style for side panels - creates a subtle, related background
-export function getAmbientBackgroundStyle(theme: ChatTheme): Record<string, string> {
+// Get ambient background style for side panels - creates dramatic RGB lighting effect
+export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = true): Record<string, string> {
   const style: Record<string, string> = {};
   
-  // Extract base color from theme for ambient effect
+  if (!enabled) {
+    // Return default dark background if ambient lighting is disabled
+    style.backgroundColor = '#09090b';
+    return style;
+  }
+  
+  // Extract base colors from theme for ambient RGB-like effect
   let baseColor = '#0a0a0a'; // default dark
+  let secondaryColor = '#0a0a0a';
   
   switch (theme.backgroundType) {
     case 'solid':
       baseColor = theme.backgroundColor;
-      // Create a darker version for ambient
-      style.background = `linear-gradient(135deg, ${baseColor} 0%, ${adjustColor(baseColor, -20)} 100%)`;
-      style.filter = 'blur(40px) opacity(0.3)';
+      secondaryColor = adjustColor(baseColor, -15);
+      // Create dramatic ambient glow
+      style.background = `
+        radial-gradient(circle at 20% 50%, ${adjustColor(baseColor, 10)} 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, ${adjustColor(baseColor, 5)} 0%, transparent 50%),
+        linear-gradient(135deg, ${adjustColor(baseColor, -10)} 0%, ${adjustColor(baseColor, -20)} 100%)
+      `;
       break;
     
     case 'gradient':
       const color1 = theme.backgroundColor;
       const color2 = theme.backgroundColor2 || theme.backgroundColor;
-      // Create darker, more subtle gradient for ambient
-      style.background = `linear-gradient(135deg, ${adjustColor(color1, -30)} 0%, ${adjustColor(color2, -30)} 100%)`;
-      style.filter = 'blur(50px) opacity(0.25)';
+      // Create dramatic RGB-like lighting from gradient colors
+      style.background = `
+        radial-gradient(circle at 20% 30%, ${adjustColor(color1, 15)} 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, ${adjustColor(color2, 15)} 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, ${adjustColor(color1, -5)} 0%, transparent 60%),
+        linear-gradient(135deg, ${adjustColor(color1, -15)} 0%, ${adjustColor(color2, -15)} 100%)
+      `;
       break;
     
     case 'pattern':
-      // Use pattern's base color for ambient
+      // Extract colors from pattern
       if (theme.backgroundPattern) {
         const patternCSS = getPatternBackgroundCSS(theme.backgroundPattern);
         const bgColorMatch = patternCSS.match(/background-color:\s*([^;]+)/);
@@ -73,14 +88,20 @@ export function getAmbientBackgroundStyle(theme: ChatTheme): Record<string, stri
           baseColor = bgColorMatch[1].trim();
         }
       }
-      style.background = `linear-gradient(135deg, ${baseColor} 0%, ${adjustColor(baseColor, -25)} 100%)`;
-      style.filter = 'blur(45px) opacity(0.28)';
+      style.background = `
+        radial-gradient(circle at 25% 40%, ${adjustColor(baseColor, 12)} 0%, transparent 48%),
+        radial-gradient(circle at 75% 60%, ${adjustColor(baseColor, 8)} 0%, transparent 48%),
+        linear-gradient(135deg, ${adjustColor(baseColor, -12)} 0%, ${adjustColor(baseColor, -22)} 100%)
+      `;
       break;
     
     case 'image':
-      // Use a very dark, blurred version for ambient
-      style.background = `linear-gradient(135deg, #0a0a0a 0%, #050505 100%)`;
-      style.filter = 'blur(60px) opacity(0.2)';
+      // Subtle ambient for images
+      style.background = `
+        radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+        #0a0a0a
+      `;
       break;
   }
 

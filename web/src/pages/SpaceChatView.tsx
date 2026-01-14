@@ -378,11 +378,9 @@ const handleSendMessage = useCallback((
     );
   }
 
-// Three Vertical Panels - NO NAVBAR, just panels from top to bottom
-// Replace the return statement in SpaceChatView.tsx starting from the main return
 
   const centerPanelBackgroundStyle = getBackgroundStyle(theme);
-  const ambientBackgroundStyle = getAmbientBackgroundStyle(theme);
+  const ambientBackgroundStyle = getAmbientBackgroundStyle(theme, useChatSettingsStore.getState().ambientLighting);
 
 return (
   <div className="h-screen flex bg-transparent overflow-hidden relative">
