@@ -1,7 +1,7 @@
 // Advanced Chat Interface with Island-Based Sidebars
 // web/src/pages/SpaceChatView.tsx
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -11,7 +11,7 @@ import {
   faBolt, faCalendar, faFire, faBrain, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faChevronDown, faTrash,
   faCheck, faLayerGroup,
-  faFilter, faBold
+  faFilter, faBold, faVolumeMute, faBellSlash, faEye, faEyeSlash, faUser
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -36,6 +36,7 @@ import { useRealtimeChat } from '../hooks/useRealtime';
 import { RoomsList } from '../components/spaces/chat/RoomList';
 import { MessagesList } from '../components/spaces/chat/MessagesList';
 import { MessageInput } from '../components/spaces/chat/MessageInput';
+import DropdownButton from '../components/ui/DropdownButton';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { queryClient } from '../lib/queryClient';
 import { useUpdateMessage } from '../hooks/useMessages';
@@ -986,8 +987,50 @@ function NotesTab() {
   );
 }
 
+// Toggle Switch Component with smooth framer-motion animation (memoized to prevent unnecessary re-renders)
+const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+  <button
+    onClick={onToggle}
+    className="relative w-11 h-6 rounded-full focus:outline-none"
+  >
+    <motion.div
+      className="absolute inset-0 rounded-full"
+      animate={{ backgroundColor: enabled ? '#06b6d4' : '#52525b' }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+    />
+    <motion.span
+      className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
+      animate={{ x: enabled ? 20 : 0 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    />
+  </button>
+));
+
 function ChatSettingsTab() {
-  const { formattingButtonsEnabled, setFormattingButtonsEnabled } = useChatSettingsStore();
+  const {
+    formattingButtonsEnabled, setFormattingButtonsEnabled,
+    showLinkPreviews, setShowLinkPreviews,
+    groupMessages, setGroupMessages,
+    messageAnimations, setMessageAnimations,
+    notifications, setNotifications,
+    muteRoom, setMuteRoom,
+    autoDeleteMessages, setAutoDeleteMessages,
+    messageHistory, setMessageHistory,
+  } = useChatSettingsStore();
+
+  // Format value for display
+  const formatValue = (value: string) => {
+    if (value === 'all') return 'All Messages';
+    if (value === 'mentions') return 'Mentions Only';
+    if (value === 'none') return 'Off';
+    if (value === 'never') return 'Never';
+    if (value === '7days') return '7 Days';
+    if (value === '30days') return '30 Days';
+    if (value === '90days') return '90 Days';
+    if (value === '1year') return '1 Year';
+    if (value === 'unlimited') return 'Unlimited';
+    return value;
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -1001,20 +1044,122 @@ function ChatSettingsTab() {
         </div>
         
         <div className="space-y-2">
-          {[
-            { label: 'Notifications', value: 'All Messages', icon: faBell },
-            { label: 'Mute Room', value: 'Off', icon: faBell },
-            { label: 'Auto-delete Messages', value: 'Never', icon: faClock },
-            { label: 'Message History', value: 'Unlimited', icon: faStickyNote },
-          ].map((setting) => (
-            <div key={setting.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <FontAwesomeIcon icon={setting.icon} className="text-gray-400 text-sm" />
-                <span className="text-sm text-white font-medium">{setting.label}</span>
-              </div>
-              <span className="text-xs text-gray-400">{setting.value}</span>
+          {/* Notifications */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={muteRoom ? faBellSlash : faBell} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Notifications</span>
             </div>
-          ))}
+            <DropdownButton
+              placement="bottom-end"
+              toggleContent={
+                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+                  {formatValue(notifications)}
+                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                </button>
+              }
+            >
+              {({ closeDropdown }) => (
+                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[160px]">
+                  {(['all', 'mentions', 'none'] as const).map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setNotifications(value);
+                        closeDropdown();
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+                        notifications === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+                      }`}
+                    >
+                      {formatValue(value)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DropdownButton>
+          </div>
+
+          {/* Mute Room */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={muteRoom ? faVolumeMute : faBell} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Mute Room</span>
+            </div>
+            <ToggleSwitch enabled={muteRoom} onToggle={() => setMuteRoom(!muteRoom)} />
+          </div>
+
+          {/* Auto-delete Messages */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faClock} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Auto-delete Messages</span>
+            </div>
+            <DropdownButton
+              placement="bottom-end"
+              toggleContent={
+                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+                  {formatValue(autoDeleteMessages)}
+                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                </button>
+              }
+            >
+              {({ closeDropdown }) => (
+                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
+                  {(['never', '7days', '30days', '1year'] as const).map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setAutoDeleteMessages(value);
+                        closeDropdown();
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+                        autoDeleteMessages === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+                      }`}
+                    >
+                      {formatValue(value)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DropdownButton>
+          </div>
+
+          {/* Message History */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faStickyNote} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Message History</span>
+            </div>
+            <DropdownButton
+              placement="bottom-end"
+              toggleContent={
+                <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+                  {formatValue(messageHistory)}
+                  <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                </button>
+              }
+            >
+              {({ closeDropdown }) => (
+                <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
+                  {(['unlimited', '30days', '90days', '1year'] as const).map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setMessageHistory(value);
+                        closeDropdown();
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
+                        messageHistory === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
+                      }`}
+                    >
+                      {formatValue(value)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DropdownButton>
+          </div>
         </div>
       </div>
 
@@ -1028,23 +1173,40 @@ function ChatSettingsTab() {
         </div>
         
         <div className="space-y-2">
+          {/* Formatting Buttons */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
             <div className="flex items-center gap-2.5">
               <FontAwesomeIcon icon={faBold} className="text-gray-400 text-sm" />
               <span className="text-sm text-white font-medium">Formatting Buttons</span>
             </div>
-            <button
-              onClick={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                formattingButtonsEnabled ? 'bg-cyan-500' : 'bg-zinc-600'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                  formattingButtonsEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
+            <ToggleSwitch enabled={formattingButtonsEnabled} onToggle={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)} />
+          </div>
+
+          {/* Show Link Previews */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faLink} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Show Link Previews</span>
+            </div>
+            <ToggleSwitch enabled={showLinkPreviews} onToggle={() => setShowLinkPreviews(!showLinkPreviews)} />
+          </div>
+
+          {/* Group Messages */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Group Messages</span>
+            </div>
+            <ToggleSwitch enabled={groupMessages} onToggle={() => setGroupMessages(!groupMessages)} />
+          </div>
+
+          {/* Message Animations */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faBolt} className="text-gray-400 text-sm" />
+              <span className="text-sm text-white font-medium">Message Animations</span>
+            </div>
+            <ToggleSwitch enabled={messageAnimations} onToggle={() => setMessageAnimations(!messageAnimations)} />
           </div>
         </div>
       </div>
@@ -1093,9 +1255,16 @@ function LinksTab() {
 }
 
 function CustomizationTab({ theme, onThemeChange }: any) {
-  const [fontSize, setFontSize] = useState(14);
-  const [messageDensity, setMessageDensity] = useState('comfortable');
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const {
+    fontSize, setFontSize,
+    messageDensity, setMessageDensity,
+    theme: storeTheme, setTheme: setStoreTheme,
+  } = useChatSettingsStore();
+  
+  const handleThemeChange = (newTheme: any) => {
+    setStoreTheme(newTheme);
+    onThemeChange(newTheme);
+  };
   
   const bubbleShapes = [
     { value: 'rounded-lg', label: 'Rounded', preview: 'rounded-lg' },
@@ -1141,7 +1310,7 @@ function CustomizationTab({ theme, onThemeChange }: any) {
           {backgrounds.map((bg) => (
             <button
               key={bg.value}
-              onClick={() => onThemeChange({ ...theme, background: bg.value })}
+              onClick={() => handleThemeChange({ ...theme, background: bg.value })}
               className={`p-3 rounded-xl transition-all ${
                 theme.background === bg.value
                   ? 'bg-purple-500/10 ring-2 ring-purple-500/50'
@@ -1162,7 +1331,7 @@ function CustomizationTab({ theme, onThemeChange }: any) {
           {accentColors.map((accent) => (
             <button
               key={accent.value}
-              onClick={() => onThemeChange({ ...theme, accentColor: accent.value })}
+              onClick={() => handleThemeChange({ ...theme, accentColor: accent.value })}
               className={`p-3 rounded-xl transition-all ${
                 theme.accentColor === accent.value
                   ? 'ring-2 ring-white/30 bg-zinc-800/70'
@@ -1183,7 +1352,7 @@ function CustomizationTab({ theme, onThemeChange }: any) {
           {bubbleShapes.map((shape) => (
             <button
               key={shape.value}
-              onClick={() => onThemeChange({ ...theme, messageBubbleShape: shape.value })}
+              onClick={() => handleThemeChange({ ...theme, messageBubbleShape: shape.value })}
               className={`p-3 rounded-xl transition-all ${
                 theme.messageBubbleShape === shape.value
                   ? 'bg-cyan-500/10 ring-2 ring-cyan-500/50'
@@ -1204,7 +1373,7 @@ function CustomizationTab({ theme, onThemeChange }: any) {
           {messagePatterns.map((pattern) => (
             <button
               key={pattern.value}
-              onClick={() => onThemeChange({ ...theme, messagePattern: pattern.value })}
+              onClick={() => handleThemeChange({ ...theme, messagePattern: pattern.value })}
               className={`p-3 rounded-xl transition-all ${
                 theme.messagePattern === pattern.value
                   ? 'ring-2 ring-purple-500/50 bg-zinc-800/70'
@@ -1243,7 +1412,7 @@ function CustomizationTab({ theme, onThemeChange }: any) {
       <div>
         <h3 className="text-sm font-bold text-white mb-3">Message Density</h3>
         <div className="grid grid-cols-3 gap-2">
-          {['compact', 'comfortable', 'spacious'].map((density) => (
+          {(['compact', 'comfortable', 'spacious'] as const).map((density) => (
             <button
               key={density}
               onClick={() => setMessageDensity(density)}
@@ -1259,56 +1428,18 @@ function CustomizationTab({ theme, onThemeChange }: any) {
         </div>
       </div>
 
-      {/* Toggle Options */}
-      <div>
-        <h3 className="text-sm font-bold text-white mb-3">Display Options</h3>
-        <div className="space-y-2">
-          {[
-            { label: 'Show Timestamps', checked: true, icon: faClock },
-            { label: 'Show Avatars', checked: true, icon: faUsers },
-            { label: 'Message Animations', checked: animationsEnabled, icon: faBolt, onChange: setAnimationsEnabled },
-            { label: 'Show Read Receipts', checked: true, icon: faCheck },
-            { label: 'Group Messages', checked: true, icon: faLayerGroup },
-            { label: 'Show Link Previews', checked: true, icon: faLink },
-          ].map((option) => (
-            <label 
-              key={option.label} 
-              className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-zinc-700/50 group-hover:bg-zinc-700 transition-colors flex items-center justify-center">
-                  <FontAwesomeIcon icon={option.icon} className="text-gray-400 text-sm" />
-                </div>
-                <span className="text-sm text-white font-medium">{option.label}</span>
-              </div>
-              
-              {/* Custom Toggle Switch */}
-              <div className="relative">
-                <input 
-                  type="checkbox" 
-                  checked={option.checked}
-                  onChange={(e) => option.onChange?.(e.target.checked)}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
       {/* Reset Button */}
       <button 
         onClick={() => {
-          onThemeChange({
+          const defaultTheme = {
             background: 'black',
             messageBubbleShape: 'rounded-xl',
             accentColor: 'cyan',
             messagePattern: 'none',
-          });
+          };
+          handleThemeChange(defaultTheme);
           setFontSize(14);
           setMessageDensity('comfortable');
-          setAnimationsEnabled(true);
         }}
         className="w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-colors flex items-center justify-center gap-2"
       >
