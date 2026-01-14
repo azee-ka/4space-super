@@ -657,9 +657,9 @@ export function MessageItem({
             {!message.deleted_at && (
               <div 
                 ref={actionsRef}
-                className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
+                className={`absolute top-0 bottom-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ${
                   showActions || openDropdownsCountRef.current > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                } px-2`}
+                } flex items-center px-2`}
                 style={{ zIndex: 10 }}
                 onMouseEnter={() => {
                   clearAllTimeouts();
