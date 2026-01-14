@@ -1,25 +1,22 @@
 // Advanced Chat Interface with Island-Based Sidebars
 // web/src/pages/SpaceChatView.tsx
 
-import { useEffect, useState, useCallback, useRef, memo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faArrowLeft, faHashtag, faRocket, faBell,
+  faArrowLeft, faHashtag, faRocket,
   faCog, faChartLine, faTasks, faClock, faStickyNote, faPalette,
-  faImages, faLink, faSlidersH, faShapes,
+  faSlidersH, faImages, faLink,
   faBolt, faCalendar, faFire, faBrain, faPhone, faVideo,
-  faUsers, faThumbtack, faSearch, faChevronDown, faTrash,
-  faCheck, faLayerGroup,
-  faFilter, faBold, faVolumeMute, faBellSlash, faEye, faEyeSlash, faUser,
-  faUpload, faTimes
+  faUsers, faThumbtack, faSearch,
+  faFilter, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { getBackgroundStyle, getAmbientBackgroundStyle } from '../utils/themeUtils';
-import { patternBackgrounds } from '../utils/patternBackgrounds';
 import { useSpace } from '../hooks/useSpaces';
 import {
   useSpaceRooms,
@@ -33,7 +30,6 @@ import {
   useMarkRoomAsRead,
   useBookmarkMessage,
   useCreateRoom,
-  messageKeys,
 } from '../hooks/useMessages';
 import { useRealtimeChat } from '../hooks/useRealtime';
 import { MessagesList } from '../components/spaces/chat/MessagesList';
@@ -45,13 +41,11 @@ import { ChatSettingsTab } from '../components/spaces/chat/ChatSettingsTab';
 import { SearchMessages } from '../components/spaces/chat/SearchMessages';
 import { PinnedMessages } from '../components/spaces/chat/PinnedMessages';
 import { RoomsList } from '../components/spaces/chat/RoomList';
-import DropdownButton from '../components/ui/DropdownButton';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
-import { queryClient } from '../lib/queryClient';
 import { useUpdateMessage } from '../hooks/useMessages';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
-type RightSidebarTab = 'chat' | 'metadata' | 'customization';
+type RightSidebarTab = 'settings' | 'metadata' | 'metrics' | 'media' | 'links' | 'customization';
 type OverlayView = 'search' | 'pins' | 'call' | null;
 
 export function SpaceChatView() {
@@ -77,7 +71,7 @@ export function SpaceChatView() {
   
   // Sidebar states
   const [leftSidebarTab, setLeftSidebarTab] = useState<LeftSidebarTab>('rooms');
-  const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('chat');
+  const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('settings');
   const [overlayView, setOverlayView] = useState<OverlayView>(null);
 
   // Fetch space data
@@ -484,7 +478,7 @@ return (
           onTabChange={setLeftSidebarTab}
           isLoading={loadingRooms}
           onlineUsers={onlineUsers}
-          onOpenSettings={() => setRightSidebarTab('chat')}
+          onOpenSettings={() => setRightSidebarTab('settings')}
         />
       </div>
     </motion.div>
@@ -560,13 +554,13 @@ return (
           {/* Action Islands - Your Original Beautiful UI */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
-              { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400' },
+              { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400', action: 'search' },
               { icon: faUsers, label: 'Members', glowClass: 'from-purple-500/25 via-purple-500/20 to-purple-500/25', borderClass: 'border-purple-500/30', textClass: 'text-purple-400', count: onlineCount },
-              { icon: faPhone, label: 'Call', glowClass: 'from-green-500/25 via-green-500/20 to-green-500/25', borderClass: 'border-green-500/30', textClass: 'text-green-400' },
+              { icon: faPhone, label: 'Call', glowClass: 'from-green-500/25 via-green-500/20 to-green-500/25', borderClass: 'border-green-500/30', textClass: 'text-green-400', action: 'call' },
               { icon: faVideo, label: 'Video', glowClass: 'from-red-500/25 via-red-500/20 to-red-500/25', borderClass: 'border-red-500/30', textClass: 'text-red-400' },
-              { icon: faThumbtack, label: 'Pinned', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400' },
-              { icon: faCog, label: 'Settings', glowClass: 'from-gray-500/25 via-gray-500/20 to-gray-500/25', borderClass: 'border-gray-500/30', textClass: 'text-gray-400' },
-            ].map(({ icon, label, glowClass, borderClass, textClass, count }) => (
+              { icon: faThumbtack, label: 'Pinned', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'pins' },
+              { icon: faCog, label: 'Settings', glowClass: 'from-gray-500/25 via-gray-500/20 to-gray-500/25', borderClass: 'border-gray-500/30', textClass: 'text-gray-400', action: 'settings' },
+            ].map(({ icon, label, glowClass, borderClass, textClass, count, action }) => (
               <motion.div
                 key={label}
                 whileHover={{ scale: 1.05, y: -2 }}
@@ -578,6 +572,12 @@ return (
                 <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover/btn:opacity-100 blur-2xl transition-all duration-500" />
                 
                 <button
+                  onClick={() => {
+                    if (action === 'search') setOverlayView('search');
+                    else if (action === 'pins') setOverlayView('pins');
+                    else if (action === 'call') setOverlayView('call');
+                    else if (action === 'settings') setRightSidebarTab('settings');
+                  }}
                   className={`relative w-10 h-10 rounded-xl backdrop-blur-xl bg-black/70 hover:bg-black/80 flex items-center justify-center transition-all ${textClass}`}
                   title={label}
                 >
@@ -592,45 +592,6 @@ return (
             ))}
           </div>
 
-          {/* Room Vibe Indicator - INNOVATIVE */}
-          <div className="relative group/vibe">
-            <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30 hover:border-purple-500/50 transition-all cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative">
-                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                    <div className="absolute inset-0 w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Room Vibe</p>
-                    <p className="text-sm font-bold text-purple-400">Active 🔥</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-cyan-400">{onlineCount}</p>
-                  <p className="text-[10px] text-gray-500">online</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
-              <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-sm" />
-              <div>
-                <p className="text-xs font-bold text-cyan-400">{selectedRoom?.message_count ?? messages.length}</p>
-                <p className="text-[9px] text-gray-500 uppercase">Messages</p>
-              </div>
-            </div>
-            <div className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center gap-2">
-              <FontAwesomeIcon icon={faUsers} className="text-purple-400 text-sm" />
-              <div>
-                <p className="text-xs font-bold text-purple-400">{onlineCount}</p>
-                <p className="text-[9px] text-gray-500 uppercase">Online</p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -644,6 +605,54 @@ return (
         />
       </div>
     </motion.div>
+
+    {/* Overlay Views */}
+    <AnimatePresence>
+      {overlayView === 'search' && (
+        <SearchMessages
+          roomId={selectedRoomId}
+          onClose={() => setOverlayView(null)}
+        />
+      )}
+      
+      {overlayView === 'pins' && (
+        <PinnedMessages
+          pinnedMessages={messages.filter(m => m.is_pinned)}
+          onClose={() => setOverlayView(null)}
+          onUnpin={(messageId) => handlePinMessage(messageId, false)}
+          onScrollToMessage={(messageId) => {
+            const element = document.getElementById(`message-${messageId}`);
+            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setOverlayView(null);
+          }}
+        />
+      )}
+      
+      {overlayView === 'call' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="absolute inset-0 bg-zinc-950/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center"
+        >
+          <button
+            onClick={() => setOverlayView(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 flex items-center justify-center transition-colors"
+          >
+            <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
+          </button>
+          <FontAwesomeIcon icon={faPhone} className="text-6xl text-green-400 mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Voice Call</h2>
+          <p className="text-gray-400 mb-6">Call feature coming soon</p>
+          <button
+            onClick={() => setOverlayView(null)}
+            className="px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl text-white font-medium transition-colors"
+          >
+            Start Call (Coming Soon)
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   </div>
 );
 }
@@ -826,10 +835,12 @@ function RightSidebar({
   onThemeChange,
 }: RightSidebarProps) {
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
-    { id: 'chat', icon: faSlidersH, label: 'Chat', color: 'cyan' },
-    { id: 'media', icon: faImages, label: 'Media', color: 'pink' },
+    { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
+    { id: 'metadata', icon: faHashtag, label: 'Room Info', color: 'pink' },
+    { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'orange' },
+    { id: 'media', icon: faImages, label: 'Media', color: 'green' },
     { id: 'links', icon: faLink, label: 'Links', color: 'blue' },
-    { id: 'customization', icon: faPalette, label: 'Customize', color: 'purple' },
+    { id: 'customization', icon: faPalette, label: 'Theme', color: 'purple' },
   ];
 
   return (
@@ -868,7 +879,25 @@ function RightSidebar({
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          {activeTab === 'chat' && <ChatSettingsTab />}
+          {activeTab === 'settings' && <ChatSettingsTab roomId={undefined} />}
+          {activeTab === 'metadata' && (
+            <RoomMetadataTab
+              room={undefined}
+              memberCount={0}
+              messageCount={0}
+              onUpdateRoom={(updates) => {
+                console.log('Update room:', updates);
+              }}
+            />
+          )}
+          {activeTab === 'metrics' && (
+            <RoomMetrics
+              roomId={undefined}
+              messageCount={0}
+              memberCount={0}
+              onlineCount={0}
+            />
+          )}
           {activeTab === 'media' && <MediaTab />}
           {activeTab === 'links' && <LinksTab />}
           {activeTab === 'customization' && (
@@ -1026,25 +1055,6 @@ function NotesTab() {
     </div>
   );
 }
-
-// Toggle Switch Component with smooth framer-motion animation (memoized to prevent unnecessary re-renders)
-const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-  <button
-    onClick={onToggle}
-    className="relative w-11 h-6 rounded-full focus:outline-none"
-  >
-    <motion.div
-      className="absolute inset-0 rounded-full"
-      animate={{ backgroundColor: enabled ? '#06b6d4' : '#52525b' }}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
-    />
-    <motion.span
-      className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
-      animate={{ x: enabled ? 20 : 0 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-    />
-  </button>
-));
 
 // function ChatSettingsTab() {
 //   const {
@@ -1258,8 +1268,8 @@ function MediaTab() {
   return (
     <div className="p-4">
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-9 h-9 rounded-lg bg-pink-500/10 flex items-center justify-center">
-          <FontAwesomeIcon icon={faImages} className="text-pink-400" />
+        <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
+          <FontAwesomeIcon icon={faImages} className="text-green-400" />
         </div>
         <h3 className="text-xs font-bold text-white">Shared Media</h3>
       </div>

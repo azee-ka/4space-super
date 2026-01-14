@@ -660,6 +660,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auto_download_media: boolean | null
+          auto_download_videos: boolean | null
           avatar_url: string | null
           bio: string | null
           created_at: string | null
@@ -667,11 +669,21 @@ export type Database = {
           email: string | null
           id: string
           last_seen: string | null
+          message_preview_in_notifications: boolean | null
+          screen_security: boolean | null
+          show_last_seen: boolean | null
+          show_online_status: boolean | null
+          show_profile_photo: boolean | null
+          show_read_receipts: boolean | null
+          show_typing_indicator: boolean | null
           status: string | null
+          two_factor_auth: boolean | null
           updated_at: string | null
           username: string | null
         }
         Insert: {
+          auto_download_media?: boolean | null
+          auto_download_videos?: boolean | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
@@ -679,11 +691,21 @@ export type Database = {
           email?: string | null
           id: string
           last_seen?: string | null
+          message_preview_in_notifications?: boolean | null
+          screen_security?: boolean | null
+          show_last_seen?: boolean | null
+          show_online_status?: boolean | null
+          show_profile_photo?: boolean | null
+          show_read_receipts?: boolean | null
+          show_typing_indicator?: boolean | null
           status?: string | null
+          two_factor_auth?: boolean | null
           updated_at?: string | null
           username?: string | null
         }
         Update: {
+          auto_download_media?: boolean | null
+          auto_download_videos?: boolean | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
@@ -691,7 +713,15 @@ export type Database = {
           email?: string | null
           id?: string
           last_seen?: string | null
+          message_preview_in_notifications?: boolean | null
+          screen_security?: boolean | null
+          show_last_seen?: boolean | null
+          show_online_status?: boolean | null
+          show_profile_photo?: boolean | null
+          show_read_receipts?: boolean | null
+          show_typing_indicator?: boolean | null
           status?: string | null
+          two_factor_auth?: boolean | null
           updated_at?: string | null
           username?: string | null
         }
@@ -738,6 +768,57 @@ export type Database = {
           },
         ]
       }
+      room_resources: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          resource_type: string | null
+          room_id: string
+          title: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          resource_type?: string | null
+          room_id: string
+          title: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          resource_type?: string | null
+          room_id?: string
+          title?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_resources_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_resources_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           category: string | null
@@ -745,6 +826,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           description: string | null
+          guidelines: string | null
           icon: string | null
           id: string
           is_archived: boolean | null
@@ -764,6 +846,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           description?: string | null
+          guidelines?: string | null
           icon?: string | null
           id?: string
           is_archived?: boolean | null
@@ -783,6 +866,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           description?: string | null
+          guidelines?: string | null
           icon?: string | null
           id?: string
           is_archived?: boolean | null

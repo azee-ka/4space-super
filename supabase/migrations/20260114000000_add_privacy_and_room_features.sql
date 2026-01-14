@@ -18,7 +18,7 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS guidelines TEXT;
 
 -- Create room_resources table for pinned links and files
 CREATE TABLE IF NOT EXISTS room_resources (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
