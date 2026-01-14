@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type BackgroundType = 'solid' | 'gradient' | 'pattern' | 'artistic' | 'image';
+export type BackgroundType = 'featured' | 'solid' | 'gradient' | 'pattern' | 'artistic' | 'image';
 export type BubbleShapePreset = 'square' | 'rounded' | 'pill' | 'extra-rounded' | 'custom';
 
 export interface ChatTheme {
