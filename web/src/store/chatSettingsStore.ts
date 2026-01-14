@@ -17,6 +17,8 @@ export interface ChatTheme {
   // Bubble settings
   sentBubbleColor: string;
   receivedBubbleColor: string;
+  sentBubbleGradient?: string; // Optional gradient for sent bubbles (e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+  receivedBubbleGradient?: string; // Optional gradient for received bubbles
   bubbleShapePreset: BubbleShapePreset;
   bubbleBorderRadius: number; // 0-24 for custom radius
   accentColor: string;

@@ -1,16 +1,17 @@
 // Comprehensive Customization Tab Component - FIXED VERSION
 // web/src/components/spaces/chat/CustomizationTab.tsx
 
-import { useRef, useCallback, memo } from 'react';
-import { motion } from 'framer-motion';
+import { useRef, useCallback, memo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPalette, faTrash, faUpload, faTimes, faImages,
-  faShapes, faSlidersH, faCheck
+  faShapes, faSlidersH, faCheck, faStar, faBriefcase, faCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../store/chatSettingsStore';
 import { artisticPatterns } from '../../../utils/artisticPatterns';
 import { patternBackgrounds } from '../../../utils/patternBackgrounds';
+import { themePresets, getThemesByCategory } from '../../../utils/themePresets';
 import { ColorPicker } from '../../ui/ColorPicker';
 
 // Toggle Switch Component with smooth animation
@@ -29,6 +30,26 @@ const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: 
     />
   </motion.button>
 ));
+
+// Helper function to adjust color brightness
+function adjustColor(color: string, brightness: number): string {
+  // Convert hex to RGB
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Adjust brightness
+  const newR = Math.max(0, Math.min(255, r + brightness));
+  const newG = Math.max(0, Math.min(255, g + brightness));
+  const newB = Math.max(0, Math.min(255, b + brightness));
+  
+  // Convert back to hex
+  return `#${[newR, newG, newB].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('')}`;
+}
 
 interface CustomizationTabProps {
   theme: ChatTheme;
@@ -49,6 +70,8 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
   } = useChatSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPresets, setShowPresets] = useState(true);
+  const [selectedPresetCategory, setSelectedPresetCategory] = useState<'simple' | 'gradient' | 'artistic' | 'professional'>('gradient');
 
   const handleThemeUpdate = useCallback((updates: Partial<ChatTheme>) => {
     const newTheme = { ...theme, ...updates };
@@ -151,8 +174,126 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     setMessageDensity('comfortable');
   }, [setStoreTheme, onThemeChange, setFontSize, setMessageDensity]);
 
+  const applyPreset = useCallback((presetId: string) => {
+    const preset = themePresets.find(p => p.id === presetId);
+    if (preset) {
+      setStoreTheme(preset.theme);
+      onThemeChange(preset.theme);
+    }
+  }, [setStoreTheme, onThemeChange]);
+
   return (
     <div className="p-6 space-y-8 overflow-y-auto h-full">
+      {/* Theme Presets Section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <FontAwesomeIcon icon={faStar} className="text-purple-400" />
+            Theme Presets
+          </h3>
+          <button
+            onClick={() => setShowPresets(!showPresets)}
+            className="text-xs text-gray-400 hover:text-white transition-colors"
+          >
+            {showPresets ? 'Hide' : 'Show'}
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {showPresets && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
+              {/* Category Tabs */}
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                {[
+                  { id: 'simple' as const, label: 'Simple', icon: faCircle },
+                  { id: 'gradient' as const, label: 'Gradient', icon: faSlidersH },
+                  { id: 'artistic' as const, label: 'Artistic', icon: faImages },
+                  { id: 'professional' as const, label: 'Professional', icon: faBriefcase },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedPresetCategory(cat.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2 ${
+                      selectedPresetCategory === cat.id
+                        ? 'bg-purple-500/20 text-purple-400 ring-2 ring-purple-500/50'
+                        : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70 hover:text-white'
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={cat.icon} />
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preset Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {getThemesByCategory(selectedPresetCategory).map((preset) => {
+                  const isActive = JSON.stringify(theme) === JSON.stringify(preset.theme);
+                  
+                  return (
+                    <button
+                      key={preset.id}
+                      onClick={() => applyPreset(preset.id)}
+                      className={`relative h-24 rounded-xl overflow-hidden transition-all ${
+                        isActive
+                          ? 'ring-2 ring-purple-500/50 scale-105'
+                          : 'hover:scale-105'
+                      }`}
+                      style={{
+                        background: preset.theme.backgroundType === 'gradient'
+                          ? `linear-gradient(135deg, ${preset.theme.backgroundColor} 0%, ${preset.theme.backgroundColor2 || preset.theme.backgroundColor} 100%)`
+                          : preset.theme.backgroundColor,
+                      }}
+                    >
+                      {/* Bubble Preview */}
+                      <div className="absolute bottom-2 right-2 flex gap-1">
+                        <div 
+                          className="w-6 h-8 rounded-lg opacity-90 shadow-md"
+                          style={{ 
+                            background: preset.theme.sentBubbleGradient || preset.theme.sentBubbleColor,
+                            borderRadius: '12px',
+                          }}
+                        />
+                        <div 
+                          className="w-6 h-8 rounded-lg opacity-90 shadow-md"
+                          style={{ 
+                            background: preset.theme.receivedBubbleGradient || preset.theme.receivedBubbleColor,
+                            borderRadius: '12px',
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Preset Name */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70" />
+                      <div className="absolute bottom-2 left-2 right-16">
+                        <p className="text-xs font-bold text-white truncate">{preset.name}</p>
+                        <p className="text-[10px] text-gray-300 truncate">{preset.description}</p>
+                      </div>
+                      
+                      {/* Active Indicator */}
+                      {isActive && (
+                        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                          <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-zinc-800/50" />
+
       {/* Global Settings Toggles */}
       <div className="space-y-4 p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
         <div className="flex items-center justify-between">
@@ -533,32 +674,129 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
         </div>
       )}
 
-      {/* Bubble Colors */}
+      {/* Bubble Colors & Gradients */}
       <div>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
           <FontAwesomeIcon icon={faPalette} className="text-cyan-400" />
           Message Bubble Colors
         </h3>
-        <div className="space-y-4">
-          {/* Sent Bubble Color */}
-          <div>
-            <label className="block text-xs text-gray-400 mb-2">Sent Messages</label>
+        <div className="space-y-6">
+          {/* Sent Bubble */}
+          <div className="space-y-3">
+            <label className="block text-xs text-gray-400 font-medium">Sent Messages</label>
+            
+            {/* Gradient Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleThemeUpdate({ sentBubbleGradient: undefined })}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  !theme.sentBubbleGradient
+                    ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50'
+                    : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70'
+                }`}
+              >
+                Solid
+              </button>
+              <button
+                onClick={() => {
+                  if (!theme.sentBubbleGradient) {
+                    handleThemeUpdate({ 
+                      sentBubbleGradient: `linear-gradient(135deg, ${theme.sentBubbleColor} 0%, ${adjustColor(theme.sentBubbleColor, -20)} 100%)`
+                    });
+                  }
+                }}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  theme.sentBubbleGradient
+                    ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50'
+                    : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70'
+                }`}
+              >
+                Gradient
+              </button>
+            </div>
+            
             <ColorPicker
               color={theme.sentBubbleColor}
-              onChange={(color) => handleThemeUpdate({ sentBubbleColor: color })}
+              onChange={(color) => {
+                const updates: Partial<ChatTheme> = { sentBubbleColor: color };
+                // Update gradient if enabled
+                if (theme.sentBubbleGradient) {
+                  updates.sentBubbleGradient = `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`;
+                }
+                handleThemeUpdate(updates);
+              }}
               previewColor={theme.sentBubbleColor}
               label=""
             />
+            
+            {/* Preview */}
+            <div className="h-12 rounded-xl border-2 border-zinc-700 flex items-center justify-center">
+              <div 
+                className="w-32 h-8 rounded-xl shadow-lg"
+                style={{ 
+                  background: theme.sentBubbleGradient || theme.sentBubbleColor,
+                }}
+              />
+            </div>
           </div>
-          {/* Received Bubble Color */}
-          <div>
-            <label className="block text-xs text-gray-400 mb-2">Received Messages</label>
+
+          {/* Received Bubble */}
+          <div className="space-y-3">
+            <label className="block text-xs text-gray-400 font-medium">Received Messages</label>
+            
+            {/* Gradient Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleThemeUpdate({ receivedBubbleGradient: undefined })}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  !theme.receivedBubbleGradient
+                    ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50'
+                    : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70'
+                }`}
+              >
+                Solid
+              </button>
+              <button
+                onClick={() => {
+                  if (!theme.receivedBubbleGradient) {
+                    handleThemeUpdate({ 
+                      receivedBubbleGradient: `linear-gradient(135deg, ${theme.receivedBubbleColor} 0%, ${adjustColor(theme.receivedBubbleColor, -15)} 100%)`
+                    });
+                  }
+                }}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  theme.receivedBubbleGradient
+                    ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50'
+                    : 'bg-zinc-800/50 text-gray-400 hover:bg-zinc-800/70'
+                }`}
+              >
+                Gradient
+              </button>
+            </div>
+            
             <ColorPicker
               color={theme.receivedBubbleColor}
-              onChange={(color) => handleThemeUpdate({ receivedBubbleColor: color })}
+              onChange={(color) => {
+                const updates: Partial<ChatTheme> = { receivedBubbleColor: color };
+                // Update gradient if enabled
+                if (theme.receivedBubbleGradient) {
+                  updates.receivedBubbleGradient = `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%)`;
+                }
+                handleThemeUpdate(updates);
+              }}
               previewColor={theme.receivedBubbleColor}
               label=""
             />
+            
+            {/* Preview */}
+            <div className="h-12 rounded-xl border-2 border-zinc-700 flex items-center justify-center">
+              <div 
+                className="w-32 h-8 rounded-xl shadow-lg"
+                style={{ 
+                  background: theme.receivedBubbleGradient || theme.receivedBubbleColor,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

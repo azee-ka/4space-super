@@ -58,7 +58,7 @@ export function getBackgroundStyle(theme: ChatTheme): Record<string, string> {
   return style;
 }
 
-// Get ambient background style for side panels - creates dramatic RGB lighting effect
+// Get ambient background style for side panels - creates dramatic glowy RGB lighting effect
 export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = true, intensity: number = 50): Record<string, string> {
   const style: Record<string, string> = {};
   
@@ -74,33 +74,40 @@ export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = t
   // Extract base colors from theme for ambient RGB-like effect
   let baseColor = '#0a0a0a'; // default dark
   
+  // Enhanced glowy gradient effect with multiple layers
   switch (theme.backgroundType) {
     case 'solid':
       baseColor = theme.backgroundColor;
-      // Create dramatic ambient glow with intensity control
-      const brightness1 = Math.round(10 * intensityFactor);
-      const brightness2 = Math.round(5 * intensityFactor);
+      // Create dramatic glowy ambient with multiple radial gradients
+      const brightness1 = Math.round(15 * intensityFactor);
+      const brightness2 = Math.round(12 * intensityFactor);
+      const brightness3 = Math.round(8 * intensityFactor);
       const darken1 = Math.round(-10 - (10 * (1 - intensityFactor)));
       const darken2 = Math.round(-20 - (10 * (1 - intensityFactor)));
       style.background = `
-        radial-gradient(circle at 20% 50%, ${adjustColor(baseColor, brightness1)} 0%, transparent ${50 + (20 * (1 - intensityFactor))}%),
-        radial-gradient(circle at 80% 50%, ${adjustColor(baseColor, brightness2)} 0%, transparent ${50 + (20 * (1 - intensityFactor))}%),
-        linear-gradient(135deg, ${adjustColor(baseColor, darken1)} 0%, ${adjustColor(baseColor, darken2)} 100%)
+        radial-gradient(ellipse at 15% 40%, ${adjustColor(baseColor, brightness1)} 0%, transparent ${35 + (25 * (1 - intensityFactor))}%),
+        radial-gradient(ellipse at 85% 60%, ${adjustColor(baseColor, brightness2)} 0%, transparent ${35 + (25 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 50% 20%, ${adjustColor(baseColor, brightness3)} 0%, transparent ${40 + (20 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 50% 80%, ${adjustColor(baseColor, brightness3)} 0%, transparent ${40 + (20 * (1 - intensityFactor))}%),
+        linear-gradient(135deg, ${adjustColor(baseColor, darken1)} 0%, ${adjustColor(baseColor, darken2)} 50%, ${adjustColor(baseColor, darken1)} 100%)
       `;
       break;
     
     case 'gradient':
       const color1 = theme.backgroundColor;
       const color2 = theme.backgroundColor2 || theme.backgroundColor;
-      // Create dramatic RGB-like lighting from gradient colors with intensity
-      const gradBright1 = Math.round(15 * intensityFactor);
-      const gradBright2 = Math.round(15 * intensityFactor);
+      // Create dramatic glowy RGB-like lighting from gradient colors with intensity
+      const gradBright1 = Math.round(20 * intensityFactor);
+      const gradBright2 = Math.round(20 * intensityFactor);
+      const gradBright3 = Math.round(10 * intensityFactor);
       const gradDarken = Math.round(-15 - (10 * (1 - intensityFactor)));
       style.background = `
-        radial-gradient(circle at 20% 30%, ${adjustColor(color1, gradBright1)} 0%, transparent ${45 + (25 * (1 - intensityFactor))}%),
-        radial-gradient(circle at 80% 70%, ${adjustColor(color2, gradBright2)} 0%, transparent ${45 + (25 * (1 - intensityFactor))}%),
-        radial-gradient(circle at 50% 50%, ${adjustColor(color1, Math.round(-5 * intensityFactor))} 0%, transparent 60%),
-        linear-gradient(135deg, ${adjustColor(color1, gradDarken)} 0%, ${adjustColor(color2, gradDarken)} 100%)
+        radial-gradient(ellipse at 15% 25%, ${adjustColor(color1, gradBright1)} 0%, transparent ${30 + (30 * (1 - intensityFactor))}%),
+        radial-gradient(ellipse at 85% 75%, ${adjustColor(color2, gradBright2)} 0%, transparent ${30 + (30 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 50% 50%, ${adjustColor(color1, gradBright3)} 0%, transparent ${50 + (20 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 30% 70%, ${adjustColor(color2, Math.round(8 * intensityFactor))} 0%, transparent ${45 + (25 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 70% 30%, ${adjustColor(color1, Math.round(8 * intensityFactor))} 0%, transparent ${45 + (25 * (1 - intensityFactor))}%),
+        linear-gradient(135deg, ${adjustColor(color1, gradDarken)} 0%, ${adjustColor(color2, gradDarken)} 50%, ${adjustColor(color1, gradDarken)} 100%)
       `;
       break;
     
@@ -113,18 +120,34 @@ export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = t
           baseColor = bgColorMatch[1].trim();
         }
       }
+      // Enhanced glowy effect for patterns
+      const patBright1 = Math.round(15 * intensityFactor);
+      const patBright2 = Math.round(12 * intensityFactor);
       style.background = `
-        radial-gradient(circle at 25% 40%, ${adjustColor(baseColor, 12)} 0%, transparent 48%),
-        radial-gradient(circle at 75% 60%, ${adjustColor(baseColor, 8)} 0%, transparent 48%),
-        linear-gradient(135deg, ${adjustColor(baseColor, -12)} 0%, ${adjustColor(baseColor, -22)} 100%)
+        radial-gradient(ellipse at 20% 35%, ${adjustColor(baseColor, patBright1)} 0%, transparent ${38 + (22 * (1 - intensityFactor))}%),
+        radial-gradient(ellipse at 80% 65%, ${adjustColor(baseColor, patBright2)} 0%, transparent ${38 + (22 * (1 - intensityFactor))}%),
+        radial-gradient(circle at 50% 50%, ${adjustColor(baseColor, Math.round(8 * intensityFactor))} 0%, transparent 55%),
+        linear-gradient(135deg, ${adjustColor(baseColor, -12)} 0%, ${adjustColor(baseColor, -22)} 50%, ${adjustColor(baseColor, -12)} 100%)
+      `;
+      break;
+    
+    case 'artistic':
+      // Special glowy effect for artistic backgrounds
+      style.background = `
+        radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, ${0.12 * intensityFactor}) 0%, transparent 40%),
+        radial-gradient(ellipse at 80% 70%, rgba(59, 130, 246, ${0.12 * intensityFactor}) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(236, 72, 153, ${0.08 * intensityFactor}) 0%, transparent 50%),
+        radial-gradient(circle at 30% 60%, rgba(6, 182, 212, ${0.08 * intensityFactor}) 0%, transparent 45%),
+        linear-gradient(135deg, #0a0a0a 0%, #0f0a14 50%, #0a0a0a 100%)
       `;
       break;
     
     case 'image':
-      // Subtle ambient for images
+      // Subtle glowy ambient for images
       style.background = `
-        radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 25% 35%, rgba(139, 92, 246, ${0.10 * intensityFactor}) 0%, transparent 45%),
+        radial-gradient(ellipse at 75% 65%, rgba(99, 102, 241, ${0.08 * intensityFactor}) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, ${0.06 * intensityFactor}) 0%, transparent 55%),
         #0a0a0a
       `;
       break;

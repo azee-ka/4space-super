@@ -360,7 +360,15 @@ export function MessageItem({
 
   const getBubbleColor = () => {
     if (isOwn) {
+      // Use gradient if available, otherwise solid color
+      if (theme.sentBubbleGradient) {
+        return { background: theme.sentBubbleGradient };
+      }
       return { backgroundColor: theme.sentBubbleColor };
+    }
+    // Received bubbles
+    if (theme.receivedBubbleGradient) {
+      return { background: theme.receivedBubbleGradient };
     }
     return { backgroundColor: theme.receivedBubbleColor };
   };

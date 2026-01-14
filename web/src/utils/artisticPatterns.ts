@@ -107,6 +107,61 @@ export const artisticPatterns: ArtisticPattern[] = [
     sentTextColor: '#fce7f3',
     receivedTextColor: '#e5e5e5'
   },
+  {
+    name: 'Food Fiesta',
+    css: `background-color: #0a0a0a; 
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23d97706' stroke-width='0.8' opacity='0.15'%3E%3Ccircle cx='15' cy='15' r='8'/%3E%3Cpath d='M15 7v16M7 15h16'/%3E%3Crect x='35' y='5' width='15' height='10' rx='2'/%3E%3Cpath d='M37 5v-3M42 5v-3M47 5v-3'/%3E%3Cpath d='M5 35c0-3 2-5 5-5s5 2 5 5v10h-10v-10z'/%3E%3Ccircle cx='42' cy='42' r='7'/%3E%3Cpath d='M38 42h8M42 38v8'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;`,
+    sentBubbleColor: '#d97706',
+    receivedBubbleColor: '#27272a',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#e5e5e5'
+  },
+  {
+    name: 'Floral Dreams',
+    css: `background-color: #0a0a0a;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ec4899' stroke-width='0.8' opacity='0.12'%3E%3Ccircle cx='25' cy='25' r='3'/%3E%3Ccircle cx='25' cy='15' r='4'/%3E%3Ccircle cx='35' cy='25' r='4'/%3E%3Ccircle cx='25' cy='35' r='4'/%3E%3Ccircle cx='15' cy='25' r='4'/%3E%3Ccircle cx='18' cy='18' r='3'/%3E%3Ccircle cx='32' cy='18' r='3'/%3E%3Ccircle cx='32' cy='32' r='3'/%3E%3Ccircle cx='18' cy='32' r='3'/%3E%3Cpath d='M25 20v10M20 25h10'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 50px 50px;`,
+    sentBubbleColor: '#ec4899',
+    receivedBubbleColor: '#27272a',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#e5e5e5'
+  },
+  {
+    name: 'Cosmic Space',
+    css: `background-color: #0a0a1a;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%238b5cf6' stroke-width='0.8' opacity='0.15'%3E%3Ccircle cx='20' cy='20' r='8'/%3E%3Ccircle cx='20' cy='20' r='12' stroke-dasharray='2,2'/%3E%3Cpath d='M15 20h10M20 15v10'/%3E%3Ccircle cx='60' cy='25' r='5'/%3E%3Cpath d='M55 25l10-5M55 25l10 5'/%3E%3Cpolygon points='25,55 30,65 20,65'/%3E%3Ccircle cx='65' cy='65' r='6'/%3E%3Cpath d='M60 60l10 10M70 60l-10 10'/%3E%3Cpath d='M10 60q5-5 10 0t10 0' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 80px 80px;`,
+    sentBubbleColor: '#8b5cf6',
+    receivedBubbleColor: '#1e1b4b',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#e0e7ff'
+  },
+  {
+    name: 'Tech Gadgets',
+    css: `background-color: #0a0a0a;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='70' height='70' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2306b6d4' stroke-width='0.8' opacity='0.14'%3E%3Crect x='10' y='10' width='15' height='20' rx='2'/%3E%3Cpath d='M12 12h11M12 15h11M12 18h11'/%3E%3Crect x='35' y='8' width='25' height='18' rx='1'/%3E%3Crect x='37' y='10' width='21' height='12'/%3E%3Ccircle cx='47' cy='30' r='2'/%3E%3Cpath d='M10 40h15v15h-15z'/%3E%3Cpath d='M12 42h11M12 45h11M12 48h11M12 51h11'/%3E%3Ccircle cx='50' cy='50' r='8'/%3E%3Cpath d='M50 45v10M45 50h10'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 70px 70px;`,
+    sentBubbleColor: '#06b6d4',
+    receivedBubbleColor: '#1e293b',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#cbd5e1'
+  },
+  {
+    name: 'Winter Frost',
+    css: `background-color: #0a0a14;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2360a5fa' stroke-width='0.8' opacity='0.12'%3E%3Cpath d='M30 20v20M20 30h20M25 25l10 10M35 25l-10 10'/%3E%3Ccircle cx='30' cy='20' r='2'/%3E%3Ccircle cx='30' cy='40' r='2'/%3E%3Ccircle cx='20' cy='30' r='2'/%3E%3Ccircle cx='40' cy='30' r='2'/%3E%3Ccircle cx='25' cy='25' r='1.5'/%3E%3Ccircle cx='35' cy='25' r='1.5'/%3E%3Ccircle cx='25' cy='35' r='1.5'/%3E%3Ccircle cx='35' cy='35' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;`,
+    sentBubbleColor: '#60a5fa',
+    receivedBubbleColor: '#1e293b',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#cbd5e1'
+  },
 ];
 
 export function getArtisticPatternCSS(patternName: string): string {

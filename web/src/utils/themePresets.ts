@@ -1,0 +1,345 @@
+// Professional Theme Presets - Telegram & WhatsApp Inspired
+// Offering more variety than any messaging app with gradient bubbles and artistic backgrounds
+
+import type { ChatTheme } from '../store/chatSettingsStore';
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  category: 'simple' | 'gradient' | 'artistic' | 'professional';
+  description: string;
+  theme: ChatTheme;
+  preview?: {
+    sentBubblePreview: string; // CSS for preview
+    receivedBubblePreview: string;
+  };
+}
+
+export const themePresets: ThemePreset[] = [
+  // ============ SIMPLE THEMES (Clean, Professional) ============
+  {
+    id: 'classic-dark',
+    name: 'Classic Dark',
+    category: 'simple',
+    description: 'Clean and professional dark theme',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#000000',
+      sentBubbleColor: '#7c3aed',
+      receivedBubbleColor: '#27272a',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'purple',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'midnight-blue',
+    name: 'Midnight Blue',
+    category: 'simple',
+    description: 'Deep blue professional theme',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0f172a',
+      sentBubbleColor: '#3b82f6',
+      receivedBubbleColor: '#1e293b',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'blue',
+      sentTextColor: '#dbeafe',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+  {
+    id: 'forest-green',
+    name: 'Forest Green',
+    category: 'simple',
+    description: 'Natural green theme',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a1f0a',
+      sentBubbleColor: '#059669',
+      receivedBubbleColor: '#1f2937',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'green',
+      sentTextColor: '#d1fae5',
+      receivedTextColor: '#d1d5db',
+    },
+  },
+
+  // ============ GRADIENT BUBBLE THEMES (Telegram Style) ============
+  {
+    id: 'purple-dream',
+    name: 'Purple Dream',
+    category: 'gradient',
+    description: 'Smooth purple gradient bubbles',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#8b5cf6',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'purple',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'ocean-wave',
+    name: 'Ocean Wave',
+    category: 'gradient',
+    description: 'Blue gradient like ocean waves',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#3b82f6',
+      receivedBubbleColor: '#1e293b',
+      sentBubbleGradient: 'linear-gradient(135deg, #667eea 0%, #06b6d4 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'cyan',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+  {
+    id: 'sunset-glow',
+    name: 'Sunset Glow',
+    category: 'gradient',
+    description: 'Warm sunset gradient',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#f97316',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'orange',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'mint-fresh',
+    name: 'Mint Fresh',
+    category: 'gradient',
+    description: 'Fresh mint green gradient',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#10b981',
+      receivedBubbleColor: '#1f2937',
+      sentBubbleGradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'green',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#d1d5db',
+    },
+  },
+  {
+    id: 'pink-passion',
+    name: 'Pink Passion',
+    category: 'gradient',
+    description: 'Vibrant pink gradient',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#ec4899',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'pink',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'cyber-neon',
+    name: 'Cyber Neon',
+    category: 'gradient',
+    description: 'Neon cyan gradient',
+    theme: {
+      backgroundType: 'solid',
+      backgroundColor: '#0a0a0a',
+      sentBubbleColor: '#06b6d4',
+      receivedBubbleColor: '#1e293b',
+      sentBubbleGradient: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'cyan',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+
+  // ============ ARTISTIC BACKGROUNDS (Telegram/WhatsApp Style Dense Patterns) ============
+  {
+    id: 'food-fiesta',
+    name: 'Food Fiesta',
+    category: 'artistic',
+    description: 'Delicious food icons everywhere',
+    theme: {
+      backgroundType: 'artistic',
+      backgroundColor: '#0a0a0a',
+      backgroundPattern: 'Food Fiesta',
+      sentBubbleColor: '#d97706',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'orange',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'floral-dreams',
+    name: 'Floral Dreams',
+    category: 'artistic',
+    description: 'Beautiful flowers pattern',
+    theme: {
+      backgroundType: 'artistic',
+      backgroundColor: '#0a0a0a',
+      backgroundPattern: 'Floral Dreams',
+      sentBubbleColor: '#ec4899',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'pink',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'cosmic-space',
+    name: 'Cosmic Space',
+    category: 'artistic',
+    description: 'Space objects and planets',
+    theme: {
+      backgroundType: 'artistic',
+      backgroundColor: '#0a0a0a',
+      backgroundPattern: 'Cosmic Space',
+      sentBubbleColor: '#8b5cf6',
+      receivedBubbleColor: '#1e1b4b',
+      sentBubbleGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'purple',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e0e7ff',
+    },
+  },
+  {
+    id: 'tech-gadgets',
+    name: 'Tech Gadgets',
+    category: 'artistic',
+    description: 'Modern tech devices pattern',
+    theme: {
+      backgroundType: 'artistic',
+      backgroundColor: '#0a0a0a',
+      backgroundPattern: 'Tech Gadgets',
+      sentBubbleColor: '#06b6d4',
+      receivedBubbleColor: '#1e293b',
+      sentBubbleGradient: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'cyan',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+  {
+    id: 'winter-frost',
+    name: 'Winter Frost',
+    category: 'artistic',
+    description: 'Snowflakes and winter vibes',
+    theme: {
+      backgroundType: 'artistic',
+      backgroundColor: '#0a0a0a',
+      backgroundPattern: 'Winter Frost',
+      sentBubbleColor: '#60a5fa',
+      receivedBubbleColor: '#1e293b',
+      sentBubbleGradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 14,
+      accentColor: 'blue',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+
+  // ============ PROFESSIONAL THEMES (Full Package) ============
+  {
+    id: 'corporate-blue',
+    name: 'Corporate Blue',
+    category: 'professional',
+    description: 'Professional business theme',
+    theme: {
+      backgroundType: 'gradient',
+      backgroundColor: '#0f172a',
+      backgroundColor2: '#1e293b',
+      sentBubbleColor: '#3b82f6',
+      receivedBubbleColor: '#334155',
+      sentBubbleGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'blue',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#cbd5e1',
+    },
+  },
+  {
+    id: 'executive-dark',
+    name: 'Executive Dark',
+    category: 'professional',
+    description: 'Premium dark theme',
+    theme: {
+      backgroundType: 'gradient',
+      backgroundColor: '#0a0a0a',
+      backgroundColor2: '#1a1a1a',
+      sentBubbleColor: '#7c3aed',
+      receivedBubbleColor: '#27272a',
+      sentBubbleGradient: 'linear-gradient(135deg, #7c3aed 0%, #6b21a8 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'purple',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#e5e5e5',
+    },
+  },
+  {
+    id: 'emerald-pro',
+    name: 'Emerald Pro',
+    category: 'professional',
+    description: 'Professional green theme',
+    theme: {
+      backgroundType: 'gradient',
+      backgroundColor: '#064e3b',
+      backgroundColor2: '#0a1f0a',
+      sentBubbleColor: '#059669',
+      receivedBubbleColor: '#1f2937',
+      sentBubbleGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      bubbleShapePreset: 'pill',
+      bubbleBorderRadius: 12,
+      accentColor: 'green',
+      sentTextColor: '#ffffff',
+      receivedTextColor: '#d1d5db',
+    },
+  },
+];
+
+export function getThemePreset(id: string): ThemePreset | undefined {
+  return themePresets.find(p => p.id === id);
+}
+
+export function getThemesByCategory(category: ThemePreset['category']): ThemePreset[] {
+  return themePresets.filter(p => p.category === category);
+}
