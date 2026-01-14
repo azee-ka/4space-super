@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import { MessageItem } from './MessageItem';
@@ -43,9 +43,9 @@ export function MessagesList({
   const isNearBottomRef = useRef(true);
   const hasInitialScrolledRef = useRef(false);
   const lastMessageCountRef = useRef(0);
-  const isLoadingRef = useRef(false);
-  const lastScrollHeightRef = useRef(0);
-  const lastScrollTopRef = useRef(0);
+  const prevScrollHeightRef = useRef(0);
+  const prevScrollTopRef = useRef(0);
+  const wasFetchingRef = useRef(false);
 
   // Scroll to bottom helper
   const scrollToBottom = useCallback((smooth = false) => {
@@ -86,7 +86,7 @@ export function MessagesList({
     const hasNew = totalCount > lastMessageCountRef.current;
     
     // Only auto-scroll if user is near bottom and new message arrived
-    if (hasNew && isNearBottomRef.current && !isLoadingRef.current) {
+    if (hasNew && isNearBottomRef.current) {
       // Use immediate scroll (not smooth) for instant feedback
       scrollToBottom(false);
     }
@@ -94,42 +94,48 @@ export function MessagesList({
     lastMessageCountRef.current = totalCount;
   }, [messages.length, isLoading, scrollToBottom]);
 
-  // Restore scroll after loading older messages
-  useEffect(() => {
-    if (isFetchingMore) return;
-    if (!isLoadingRef.current) return;
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    const newHeight = container.scrollHeight;
-    const heightDiff = newHeight - lastScrollHeightRef.current;
-    
-    if (heightDiff > 0) {
-      // Restore position - user sees same messages in view
-      container.scrollTop = lastScrollTopRef.current + heightDiff;
-    }
-    
-    isLoadingRef.current = false;
-    lastScrollHeightRef.current = 0;
-    lastScrollTopRef.current = 0;
-  }, [isFetchingMore, messages.length]);
 
   // Handle scroll
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    const { scrollTop, scrollHeight } = containerRef.current;
     
     // Track if near bottom
     isNearBottomRef.current = checkIfNearBottom();
     
     // Load more when near top
-    if (scrollTop < 200 && hasMore && !isFetchingMore && !isLoadingRef.current) {
-      isLoadingRef.current = true;
-      lastScrollHeightRef.current = scrollHeight;
-      lastScrollTopRef.current = scrollTop;
+    if (scrollTop < 200 && hasMore && !isFetchingMore) {
+      // Save scroll position before loading
+      prevScrollHeightRef.current = scrollHeight;
+      prevScrollTopRef.current = scrollTop;
+      wasFetchingRef.current = true;
       onLoadMore();
     }
   }, [hasMore, isFetchingMore, onLoadMore, checkIfNearBottom]);
+
+  // Restore scroll position after loading older messages
+  // Use useLayoutEffect to adjust scroll synchronously before browser paint
+  useLayoutEffect(() => {
+    // Only run when fetching completes (was fetching, now not fetching)
+    if (isFetchingMore || !wasFetchingRef.current || !containerRef.current) return;
+    
+    const container = containerRef.current;
+    const prevHeight = prevScrollHeightRef.current;
+    const prevTop = prevScrollTopRef.current;
+    
+    const newHeight = container.scrollHeight;
+    const heightDiff = newHeight - prevHeight;
+    
+    if (heightDiff > 0) {
+      // Adjust scroll position to maintain visual position
+      // The height difference is how much content was added above
+      container.scrollTop = prevTop + heightDiff;
+    }
+    
+    wasFetchingRef.current = false;
+    prevScrollHeightRef.current = 0;
+    prevScrollTopRef.current = 0;
+  }, [isFetchingMore, messages.length]);
 
   // Scroll to specific message
   const scrollToMessage = useCallback((messageId: string) => {
@@ -267,7 +273,7 @@ export function MessagesList({
       className="h-full overflow-y-auto bg-black"
       style={{
         scrollbarWidth: 'thin',
-        scrollbarColor: '#3f3f46 #18181b',
+        scrollbarColor: '#6b7280 transparent',
       }}
     >
       <style>{`
@@ -275,14 +281,14 @@ export function MessagesList({
           width: 8px;
         }
         [data-messages-container]::-webkit-scrollbar-track {
-          background: #18181b;
+          background: transparent;
         }
         [data-messages-container]::-webkit-scrollbar-thumb {
-          background: #3f3f46;
+          background: #6b7280;
           border-radius: 4px;
         }
         [data-messages-container]::-webkit-scrollbar-thumb:hover {
-          background: #52525b;
+          background: #4b5563;
         }
       `}</style>
       {/* Load More Indicator */}
