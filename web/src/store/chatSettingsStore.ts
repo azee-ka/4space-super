@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type BackgroundType = 'solid' | 'gradient' | 'pattern' | 'image';
+export type BackgroundType = 'solid' | 'gradient' | 'pattern' | 'artistic' | 'image';
 export type BubbleShapePreset = 'square' | 'rounded' | 'pill' | 'extra-rounded' | 'custom';
 
 export interface ChatTheme {
@@ -12,7 +12,7 @@ export interface ChatTheme {
   backgroundColor: string; // solid color or gradient colors
   backgroundColor2?: string; // for gradients
   backgroundImage?: string; // base64 or URL
-  backgroundPattern?: string; // pattern name
+  backgroundPattern?: string; // pattern name (for both pattern and artistic)
   
   // Bubble settings
   sentBubbleColor: string;
@@ -22,8 +22,8 @@ export interface ChatTheme {
   accentColor: string;
   
   // Text colors for readability
-  sentTextColor?: string; // text color in sent bubbles
-  receivedTextColor?: string; // text color in received bubbles
+  sentTextColor: string; // text color in sent bubbles
+  receivedTextColor: string; // text color in received bubbles
 }
 
 interface ChatSettingsState {
@@ -47,7 +47,15 @@ interface ChatSettingsState {
   messageDensity: 'compact' | 'comfortable' | 'spacious';
   theme: ChatTheme;
   ambientLighting: boolean; // Ambient lighting for sidebars
+  ambientIntensity: number; // 0-100, intensity of ambient lighting
   applyToAllRooms: boolean; // Apply settings to all rooms
+  
+  // Per-room settings storage
+  roomSettings: Record<string, {
+    fontSize?: number;
+    messageDensity?: 'compact' | 'comfortable' | 'spacious';
+    theme?: ChatTheme;
+  }>;
   
   // Setters
   setFormattingButtonsEnabled: (enabled: boolean) => void;
@@ -61,11 +69,19 @@ interface ChatSettingsState {
   setMuteRoom: (enabled: boolean) => void;
   setAutoDeleteMessages: (value: 'never' | '7days' | '30days' | '1year') => void;
   setMessageHistory: (value: 'unlimited' | '30days' | '90days' | '1year') => void;
-  setFontSize: (size: number) => void;
-  setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious') => void;
-  setTheme: (theme: ChatTheme) => void;
+  setFontSize: (size: number, roomId?: string) => void;
+  setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious', roomId?: string) => void;
+  setTheme: (theme: ChatTheme, roomId?: string) => void;
   setAmbientLighting: (enabled: boolean) => void;
+  setAmbientIntensity: (intensity: number) => void;
   setApplyToAllRooms: (apply: boolean) => void;
+  
+  // Get settings for a specific room
+  getSettingsForRoom: (roomId?: string) => {
+    fontSize: number;
+    messageDensity: 'compact' | 'comfortable' | 'spacious';
+    theme: ChatTheme;
+  };
 }
 
 export const useChatSettingsStore = create<ChatSettingsState>()(
@@ -99,7 +115,9 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
         receivedTextColor: '#ffffff',
       },
       ambientLighting: true, // Enabled by default for nice effect
+      ambientIntensity: 50, // Default 50% intensity
       applyToAllRooms: false, // By default, settings apply to current room only
+      roomSettings: {}, // Per-room settings storage
       
       // Setters
       setFormattingButtonsEnabled: (enabled: boolean) => {
@@ -135,20 +153,84 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
       setMessageHistory: (value: 'unlimited' | '30days' | '90days' | '1year') => {
         set({ messageHistory: value });
       },
-      setFontSize: (size: number) => {
-        set({ fontSize: size });
+      setFontSize: (size: number, roomId?: string) => {
+        set((state) => {
+          if (roomId && !state.applyToAllRooms) {
+            // Save to room-specific settings
+            return {
+              roomSettings: {
+                ...state.roomSettings,
+                [roomId]: {
+                  ...state.roomSettings[roomId],
+                  fontSize: size,
+                },
+              },
+            };
+          }
+          // Apply globally
+          return { fontSize: size };
+        });
       },
-      setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious') => {
-        set({ messageDensity: density });
+      setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious', roomId?: string) => {
+        set((state) => {
+          if (roomId && !state.applyToAllRooms) {
+            return {
+              roomSettings: {
+                ...state.roomSettings,
+                [roomId]: {
+                  ...state.roomSettings[roomId],
+                  messageDensity: density,
+                },
+              },
+            };
+          }
+          return { messageDensity: density };
+        });
       },
-      setTheme: (theme: ChatTheme) => {
-        set({ theme });
+      setTheme: (theme: ChatTheme, roomId?: string) => {
+        set((state) => {
+          if (roomId && !state.applyToAllRooms) {
+            return {
+              roomSettings: {
+                ...state.roomSettings,
+                [roomId]: {
+                  ...state.roomSettings[roomId],
+                  theme,
+                },
+              },
+            };
+          }
+          return { theme };
+        });
       },
       setAmbientLighting: (enabled: boolean) => {
         set({ ambientLighting: enabled });
       },
+      setAmbientIntensity: (intensity: number) => {
+        set({ ambientIntensity: intensity });
+      },
       setApplyToAllRooms: (apply: boolean) => {
         set({ applyToAllRooms: apply });
+      },
+      
+      // Get settings for a specific room
+      getSettingsForRoom(roomId?: string) {
+        const state = useChatSettingsStore.getState() as ChatSettingsState;
+        if (roomId && !state.applyToAllRooms && state.roomSettings[roomId]) {
+          // Return room-specific settings merged with global defaults
+          const roomSettings = state.roomSettings[roomId];
+          return {
+            fontSize: roomSettings.fontSize ?? state.fontSize,
+            messageDensity: roomSettings.messageDensity ?? state.messageDensity,
+            theme: roomSettings.theme ?? state.theme,
+          };
+        }
+        // Return global settings
+        return {
+          fontSize: state.fontSize,
+          messageDensity: state.messageDensity,
+          theme: state.theme,
+        };
       },
     }),
     {

@@ -1,15 +1,34 @@
 // Comprehensive Customization Tab Component - FIXED VERSION
 // web/src/components/spaces/chat/CustomizationTab.tsx
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, memo } from 'react';
+import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPalette, faTrash, faUpload, faTimes, faImages,
   faShapes, faSlidersH, faCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../store/chatSettingsStore';
+import { artisticPatterns } from '../../../utils/artisticPatterns';
 import { patternBackgrounds } from '../../../utils/patternBackgrounds';
 import { ColorPicker } from '../../ui/ColorPicker';
+
+// Toggle Switch Component with smooth animation
+const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: (value: boolean) => void }) => (
+  <motion.button
+    onClick={() => onToggle(!enabled)}
+    className={`w-12 h-6 rounded-full transition-colors flex items-center ${
+      enabled ? 'bg-purple-500' : 'bg-zinc-700'
+    }`}
+    whileTap={{ scale: 0.95 }}
+  >
+    <motion.div
+      className="w-5 h-5 rounded-full bg-white"
+      animate={{ x: enabled ? 24 : 2 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    />
+  </motion.button>
+));
 
 interface CustomizationTabProps {
   theme: ChatTheme;
@@ -21,10 +40,15 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     fontSize, setFontSize,
     messageDensity, setMessageDensity,
     setTheme: setStoreTheme,
+    ambientLighting,
+    setAmbientLighting,
+    ambientIntensity,
+    setAmbientIntensity,
+    applyToAllRooms,
+    setApplyToAllRooms,
   } = useChatSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [applyToAllRooms, setApplyToAllRooms] = useState(false);
 
   const handleThemeUpdate = useCallback((updates: Partial<ChatTheme>) => {
     const newTheme = { ...theme, ...updates };
@@ -54,8 +78,9 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
   const backgroundTypes: Array<{ value: BackgroundType; label: string; icon: any }> = [
     { value: 'solid', label: 'Solid', icon: faPalette },
     { value: 'gradient', label: 'Gradient', icon: faSlidersH },
-    { value: 'pattern', label: 'Pattern', icon: faImages },
-    { value: 'image', label: 'Image', icon: faImages },
+    { value: 'pattern', label: 'Pattern', icon: faShapes },
+    { value: 'artistic', label: 'Artistic', icon: faImages },
+    { value: 'image', label: 'Image', icon: faUpload },
   ];
 
   // Bubble shape presets
@@ -126,39 +151,52 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     setMessageDensity('comfortable');
   }, [setStoreTheme, onThemeChange, setFontSize, setMessageDensity]);
 
-  // Parse CSS pattern string
-  const parsePatternCSS = (css: string) => {
-    const cssProps: Record<string, string> = {};
-    const cssRules = css.split(';').filter(rule => rule.trim());
-    cssRules.forEach(rule => {
-      const [property, value] = rule.split(':').map(s => s.trim());
-      if (property && value) {
-        cssProps[property] = value;
-      }
-    });
-    return cssProps;
-  };
-
   return (
     <div className="p-6 space-y-8 overflow-y-auto h-full">
-      {/* Apply to All Rooms */}
-      <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
-        <div>
-          <label className="text-sm font-medium text-white cursor-pointer">Apply to All Rooms</label>
-          <p className="text-xs text-gray-400 mt-0.5">Use these settings for all chat rooms</p>
-        </div>
-        <button
-          onClick={() => setApplyToAllRooms(!applyToAllRooms)}
-          className={`w-12 h-6 rounded-full transition-colors flex items-center ${
-            applyToAllRooms ? 'bg-cyan-500' : 'bg-zinc-700'
-          }`}
-        >
-          <div
-            className={`w-5 h-5 rounded-full bg-white transition-transform ${
-              applyToAllRooms ? 'translate-x-6' : 'translate-x-0.5'
-            }`}
+      {/* Global Settings Toggles */}
+      <div className="space-y-4 p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium text-white cursor-pointer">Ambient Lighting</label>
+            <p className="text-xs text-gray-400 mt-0.5">RGB-style lighting effect for sidebars</p>
+          </div>
+          <ToggleSwitch
+            enabled={ambientLighting}
+            onToggle={setAmbientLighting}
           />
-        </button>
+        </div>
+        
+        {/* Ambient Intensity Slider */}
+        {ambientLighting && (
+          <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-300">Ambient Intensity</label>
+              <span className="text-xs text-purple-400 font-medium">{ambientIntensity}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={ambientIntensity}
+              onChange={(e) => setAmbientIntensity(Number(e.target.value))}
+              className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              style={{
+                background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${ambientIntensity}%, #3f3f46 ${ambientIntensity}%, #3f3f46 100%)`
+              }}
+            />
+          </div>
+        )}
+        
+        <div className="flex items-center justify-between pt-3 border-t border-zinc-700/50">
+          <div>
+            <label className="text-sm font-medium text-white cursor-pointer">Apply to All Rooms</label>
+            <p className="text-xs text-gray-400 mt-0.5">Use these settings for all chat rooms</p>
+          </div>
+          <ToggleSwitch
+            enabled={applyToAllRooms}
+            onToggle={setApplyToAllRooms}
+          />
+        </div>
       </div>
 
       {/* Background Type Selection */}
@@ -356,29 +394,96 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
         </div>
       )}
 
-      {/* Pattern Background */}
+      {/* CSS Pattern Backgrounds */}
       {theme.backgroundType === 'pattern' && (
         <div>
-          <h3 className="text-sm font-bold text-white mb-4">Pattern Background</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <h3 className="text-sm font-bold text-white mb-4">CSS Patterns</h3>
+          <p className="text-xs text-gray-400 mb-3">Repeating geometric patterns</p>
+          <div className="grid grid-cols-3 gap-3">
             {patternBackgrounds.map((pattern) => {
-              const cssProps = parsePatternCSS(pattern.css);
+              // Parse CSS more robustly
+              const cssStyles = pattern.css.split(';').reduce((acc, rule) => {
+                const colonIndex = rule.indexOf(':');
+                if (colonIndex > -1) {
+                  const property = rule.substring(0, colonIndex).trim();
+                  const value = rule.substring(colonIndex + 1).trim();
+                  if (property && value) {
+                    // Convert kebab-case to camelCase for React
+                    const camelProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    acc[camelProperty] = value;
+                  }
+                }
+                return acc;
+              }, {} as Record<string, string>);
+
               return (
                 <button
                   key={pattern.id}
-                  onClick={() => handleThemeUpdate({ backgroundPattern: pattern.id })}
+                  onClick={() => handleThemeUpdate({ 
+                    backgroundType: 'pattern', 
+                    backgroundPattern: pattern.id,
+                    sentBubbleColor: pattern.sentBubbleColor,
+                    receivedBubbleColor: pattern.receivedBubbleColor,
+                    sentTextColor: pattern.sentTextColor,
+                    receivedTextColor: pattern.receivedTextColor,
+                  })}
+                  className={`relative h-24 rounded-xl transition-all overflow-hidden ${
+                    theme.backgroundPattern === pattern.id && theme.backgroundType === 'pattern'
+                      ? 'ring-2 ring-purple-500/50'
+                      : 'hover:ring-2 hover:ring-zinc-600'
+                  }`}
+                  style={cssStyles}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+                  <span className="absolute bottom-2 left-2 right-2 text-[10px] text-white font-medium text-center">
+                    {pattern.name}
+                  </span>
+                  {theme.backgroundPattern === pattern.id && theme.backgroundType === 'pattern' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                      <FontAwesomeIcon icon={faCheck} className="text-white text-[10px]" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Artistic Pattern Backgrounds */}
+      {theme.backgroundType === 'artistic' && (
+        <div>
+          <h3 className="text-sm font-bold text-white mb-4">Artistic Backgrounds</h3>
+          <p className="text-xs text-gray-400 mb-3">Unique, non-repetitive designs</p>
+          <div className="grid grid-cols-2 gap-3">
+            {artisticPatterns.map((pattern) => {
+              // Parse CSS for preview
+              const cssMatch = pattern.css.match(/background:\s*([^;]+)/);
+              const backgroundCSS = cssMatch ? cssMatch[1].trim() : '';
+
+              return (
+                <button
+                  key={pattern.name}
+                  onClick={() => handleThemeUpdate({ 
+                    backgroundType: 'artistic', 
+                    backgroundPattern: pattern.name,
+                    sentBubbleColor: pattern.sentBubbleColor,
+                    receivedBubbleColor: pattern.receivedBubbleColor,
+                    sentTextColor: pattern.sentTextColor,
+                    receivedTextColor: pattern.receivedTextColor,
+                  })}
                   className={`relative h-20 rounded-xl transition-all overflow-hidden ${
-                    theme.backgroundPattern === pattern.id
+                    theme.backgroundPattern === pattern.name && theme.backgroundType === 'artistic'
                       ? 'ring-2 ring-purple-500/50 bg-zinc-800/70'
                       : 'bg-zinc-800/50 hover:bg-zinc-800/70'
                   }`}
-                  style={cssProps}
+                  style={{ background: backgroundCSS }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
                   <span className="absolute bottom-2 left-2 right-2 text-xs text-white font-medium">
                     {pattern.name}
                   </span>
-                  {theme.backgroundPattern === pattern.id && (
+                  {theme.backgroundPattern === pattern.name && theme.backgroundType === 'artistic' && (
                     <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
                       <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />
                     </div>

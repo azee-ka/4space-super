@@ -9,6 +9,7 @@ import {
   faChevronDown, faVolumeUp, faVideo, faCog
 } from '@fortawesome/free-solid-svg-icons';
 import type { Room } from '@4space/shared/src/services/messages.service';
+import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 
 interface RoomsListProps {
   rooms: Room[];
@@ -33,6 +34,23 @@ export function RoomsList({
 }: RoomsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  
+  // Get accent color from theme
+  const { theme } = useChatSettingsStore();
+  
+  // Get accent color value
+  const getAccentColor = () => {
+    switch (theme.accentColor) {
+      case 'cyan': return '#06b6d4';
+      case 'purple': return '#a855f7';
+      case 'pink': return '#ec4899';
+      case 'green': return '#10b981';
+      case 'yellow': return '#eab308';
+      default: return '#a855f7';
+    }
+  };
+  
+  const accentColor = getAccentColor();
 
   // Group rooms by category
   const groupedRooms = rooms.reduce((acc, room) => {
@@ -93,7 +111,13 @@ export function RoomsList({
         {onCreateRoom && (
           <button
             onClick={onCreateRoom}
-            className="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: `${accentColor}15`,
+              color: accentColor,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
           >
             Create Room
           </button>
@@ -124,7 +148,12 @@ export function RoomsList({
           {onCreateRoom && (
             <button
               onClick={onCreateRoom}
-              className="w-10 h-10 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+              style={{
+                backgroundColor: `${accentColor}15`,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
             >
               <FontAwesomeIcon icon={faPlus} className="text-cyan-400 text-sm" />
             </button>
@@ -184,9 +213,14 @@ export function RoomsList({
                           onClick={() => onSelectRoom(room.id)}
                           className={`w-full px-3 py-2.5 rounded-xl transition-all flex items-center gap-3 ${
                             isSelected 
-                              ? `bg-${color}-500/10` 
+                              ? '' 
                               : 'bg-zinc-800/30 hover:bg-zinc-800/50'
                           }`}
+                          style={isSelected ? {
+                            backgroundColor: `${accentColor}15`,
+                            boxShadow: `0 0 12px -2px ${accentColor}40`,
+                            border: `1.5px solid ${accentColor}60`,
+                          } : {}}
                         >
                           {/* Icon */}
                           <div className={`w-10 h-10 rounded-xl bg-${color}-500/10 flex items-center justify-center flex-shrink-0`}>
@@ -206,7 +240,10 @@ export function RoomsList({
                               </span>
                               
                               {room.unread_count && room.unread_count > 0 && (
-                                <span className="px-1.5 py-0.5 rounded-lg bg-cyan-500 text-white text-[10px] font-bold min-w-[20px] text-center">
+                                <span 
+                                  className="px-1.5 py-0.5 rounded-lg text-white text-[10px] font-bold min-w-[20px] text-center"
+                                  style={{ backgroundColor: accentColor }}
+                                >
                                   {room.unread_count > 99 ? '99+' : room.unread_count}
                                 </span>
                               )}

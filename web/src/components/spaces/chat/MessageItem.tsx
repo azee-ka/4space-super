@@ -401,12 +401,22 @@ export function MessageItem({
   // Get all reactions in a flat list for the dropdown
   const allReactions = reactionsToUse || [];
   const totalReactionCount = allReactions.length;
+  
+  // Get density spacing
+  const getDensitySpacing = () => {
+    if (messageDensity === 'compact') {
+      return isFirstInGroup ? 'mt-1' : 'mt-0.5';
+    } else if (messageDensity === 'spacious') {
+      return isFirstInGroup ? 'mt-4' : 'mt-2';
+    }
+    return isFirstInGroup ? 'mt-3' : 'mt-1.5'; // comfortable (default)
+  };
 
   return (
     <div 
       ref={containerRef}
       className={`group flex gap-2 px-3 ${isOwn ? 'flex-row-reverse' : ''} ${
-        isFirstInGroup ? 'mt-3' : 'mt-1.5'
+        getDensitySpacing()
       } ${reactionsToUse && reactionsToUse.length > 0 ? 'mb-5' : ''} relative`}
       id={`message-${message.id}`}
       onMouseEnter={handleMouseEnter}
@@ -442,12 +452,13 @@ export function MessageItem({
           {/* Message Bubble */}
           <div className="relative group/msg">
             <div 
-              className={`relative px-3 py-1.5 ${
+              className={`relative ${
                 message.deleted_at ? 'opacity-50' : ''
               } shadow-lg`}
               style={{
                 ...getBorderRadius(),
                 ...getBubbleColor(),
+                padding: messageDensity === 'compact' ? '4px 10px' : messageDensity === 'spacious' ? '8px 16px' : '6px 12px',
               }}
             >
               {/* Reply To - Inside bubble */}
@@ -476,7 +487,11 @@ export function MessageItem({
               ) : (
                 <>
                   <div 
-                    className="text-[15px] text-white whitespace-pre-wrap break-words pb-0 leading-[1.3]"
+                    className="whitespace-pre-wrap break-words pb-0 leading-[1.3]"
+                    style={{ 
+                      color: getTextColor(),
+                      fontSize: `${fontSize}px`,
+                    }}
                     dangerouslySetInnerHTML={{ 
                       __html: DOMPurify.sanitize(message.content || '', {
                         ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'p', 'br'],

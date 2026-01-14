@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
-import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset } from '../store/chatSettingsStore';
+import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { getBackgroundStyle, getAmbientBackgroundStyle } from '../utils/themeUtils';
 import { patternBackgrounds } from '../utils/patternBackgrounds';
 import { useSpace } from '../hooks/useSpaces';
@@ -52,9 +52,14 @@ export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { formattingButtonsEnabled, theme } = useChatSettingsStore();
+  const chatSettings = useChatSettingsStore();
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
+  
+  // Get settings for current room
+  const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId);
+  const { theme } = roomSettings;
+  const { ambientLighting, ambientIntensity } = chatSettings;
   const [replyTo, setReplyTo] = useState<MessageType | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageType | null>(null);
   
@@ -380,7 +385,7 @@ const handleSendMessage = useCallback((
 
 
   const centerPanelBackgroundStyle = getBackgroundStyle(theme);
-  const ambientBackgroundStyle = getAmbientBackgroundStyle(theme, useChatSettingsStore.getState().ambientLighting);
+  const ambientBackgroundStyle = getAmbientBackgroundStyle(theme, ambientLighting, ambientIntensity);
 
 return (
   <div className="h-screen flex bg-transparent overflow-hidden relative">
