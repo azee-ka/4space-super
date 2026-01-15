@@ -224,8 +224,8 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
       {/* Featured Premium Themes */}
       {theme.backgroundType === 'featured' && (
         <div>
-          <h3 className="text-sm font-bold text-white mb-2">Featured Premium Themes</h3>
-          <p className="text-xs text-gray-400 mb-3">Standalone premium themes with custom backgrounds & gradient bubbles</p>
+          <h3 className="text-sm font-bold text-white mb-2">Featured Themes</h3>
+          <p className="text-xs text-gray-400 mb-3">Premium themes with custom backgrounds & gradient bubbles</p>
           <div className="grid grid-cols-3 gap-3">
             {getThemesByCategory('featured').map((preset) => (
               <button
@@ -277,9 +277,6 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
                 )}
               </button>
             ))}
-          </div>
-          <div className="mt-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <p className="text-xs text-purple-400">✨ Standalone premium themes with unique backgrounds and gradient bubbles</p>
           </div>
         </div>
       )}
