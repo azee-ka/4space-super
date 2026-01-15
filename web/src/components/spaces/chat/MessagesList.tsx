@@ -40,6 +40,9 @@ export function MessagesList({
   typingUsers = new Map(),
   optimisticMessages = [],
 }: MessagesListProps) {
+  const [scrollIndicator, setScrollIndicator] = useState<string | null>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -48,7 +51,6 @@ export function MessagesList({
   const prevScrollHeightRef = useRef(0);
   const prevScrollTopRef = useRef(0);
   const wasFetchingRef = useRef(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Scroll to bottom helper
   const scrollToBottom = useCallback((smooth = false) => {
@@ -96,15 +98,72 @@ export function MessagesList({
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    
+
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
-    // Show scroll-to-bottom button if user has scrolled up more than 200px from bottom
-    setShowScrollButton(distanceFromBottom > 200);
-    
+
+    // Show date indicator during scrolling - clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    if (messages.length > 0) {
+      // Find the message that's currently at the top of the viewport
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const messageElements = containerRef.current.querySelectorAll('[data-message-id]');
+
+      let visibleDate = null;
+      for (const element of messageElements) {
+        const rect = element.getBoundingClientRect();
+        // Check if message is visible in the container
+        if (rect.top >= containerRect.top && rect.top <= containerRect.bottom) {
+          const messageId = element.getAttribute('data-message-id');
+          const message = messages.find(m => m.id === messageId || m.id?.startsWith(`optimistic-${messageId}`));
+          if (message) {
+            const messageDate = new Date(message.created_at || Date.now());
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (messageDate.toDateString() === today.toDateString()) {
+              visibleDate = 'Today';
+            } else if (messageDate.toDateString() === yesterday.toDateString()) {
+              visibleDate = 'Yesterday';
+            } else {
+              // Check if within a week
+              const weekAgo = new Date(today);
+              weekAgo.setDate(today.getDate() - 7);
+              if (messageDate >= weekAgo) {
+                visibleDate = messageDate.toLocaleDateString(undefined, { weekday: 'long' });
+              } else {
+                visibleDate = messageDate.toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+                });
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      if (visibleDate) {
+        setScrollIndicator(visibleDate);
+        // Hide indicator after user stops scrolling (1 second delay)
+        scrollTimeoutRef.current = setTimeout(() => {
+          setScrollIndicator(null);
+          scrollTimeoutRef.current = null;
+        }, 1000);
+      }
+    }
+
     // Track if near bottom
     isNearBottomRef.current = distanceFromBottom < 100;
-    
+
+    // Show/hide scroll to bottom button
+    const shouldShowScrollButton = distanceFromBottom > 100 && distanceFromBottom > 0;
+    setShowScrollToBottom(shouldShowScrollButton);
+
     // Load more when near top
     if (scrollTop < 200 && hasMore && !isFetchingMore) {
       // Save scroll position before loading
@@ -113,7 +172,7 @@ export function MessagesList({
       wasFetchingRef.current = true;
       onLoadMore();
     }
-  }, [hasMore, isFetchingMore, onLoadMore]);
+  }, [hasMore, isFetchingMore, onLoadMore, messages]);
 
   // Restore scroll position after loading older messages
   // Use useLayoutEffect to adjust scroll synchronously before browser paint
@@ -164,11 +223,12 @@ export function MessagesList({
   // Group messages and determine timeline breaks
   const getMessageGroups = () => {
     const allMessages = [...messages, ...optimisticMessages];
-    
+
     const groups: Array<{
-      date: string;
-      time?: string; // Time separator within same day
-      showTimeSeparator: boolean;
+      separator?: {
+        type: 'time' | 'date';
+        text: string;
+      };
       messages: Array<{
         message: Message;
         isFirstInGroup: boolean;
@@ -177,7 +237,6 @@ export function MessagesList({
       }>;
     }> = [];
 
-    let currentDate = '';
     let currentGroup: Array<{
       message: Message;
       isFirstInGroup: boolean;
@@ -189,53 +248,77 @@ export function MessagesList({
 
     allMessages.forEach((message, index) => {
       const messageDate = new Date(message.created_at || Date.now());
-      const messageDateStr = messageDate.toLocaleDateString();
       const messageTime = messageDate.getTime();
       const isOptimistic = !message.id || message.id.startsWith('optimistic-');
-      
-      // Time gap thresholds
-      const TIME_GAP_SEPARATOR = 3600000; // 1 hour in ms - show time separator
-      const BUBBLE_GAP_THRESHOLD = 300000; // 5 minutes in ms - just spacing
 
-      // Check if we need a new date separator (different day)
-      if (messageDateStr !== currentDate) {
+      // Time gap threshold for separators
+      const TIME_SEPARATOR_THRESHOLD = 3600000; // 1 hour in ms
+
+      // Check if we need a separator
+      const timeSinceLastMessage = messageTime - lastMessageTime;
+      let separator: { type: 'time' | 'date'; text: string } | undefined;
+
+      if (lastMessageTime > 0 && timeSinceLastMessage >= TIME_SEPARATOR_THRESHOLD) {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        // Always show full date and time for separators
+        if (messageDate.toDateString() === today.toDateString()) {
+          // Today - show "Today at time"
+          separator = {
+            type: 'date',
+            text: `Today at ${messageDate.toLocaleTimeString(undefined, {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })}`
+          };
+        } else if (messageDate.toDateString() === yesterday.toDateString()) {
+          // Yesterday - show "Yesterday at time"
+          separator = {
+            type: 'date',
+            text: `Yesterday at ${messageDate.toLocaleTimeString(undefined, {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })}`
+          };
+        } else {
+          // Older - show full date with time
+          separator = {
+            type: 'date',
+            text: messageDate.toLocaleDateString(undefined, {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })
+          };
+        }
+
         if (currentGroup.length > 0) {
-          groups.push({ 
-            date: currentDate, 
-            messages: currentGroup,
-            showTimeSeparator: false 
-          });
+          // Push current group without separator
+          groups.push({ messages: currentGroup });
           currentGroup = [];
         }
-        currentDate = messageDateStr;
-        currentSender = ''; // Reset sender on date change
-        lastMessageTime = 0;
+
+        // Start new group with separator
+        currentGroup = [];
+        currentSender = '';
       }
 
-      // Check if we need a time separator (same day but large gap)
-      const timeSinceLastMessage = messageTime - lastMessageTime;
-      const needsTimeSeparator = lastMessageTime > 0 && timeSinceLastMessage >= TIME_GAP_SEPARATOR;
-
-      if (needsTimeSeparator && currentGroup.length > 0) {
-        // Push current group with time separator
-        groups.push({ 
-          date: currentDate, 
-          time: messageDate.toLocaleTimeString(undefined, { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            hour12: true 
-          }),
-          messages: currentGroup,
-          showTimeSeparator: true
-        });
-        currentGroup = [];
-        currentSender = ''; // Reset to start new visual group
+      // Push separator if needed
+      if (separator) {
+        groups.push({ separator, messages: [] });
       }
 
       // Determine if this starts a new message bubble group
-      const isNewGroup = 
-        message.sender_id !== currentSender || 
-        timeSinceLastMessage > BUBBLE_GAP_THRESHOLD;
+      const isNewGroup =
+        message.sender_id !== currentSender ||
+        timeSinceLastMessage > 300000; // 5 minutes
 
       if (isNewGroup && currentGroup.length > 0) {
         // Mark last message in previous group
@@ -253,69 +336,21 @@ export function MessagesList({
       lastMessageTime = messageTime;
 
       // If this is the last message, mark it
-      if (index === allMessages.length - 1) {
+      if (index === allMessages.length - 1 && currentGroup.length > 0) {
         currentGroup[currentGroup.length - 1].isLastInGroup = true;
       }
     });
 
     if (currentGroup.length > 0) {
-      groups.push({ 
-        date: currentDate, 
-        messages: currentGroup,
-        showTimeSeparator: false
-      });
+      groups.push({ messages: currentGroup });
     }
 
     return groups;
   };
 
-  const formatDateSeparator = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const now = new Date();
-    const hoursDiff = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-    if (date.toDateString() === today.toDateString()) {
-      // For today, just show "Today" or with time if recent
-      if (hoursDiff < 6) {
-        return 'Today';
-      } else {
-        return `Today at ${date.toLocaleTimeString(undefined, { 
-          hour: 'numeric', 
-          minute: '2-digit',
-          hour12: true 
-        })}`;
-      }
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday at ${date.toLocaleTimeString(undefined, { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })}`;
-    } else {
-      // For older dates, show full date with time
-      return date.toLocaleDateString(undefined, { 
-        weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-    }
-  };
 
   const messageGroups = getMessageGroups();
   const typingUsersList = Array.from(typingUsers.values());
-  
-  // Debug typing indicator
-  if (typingUsersList.length > 0) {
-    console.log('[MessagesList] Typing users:', typingUsersList);
-  }
 
   // Scroll to bottom when typing indicator appears
   useEffect(() => {
@@ -333,31 +368,68 @@ export function MessagesList({
   }
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      data-messages-container
-      className="h-full overflow-y-auto bg-transparent"
-      style={{
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#6b7280 transparent',
-      }}
-    >
-      <style>{`
+    <div className="h-full min-h-0 relative">
+      {/* Scroll Date Indicator - Fixed position over scrollable area */}
+      {scrollIndicator && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="absolute top-4 left-[40%] -translate-x-1/2 transform z-[70] px-4 py-0 rounded-full bg-black/90 backdrop-blur-sm border border-cyan-400/60 shadow-lg shadow-cyan-500/10"
+        >
+          <span className="text-sm font-semibold text-cyan-200">
+            {scrollIndicator}
+          </span>
+        </motion.div>
+      )}
+
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        data-messages-container
+        className="h-full min-h-0 overflow-y-auto bg-transparent relative messages-scrollbar"
+      >
+        {/* Smooth gradient overlay for dynamic bubble colors - creates spectrum effect */}
+        <div
+          className="absolute inset-y-0 left-0 pointer-events-none z-10"
+          style={{ right: '14px' }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                linear-gradient(to top,
+                  rgba(0, 0, 0, 0) 0%,
+                  rgba(0, 0, 0, 0.1) 20%,
+                  rgba(0, 0, 0, 0.2) 40%,
+                  rgba(0, 0, 0, 0.3) 60%,
+                  rgba(0, 0, 0, 0.4) 80%,
+                  rgba(0, 0, 0, 0.5) 100%
+                )
+              `,
+            }}
+          />
+          <style>{`
         [data-messages-container]::-webkit-scrollbar {
           width: 8px;
         }
         [data-messages-container]::-webkit-scrollbar-track {
+          background: #18181b;
           background: transparent;
         }
         [data-messages-container]::-webkit-scrollbar-thumb {
+          background: #3f3f46;
           background: #6b7280;
           border-radius: 4px;
         }
         [data-messages-container]::-webkit-scrollbar-thumb:hover {
+          background: #52525b;
           background: #4b5563;
         }
-      `}</style>
+`}</style>
+        </div>
+        
+
       {/* Load More Indicator */}
       {isFetchingMore && (
         <div className="flex justify-center py-4">
@@ -368,39 +440,35 @@ export function MessagesList({
         </div>
       )}
 
-      {/* Messages with Date Separators */}
+      {/* Messages with Unified Separators */}
       <div className="py-4">
         {messageGroups.map((group, groupIndex) => (
-          <div key={`${group.date}-${groupIndex}`}>
-            {/* Date Separator */}
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center my-6"
-            >
-              <div className="px-4 py-1.5 rounded-full bg-zinc-900/90 backdrop-blur-sm border border-zinc-800/50 shadow-lg">
-                <span className="text-xs font-medium text-gray-400">
-                  {formatDateSeparator(group.date)}
-                </span>
-              </div>
-            </motion.div>
+          <div key={`group-${groupIndex}`}>
 
-            {/* Time Separator (within same day, for large gaps) */}
-            {group.showTimeSeparator && group.time && (
-              <motion.div 
+            {/* Unified Separator (time or date) */}
+            {group.separator && (
+              <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex justify-center my-4"
               >
-                <div className="px-3 py-1 rounded-full bg-zinc-800/60 backdrop-blur-sm border border-zinc-700/50">
-                  <span className="text-[10px] font-medium text-gray-500">
-                    {group.time}
+                <div className={`px-3 py-1 rounded-full backdrop-blur-sm border-[1px] border-solid ${
+                  group.separator.type === 'date'
+                    ? 'bg-black/95 border-cyan-400/80 shadow-lg shadow-cyan-500/10'
+                    : 'bg-black/90 border-cyan-400/60'
+                }`}>
+                  <span className={`font-semibold ${
+                    group.separator.type === 'date'
+                      ? 'text-xs text-cyan-200'
+                      : 'text-[10px] text-cyan-300'
+                  }`}>
+                    {group.separator.text}
                   </span>
                 </div>
               </motion.div>
             )}
 
-            {/* Messages in this date group */}
+            {/* Messages in this group */}
             <AnimatePresence initial={false} mode="popLayout">
               {group.messages.map(({ message, isFirstInGroup, isLastInGroup }) => {
                 const isOwn = message.sender_id === currentUserId;
@@ -502,21 +570,23 @@ export function MessagesList({
         </motion.div>
       )}
 
+      </div>
+
       {/* Scroll to Bottom Button */}
       <AnimatePresence>
-        {showScrollButton && (
+        {showScrollToBottom && (
           <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             onClick={() => scrollToBottom(true)}
-            className="fixed bottom-24 right-8 z-50 w-12 h-12 rounded-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 shadow-lg shadow-purple-900/50 flex items-center justify-center transition-colors group"
+            className="absolute bottom-6 right-6 z-[60] w-10 h-10 rounded-full bg-black/80 hover:bg-black active:bg-gray-800 shadow-lg shadow-cyan-500/20 flex items-center justify-center transition-all duration-200 group border border-cyan-500/30"
             title="Scroll to bottom"
           >
-            <FontAwesomeIcon 
-              icon={faChevronDown} 
-              className="text-white text-lg group-hover:animate-bounce" 
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className="text-cyan-400 group-hover:text-cyan-300 text-base group-hover:animate-bounce transition-colors"
             />
           </motion.button>
         )}

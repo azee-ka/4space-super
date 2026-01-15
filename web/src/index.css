@@ -178,21 +178,22 @@
   }
 }
 
-::-webkit-scrollbar {
+/* Global scrollbar styles - don't apply to messages container */
+*:not(.messages-scrollbar)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
+*:not(.messages-scrollbar)::-webkit-scrollbar-track {
   @apply bg-slate-100 dark:bg-slate-900;
 }
 
-::-webkit-scrollbar-thumb {
+*:not(.messages-scrollbar)::-webkit-scrollbar-thumb {
   @apply bg-slate-300 dark:bg-slate-700 rounded-full;
   transition: background 0.3s;
 }
 
-::-webkit-scrollbar-thumb:hover {
+*:not(.messages-scrollbar)::-webkit-scrollbar-thumb:hover {
   @apply bg-slate-400 dark:bg-slate-600;
 }
 
@@ -204,6 +205,7 @@
 .dark * {
   scrollbar-color: rgb(51 65 85) rgb(15 23 42);
 }
+
 
 ::selection {
   @apply bg-blue-500/30 text-blue-100;
@@ -262,22 +264,34 @@
   background: rgba(6, 182, 212, 1);
 }
 
-/* Firefox */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(6, 182, 212, 0.6) rgba(0, 0, 0, 0.2);
+/* Messages container scrollbar - diagnostic white thumb */
+.messages-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.95) rgba(20, 20, 20, 0.8) !important;
+  color-scheme: light;
 }
 
-/* Slide in animation */
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.messages-scrollbar::-webkit-scrollbar {
+  width: 14px !important;
+}
+
+.messages-scrollbar::-webkit-scrollbar-track {
+  background: rgba(20, 20, 20, 0.8) !important;
+  border-radius: 7px !important;
+}
+
+.messages-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 7px !important;
+  border: 2px solid rgba(20, 20, 20, 0.8) !important;
+}
+
+.messages-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 1) !important;
+}
+
+.messages-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(245, 245, 245, 1) !important;
 }
 
 

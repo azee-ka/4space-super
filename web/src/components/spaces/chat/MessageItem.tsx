@@ -421,12 +421,13 @@ export function MessageItem({
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`group flex gap-2 px-3 ${isOwn ? 'flex-row-reverse' : ''} ${
         getDensitySpacing()
       } ${reactionsToUse && reactionsToUse.length > 0 ? 'mb-5' : ''} relative`}
       id={`message-${message.id}`}
+      data-message-id={message.id}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={(e) => handleMouseLeave(e)}
     >
@@ -459,14 +460,15 @@ export function MessageItem({
 
           {/* Message Bubble */}
           <div className="relative group/msg">
-            <div 
+            <div
               className={`relative ${
                 message.deleted_at ? 'opacity-50' : ''
-              } shadow-lg`}
+              } shadow-lg transition-all duration-300 ease-out`}
               style={{
                 ...getBorderRadius(),
                 ...getBubbleColor(),
                 padding: messageDensity === 'compact' ? '4px 10px' : messageDensity === 'spacious' ? '8px 16px' : '6px 12px',
+                transitionProperty: 'background-color, background',
               }}
             >
               {/* Reply To - Inside bubble */}

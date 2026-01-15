@@ -301,7 +301,8 @@ const handleSelectRoom = async (roomId: string) => {
     }
   };
 
-// Industry standard: Simple, fast message sending
+
+  // Industry standard: Simple, fast message sending
 const handleSendMessage = useCallback((
   content: string,
   type: string = 'text',
@@ -489,7 +490,7 @@ return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 flex flex-col overflow-hidden relative z-10"
+      className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10"
       style={centerPanelBackgroundStyle}
     >
       {/* For featured themes, add alternating mirrored pattern using absolute positioned divs */}
@@ -520,7 +521,8 @@ return (
       {selectedRoomId ? (
         <>
           {/* Messages Area - FULL HEIGHT */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+
             <MessagesList
               messages={messages}
               currentUserId={user?.id}
@@ -537,6 +539,7 @@ return (
               onRemoveReaction={handleRemoveReaction}
               typingUsers={typingUsers}
             />
+
           </div>
 
           {/* Input Area */}
@@ -1330,4 +1333,3 @@ function LinksTab() {
     </div>
   );
 }
-
