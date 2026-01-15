@@ -195,8 +195,8 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           <FontAwesomeIcon icon={faPalette} className="text-purple-400" />
           Theme Presets
         </h3>
-        {/* Tabs that can wrap to multiple rows */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        {/* Tabs that can wrap to multiple rows - 3 per row, equal width */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
           {[
             { value: 'featured' as const, label: 'Featured', icon: faStar },
             { value: 'solid' as const, label: 'Solid', icon: faCircle },
@@ -208,7 +208,7 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
             <button
               key={type.value}
               onClick={() => handleThemeUpdate({ backgroundType: type.value as BackgroundType })}
-              className={`px-3 py-2.5 rounded-xl transition-all flex flex-col items-center gap-1 min-w-[70px] ${
+              className={`px-3 py-2.5 rounded-xl transition-all flex flex-col items-center gap-1 ${
                 theme.backgroundType === type.value
                   ? 'bg-purple-500/20 ring-2 ring-purple-500/50 text-purple-400'
                   : 'bg-zinc-800/50 hover:bg-zinc-800/70 text-gray-400 hover:text-white'

@@ -53,6 +53,8 @@ export function SpaceChatView() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const chatSettings = useChatSettingsStore();
+  const ambientLighting = useChatSettingsStore((state) => state.ambientLighting);
+  const ambientIntensity = useChatSettingsStore((state) => state.ambientIntensity);
   
   // Get room from URL hash
   const getRoomFromHash = () => {
@@ -65,7 +67,6 @@ export function SpaceChatView() {
   // Get settings for current room
   const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId);
   const { theme } = roomSettings;
-  const { ambientLighting, ambientIntensity } = chatSettings;
   const [replyTo, setReplyTo] = useState<MessageType | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageType | null>(null);
   
@@ -418,7 +419,8 @@ return (
   <div className="h-screen flex bg-transparent overflow-hidden relative">
     {/* Ambient Background Overlay for Side Panels */}
     <div 
-      className="absolute inset-0 pointer-events-none z-0"
+      key={`ambient-${ambientIntensity}-${ambientLighting}-${theme.backgroundType}`}
+      className="absolute inset-0 pointer-events-none z-0 transition-all duration-300"
       style={ambientBackgroundStyle}
     />
     
@@ -427,7 +429,7 @@ return (
       initial={{ x: -200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/60 backdrop-blur-md flex flex-col relative z-10"
+      className="w-80 flex-shrink-0 bg-black/98 backdrop-blur-sm flex flex-col relative z-10"
     >
       {/* Space Info at Top of Left Panel */}
       <div className="flex-shrink-0 p-4">
@@ -437,10 +439,10 @@ return (
           <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
           <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
           
-          <div className="relative px-4 py-3 rounded-xl backdrop-blur-xl bg-black/70 flex items-center gap-3">
+          <div className="relative px-4 py-3 rounded-xl backdrop-blur-xl bg-black/80 flex items-center gap-3 shadow-lg shadow-black/30">
             <button
               onClick={() => navigate(`/spaces/${spaceId}`)}
-              className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-lg bg-zinc-800/90 hover:bg-zinc-800 flex items-center justify-center transition-colors shadow-lg shadow-black/20"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="text-gray-400 text-sm" />
             </button>
@@ -494,20 +496,24 @@ return (
       {theme.backgroundType === 'featured' && theme.backgroundImage && (
         <>
           {/* Tiled pattern using actual img elements for proper sizing - BEHIND everything */}
-          <div className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden" style={{ gap: 0 }}>
+          <div className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden" style={{ gap: 0, height: '100%' }}>
             {[...Array(30)].map((_, i) => (
               <img
                 key={i}
                 src={i % 2 === 0 ? theme.backgroundImage : (theme.backgroundImage || '').replace('.png', '-mirror.png')}
                 alt=""
-                className="h-full w-auto flex-shrink-0 block"
-                style={{ display: 'block', margin: 0, padding: 0, verticalAlign: 'bottom' }}
+                className="flex-shrink-0 h-full"
+                style={{ 
+                  width: 'auto', // Width scales with aspect ratio
+                  objectFit: 'cover', // Fill height, maintain aspect ratio
+                  objectPosition: 'center',
+                }}
               />
             ))}
           </div>
           
-          {/* Subtle dark overlay on top of images but behind content */}
-          <div className="absolute inset-0 bg-black/15 pointer-events-none -z-[9]" />
+          {/* Dark overlay on top of images but behind content - dims the background */}
+          <div className="absolute inset-0 bg-black/50 pointer-events-none -z-[9]" />
         </>
       )}
       
@@ -567,7 +573,7 @@ return (
       initial={{ x: 200, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="w-80 flex-shrink-0 bg-zinc-950/60 backdrop-blur-md flex flex-col relative z-10"
+      className="w-80 flex-shrink-0 bg-black/98 backdrop-blur-sm flex flex-col relative z-10"
     >
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (
@@ -599,7 +605,7 @@ return (
                     else if (action === 'call') setOverlayView('call');
                     else if (action === 'settings') setRightSidebarTab('settings');
                   }}
-                  className={`relative w-10 h-10 rounded-xl backdrop-blur-xl bg-black/70 hover:bg-black/80 flex items-center justify-center transition-all ${textClass}`}
+                  className={`relative w-10 h-10 rounded-xl backdrop-blur-xl bg-black/80 hover:bg-black/90 flex items-center justify-center transition-all shadow-lg shadow-black/30 ${textClass}`}
                   title={label}
                 >
                   <FontAwesomeIcon icon={icon} className="text-sm" />

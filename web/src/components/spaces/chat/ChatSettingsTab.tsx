@@ -55,57 +55,6 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
         />
       </div>
 
-      {/* Message Display */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-            <FontAwesomeIcon icon={faFont} className="text-cyan-400" />
-          </div>
-          <h3 className="text-xs font-bold text-white">Message Display</h3>
-        </div>
-        
-        <div className="space-y-2">
-          {/* Font Size */}
-          <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-white font-medium">Font Size</span>
-              <span className="text-xs text-purple-400 font-medium">{fontSize}px</span>
-            </div>
-            <input
-              type="range"
-              min="12"
-              max="18"
-              step="1"
-              value={fontSize}
-              onChange={(e) => setFontSize(Number(e.target.value))}
-              className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-            />
-          </div>
-
-          {/* Message Density */}
-          <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="mb-2">
-              <span className="text-sm text-white font-medium">Message Density</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {(['compact', 'comfortable', 'spacious'] as const).map((density) => (
-                <button
-                  key={density}
-                  onClick={() => setMessageDensity(density)}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    messageDensity === density
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-zinc-700/50 text-gray-400 hover:bg-zinc-700'
-                  }`}
-                >
-                  {density.charAt(0).toUpperCase() + density.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Privacy & Visibility */}
       <div>
         <div className="flex items-center gap-2.5 mb-2">

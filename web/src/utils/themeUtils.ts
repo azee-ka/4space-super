@@ -159,21 +159,47 @@ export function getAmbientBackgroundStyle(theme: ChatTheme, enabled: boolean = t
       break;
     
     case 'featured':
-      // For featured themes, minimal subtle ambient lighting
+      // For featured themes, create adaptive ambient that samples from bubble colors
+      // Subtle leak from the edges where sidebars meet the center panel
       const sentColor = theme.sentBubbleColor || '#8b5cf6';
       const receivedColor = theme.receivedBubbleColor || '#1e1b4b';
       
-      // Subtle, minimal ambient - not too intense
-      const featBright1 = Math.round(15 * intensityFactor);
-      const featBright2 = Math.round(12 * intensityFactor);
-      const featBright3 = Math.round(8 * intensityFactor);
+      // Intensity controlled by slider (0-100)
+      // At 100%: visible and vibrant (15), at 0%: almost completely invisible (0)
+      const minBright = 0;
+      const maxBright = 1;
+      const featBright = minBright + ((maxBright - minBright) * intensityFactor);
       
-      // Create subtle color hints from bubble colors
+      // Create subtle color variations - already somewhat faded
+      const topColor = adjustColor(sentColor, Math.round(featBright * 0.7));
+      const midColor = adjustColor(receivedColor, Math.round(featBright * 0.6));
+      const bottomColor = adjustColor(sentColor, Math.round(featBright * 0.5));
+      
+      // Dynamic opacity based on intensity (0 to 80 in hex = 00 to 50)
+      const opacityHex = Math.round(80 * intensityFactor).toString(16).padStart(2, '0');
+      const topColorFaded = topColor + opacityHex;
+      const midColorFaded = midColor + Math.round(parseInt(opacityHex, 16) * 0.8).toString(16).padStart(2, '0');
+      const bottomColorFaded = bottomColor + Math.round(parseInt(opacityHex, 16) * 0.6).toString(16).padStart(2, '0');
+      
+      // Left sidebar: narrow gradient from right edge (at ~24% where left sidebar meets center)
+      // Right sidebar: narrow gradient from left edge (at ~76% where right sidebar meets center)
+      // Start already faded, fade to transparent quickly
       style.background = `
-        radial-gradient(ellipse at 15% 25%, ${adjustColor(sentColor, featBright1)} 0%, transparent ${50 + (30 * (1 - intensityFactor))}%),
-        radial-gradient(ellipse at 85% 75%, ${adjustColor(receivedColor, featBright2)} 0%, transparent ${50 + (30 * (1 - intensityFactor))}%),
-        radial-gradient(circle at 50% 50%, ${adjustColor(sentColor, featBright3)} 0%, transparent ${60 + (25 * (1 - intensityFactor))}%),
-        linear-gradient(135deg, #0a0a0a 0%, #0f0a0f 50%, #0a0a0a 100%)
+        linear-gradient(to right,
+          transparent 0%,
+          transparent 20%,
+          ${bottomColorFaded} 23%,
+          ${midColorFaded} 24%,
+          ${topColorFaded} 25%,
+          transparent 28%,
+          transparent 72%,
+          ${topColorFaded} 75%,
+          ${midColorFaded} 76%,
+          ${bottomColorFaded} 77%,
+          transparent 80%,
+          transparent 100%
+        ),
+        #000000
       `;
       break;
   }

@@ -104,7 +104,7 @@ export function RoomsList({
   if (rooms.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-        <div className="w-16 h-16 rounded-xl bg-zinc-800/50 flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-xl bg-zinc-800/80 flex items-center justify-center mb-4 shadow-lg shadow-black/20">
           <FontAwesomeIcon icon={faHashtag} className="text-2xl text-cyan-400" />
         </div>
         <p className="text-gray-400 text-sm mb-4">No rooms yet</p>
@@ -141,7 +141,7 @@ export function RoomsList({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search rooms..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-800/50 focus:bg-zinc-800/70 outline-none transition-colors text-white placeholder-gray-500 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900/95 focus:bg-zinc-900 outline-none transition-colors text-white placeholder-gray-500 text-sm shadow-lg shadow-black/30"
             />
           </div>
           
@@ -175,7 +175,7 @@ export function RoomsList({
               {/* Category Header */}
               <button
                 onClick={() => toggleCategory(category)}
-                className="w-full px-3 py-2 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-300 uppercase tracking-wider transition-colors mb-2"
+                className="w-full px-3 py-2 rounded-xl bg-zinc-900/95 hover:bg-zinc-900 flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-300 uppercase tracking-wider transition-colors mb-2 shadow-lg shadow-black/30"
               >
                 <motion.div
                   animate={{ rotate: isExpanded ? 0 : -90 }}
@@ -208,17 +208,16 @@ export function RoomsList({
                           key={room.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          whileHover={{ scale: 1.02, x: 4 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => onSelectRoom(room.id)}
                           className={`w-full px-3 py-2.5 rounded-xl transition-all flex items-center gap-3 ${
                             isSelected 
                               ? '' 
-                              : 'bg-zinc-800/30 hover:bg-zinc-800/50'
+                              : 'bg-zinc-900/95 hover:bg-zinc-900 shadow-lg shadow-black/30'
                           }`}
                           style={isSelected ? {
                             backgroundColor: `${accentColor}15`,
-                            boxShadow: `0 0 12px -2px ${accentColor}40`,
+                            boxShadow: `0 0 16px -2px ${accentColor}50, 0 4px 8px -2px rgba(0,0,0,0.3)`,
                             border: `1.5px solid ${accentColor}60`,
                           } : {}}
                         >
