@@ -1,7 +1,7 @@
 // Comprehensive Customization Tab Component - FIXED VERSION
 // web/src/components/spaces/chat/CustomizationTab.tsx
 
-import { useRef, useCallback, memo, useState } from 'react';
+import { useRef, useCallback, memo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -90,6 +90,14 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
   const [soundThemes, setSoundThemes] = useState(false);
   const [bubbleEffects, setBubbleEffects] = useState(true);
   const [themeSharing, setThemeSharing] = useState(false);
+
+  // UI state for which category tab is selected (for display only, doesn't change theme)
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<BackgroundType>(theme.backgroundType);
+
+  // Sync selected tab with theme changes
+  useEffect(() => {
+    setSelectedCategoryTab(theme.backgroundType);
+  }, [theme.backgroundType]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -286,9 +294,9 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           ].map((type) => (
             <button
               key={type.value}
-              onClick={() => handleThemeUpdate({ backgroundType: type.value as BackgroundType })}
+              onClick={() => setSelectedCategoryTab(type.value)}
               className={`px-3 py-2.5 rounded-xl transition-all flex flex-col items-center gap-1 ${
-                theme.backgroundType === type.value
+                selectedCategoryTab === type.value
                   ? 'bg-purple-500/20 ring-2 ring-purple-500/50 text-purple-400'
                   : 'bg-zinc-800/50 hover:bg-zinc-800/70 text-gray-400 hover:text-white'
               }`}
@@ -301,7 +309,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       </div>
 
       {/* Featured Premium Themes */}
-      {theme.backgroundType === 'featured' && (
+      {selectedCategoryTab === 'featured' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-2">Featured Themes</h3>
           <p className="text-xs text-gray-400 mb-3">Premium themes with custom backgrounds & gradient bubbles</p>
@@ -361,7 +369,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       )}
 
       {/* Solid Color Background */}
-      {theme.backgroundType === 'solid' && (
+      {selectedCategoryTab === 'solid' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-4">Solid Color Themes</h3>
           
@@ -428,7 +436,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       )}
 
       {/* Gradient Background */}
-      {theme.backgroundType === 'gradient' && (
+      {selectedCategoryTab === 'gradient' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-4">Gradient Background Themes</h3>
           
@@ -521,7 +529,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       )}
 
       {/* CSS Pattern Backgrounds */}
-      {theme.backgroundType === 'pattern' && (
+      {selectedCategoryTab === 'pattern' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-4">Pattern Background Themes</h3>
           <p className="text-xs text-gray-400 mb-3">Geometric patterns with coordinated bubble colors</p>
@@ -573,7 +581,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       )}
 
       {/* Artistic Themes */}
-      {theme.backgroundType === 'artistic' && (
+      {selectedCategoryTab === 'artistic' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-4">Artistic Background Themes</h3>
           <p className="text-xs text-gray-400 mb-3">Dense repeating patterns inspired by Telegram</p>
@@ -625,7 +633,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       )}
 
       {/* Image Background */}
-      {theme.backgroundType === 'image' && (
+      {selectedCategoryTab === 'image' && (
         <div>
           <h3 className="text-sm font-bold text-white mb-4">Custom Image Background</h3>
           <div className="space-y-4">
