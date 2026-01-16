@@ -14,7 +14,8 @@ import {
   faUser, faUsers, faCrown, faGavel, faExclamationTriangle,
   faArrowDown, faCompress, faKeyboard, faAt, faSignInAlt,
   faThumbtack, faTag, faFont, faPause, faBug,
-  faAdjust
+  faAdjust, faInfoCircle, faBan, faUserTimes, faUserCheck,
+  faClone, faChevronRight, faSkull, faHashtag
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../../ui/ToggleSwitch';
 import { useChatSettingsStore } from '../../../store/chatSettingsStore';
@@ -121,6 +122,30 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
         </div>
 
         <div className="space-y-2">
+          {/* Disappearing Messages - Near top as commonly used */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <FontAwesomeIcon icon={faHistory} className="text-indigo-400 text-sm" />
+              <div>
+                <p className="text-sm text-white font-medium">Disappearing Messages</p>
+                <p className="text-xs text-gray-500">Auto-delete messages after selected time</p>
+              </div>
+            </div>
+            <select
+              value={messageRetention}
+              onChange={(e) => setMessageRetention(e.target.value)}
+              className={`px-1.5 py-0.5 bg-zinc-700/50 border border-zinc-600/50 rounded text-white text-xs focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
+            >
+              <option value="forever">Off</option>
+              <option value="1hour">1h</option>
+              <option value="24hours">24h</option>
+              <option value="1week">1w</option>
+              <option value="1month">1mo</option>
+              <option value="6months">6mo</option>
+              <option value="1year">1y</option>
+            </select>
+          </div>
+
           {[
             { icon: faEye, label: 'Show Online Status', sublabel: 'Others can see when you\'re online', enabled: showOnlineStatus, onToggle: setShowOnlineStatus, color: 'green' },
             { icon: faCheck, label: 'Read Receipts', sublabel: 'Show when you\'ve read messages', enabled: showReadReceipts, onToggle: setShowReadReceipts, color: 'blue' },
@@ -444,52 +469,146 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
               />
             </div>
           ))}
-
-          {/* Message Retention */}
-          <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-            <div className="flex items-center gap-2.5 mb-2">
-              <FontAwesomeIcon icon={faHistory} className="text-indigo-400 text-sm" />
-              <span className="text-sm text-white font-medium">Message Retention</span>
-            </div>
-            <select
-              value={messageRetention}
-              onChange={(e) => setMessageRetention(e.target.value)}
-              className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
-            >
-              <option value="forever">Keep Forever</option>
-              <option value="1year">1 Year</option>
-              <option value="6months">6 Months</option>
-              <option value="1month">1 Month</option>
-              <option value="1week">1 Week</option>
-            </select>
-          </div>
         </div>
       </div>
 
-      {/* Room Management */}
+      {/* Advanced Room Management */}
       <div>
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-9 h-9 rounded-lg bg-slate-500/10 flex items-center justify-center">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-slate-500/20 to-slate-600/20 flex items-center justify-center border border-slate-500/30">
             <FontAwesomeIcon icon={faGavel} className="text-slate-400" />
           </div>
-          <h3 className="text-xs font-bold text-white">Room Management</h3>
+          <div>
+            <h3 className="text-xs font-bold text-white">Room Management</h3>
+            <p className="text-xs text-gray-500">Advanced room controls and moderation tools</p>
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <button className="w-full px-4 py-3 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-medium transition-colors">
-            <FontAwesomeIcon icon={faArchive} className="mr-2" />
-            Archive Room
-          </button>
+        <div className="space-y-4">
 
-          <button className="w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 text-sm font-medium transition-colors">
-            <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
-            Leave Room
-          </button>
+      {/* Moderation Actions */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center">
+            <FontAwesomeIcon icon={faShieldAlt} className="text-orange-400" />
+          </div>
+          <h3 className="text-xs font-bold text-white">Moderation Actions</h3>
+        </div>
 
-          <button className="w-full px-4 py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium transition-colors">
-            <FontAwesomeIcon icon={faTrash} className="mr-2" />
-            Delete Room (Dangerous)
-          </button>
+        <div className="space-y-2">
+          {[
+            { icon: faBan, label: 'Ban User', sublabel: 'Permanently ban a user from this room', color: 'red', action: 'ban' },
+            { icon: faExclamationTriangle, label: 'Warn User', sublabel: 'Send a warning message to user', color: 'yellow', action: 'warn' },
+            { icon: faUserTimes, label: 'Kick User', sublabel: 'Remove user from room temporarily', color: 'purple', action: 'kick' },
+            { icon: faUserCheck, label: 'Verify User', sublabel: 'Mark user as verified/trusted', color: 'blue', action: 'verify' },
+            { icon: faClock, label: 'Timeout User', sublabel: 'Temporarily mute user', color: 'orange', action: 'timeout' }
+          ].map((item) => (
+            <div key={item.action} className={`flex items-center justify-between p-3 rounded-xl bg-${item.color}-500/10 hover:bg-${item.color}-500/15 transition-colors border border-${item.color}-500/20`}>
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg bg-${item.color}-500/20 flex items-center justify-center`}>
+                  <FontAwesomeIcon icon={item.icon} className={`text-${item.color}-400 text-xs`} />
+                </div>
+                <div>
+                  <span className="text-sm text-white font-medium">{item.label}</span>
+                  <p className="text-xs text-gray-500">{item.sublabel}</p>
+                </div>
+              </div>
+              <button className={`px-3 py-1.5 rounded-lg bg-${item.color}-500/20 hover:bg-${item.color}-500/30 text-${item.color}-400 text-xs font-medium transition-colors`}>
+                Execute
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Room Lifecycle Actions */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-9 h-9 rounded-lg bg-gray-500/10 flex items-center justify-center">
+            <FontAwesomeIcon icon={faCog} className="text-gray-400" />
+          </div>
+          <h3 className="text-xs font-bold text-white">Room Lifecycle</h3>
+        </div>
+
+        <div className="space-y-2">
+          {[
+            { icon: faArchive, label: 'Archive Room', sublabel: 'Move to archives - becomes read-only', color: 'amber', action: 'archive' },
+            { icon: faClone, label: 'Duplicate Room', sublabel: 'Create a copy with same settings', color: 'emerald', action: 'duplicate' },
+            { icon: faSignOutAlt, label: 'Leave Room', sublabel: 'Remove yourself from this room', color: 'blue', action: 'leave' },
+            { icon: faCog, label: 'Room Settings', sublabel: 'Advanced room configuration', color: 'cyan', action: 'settings' }
+          ].map((item) => (
+            <div key={item.action} className={`flex items-center justify-between p-3 rounded-xl bg-${item.color}-500/10 hover:bg-${item.color}-500/15 transition-colors border border-${item.color}-500/20`}>
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg bg-${item.color}-500/20 flex items-center justify-center`}>
+                  <FontAwesomeIcon icon={item.icon} className={`text-${item.color}-400 text-xs`} />
+                </div>
+                <div>
+                  <span className="text-sm text-white font-medium">{item.label}</span>
+                  <p className="text-xs text-gray-500">{item.sublabel}</p>
+                </div>
+              </div>
+              <button className={`px-3 py-1.5 rounded-lg bg-${item.color}-500/20 hover:bg-${item.color}-500/30 text-${item.color}-400 text-xs font-medium transition-colors`}>
+                {item.action === 'settings' ? 'Open' : 'Execute'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+          {/* Danger Zone */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-red-900/10 to-red-800/5 border border-red-500/30">
+            <h4 className="text-sm font-semibold text-red-400 mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center border border-red-500/30">
+                <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-400 text-sm" />
+              </div>
+              Danger Zone
+            </h4>
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 hover:bg-zinc-800/50 transition-colors">
+                <button className="w-full text-left group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center border border-red-500/30">
+                        <FontAwesomeIcon icon={faTrash} className="text-red-400" />
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-semibold text-white">Delete Room</h5>
+                        <p className="text-xs text-gray-400">Permanently delete this room and all messages</p>
+                      </div>
+                    </div>
+                    <FontAwesomeIcon icon={faChevronRight} className="text-red-400/60 text-sm group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <div className="ml-13">
+                    <button className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium transition-all hover:scale-105">
+                      Confirm Deletion
+                    </button>
+                  </div>
+                </button>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 hover:bg-zinc-800/50 transition-colors">
+                <button className="w-full text-left group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-red-800/20 flex items-center justify-center border border-red-700/30">
+                        <FontAwesomeIcon icon={faSkull} className="text-red-300" />
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-semibold text-white">Nuclear Option</h5>
+                        <p className="text-xs text-gray-400">Delete room, ban all members, and blacklist</p>
+                      </div>
+                    </div>
+                    <FontAwesomeIcon icon={faChevronRight} className="text-red-300/60 text-sm group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <div className="ml-13">
+                    <button className="px-4 py-2 bg-red-800/20 hover:bg-red-800/30 border border-red-700/30 rounded-lg text-red-300 text-xs font-medium transition-all hover:scale-105">
+                      ⚠️ Execute Nuclear Protocol
+                    </button>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

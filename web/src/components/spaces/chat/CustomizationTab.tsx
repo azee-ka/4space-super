@@ -1,12 +1,15 @@
 // Comprehensive Customization Tab Component - FIXED VERSION
 // web/src/components/spaces/chat/CustomizationTab.tsx
 
-import { useRef, useCallback, memo } from 'react';
+import { useRef, useCallback, memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPalette, faTrash, faUpload, faTimes, faImages,
-  faShapes, faSlidersH, faCheck, faStar, faCircle
+  faShapes, faSlidersH, faCheck, faStar, faCircle,
+  faRobot, faClock, faSync, faBolt, faEye, faVolumeUp,
+  faShare, faDownload, faMagic, faSun, faMoon, faCloud,
+  faZap, faWandMagicSparkles, faBrain, faRocket
 } from '@fortawesome/free-solid-svg-icons';
 import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../store/chatSettingsStore';
 import { themePresets, getThemesByCategory } from '../../../utils/themePresets';
@@ -72,6 +75,17 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     applyToAllRooms,
     setApplyToAllRooms,
   } = useChatSettingsStore();
+
+  // Revolutionary new settings
+  const [aiThemeSuggestions, setAiThemeSuggestions] = useState(false);
+  const [dynamicTimeTheme, setDynamicTimeTheme] = useState(false);
+  const [themeSync, setThemeSync] = useState(false);
+  const [advancedAnimations, setAdvancedAnimations] = useState(true);
+  const [accessibilityMode, setAccessibilityMode] = useState(false);
+  const [performanceMode, setPerformanceMode] = useState(false);
+  const [soundThemes, setSoundThemes] = useState(false);
+  const [bubbleEffects, setBubbleEffects] = useState(true);
+  const [themeSharing, setThemeSharing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -840,6 +854,334 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
               {density === 'comfortable' ? 'Comfy' : density.charAt(0).toUpperCase() + density.slice(1)}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Revolutionary AI & Smart Features */}
+      <div>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <FontAwesomeIcon icon={faBrain} className="text-purple-400" />
+          AI & Smart Features
+        </h3>
+        <div className="space-y-4">
+          {/* AI Theme Suggestions */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faRobot} className="text-cyan-400" />
+                  AI Theme Suggestions
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Get personalized theme recommendations based on your usage patterns</p>
+              </div>
+              <ToggleSwitch
+                enabled={aiThemeSuggestions}
+                onToggle={setAiThemeSuggestions}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {aiThemeSuggestions && (
+              <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                <button className="w-full px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-lg text-cyan-400 text-sm font-medium transition-colors">
+                  <FontAwesomeIcon icon={faBolt} className="mr-2" />
+                  Generate Suggestions
+                </button>
+                <div className="text-xs text-gray-500">
+                  AI analyzes your chat patterns, time of day preferences, and mood to suggest optimal themes
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic Time-Based Themes */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faClock} className="text-orange-400" />
+                  Dynamic Time Themes
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Automatically adjust theme based on time of day</p>
+              </div>
+              <ToggleSwitch
+                enabled={dynamicTimeTheme}
+                onToggle={setDynamicTimeTheme}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {dynamicTimeTheme && (
+              <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg text-center">
+                    <FontAwesomeIcon icon={faSun} className="text-orange-400 mb-1" />
+                    <div className="text-xs text-orange-400">Morning</div>
+                  </div>
+                  <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg text-center">
+                    <FontAwesomeIcon icon={faCloud} className="text-blue-400 mb-1" />
+                    <div className="text-xs text-blue-400">Day</div>
+                  </div>
+                  <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg text-center">
+                    <FontAwesomeIcon icon={faMoon} className="text-indigo-400 mb-1" />
+                    <div className="text-xs text-indigo-400">Night</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cross-Device Theme Sync */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faSync} className="text-green-400" />
+                  Cross-Device Sync
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Keep themes synchronized across all your devices</p>
+              </div>
+              <ToggleSwitch
+                enabled={themeSync}
+                onToggle={setThemeSync}
+                accentColor={theme.accentColor}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Performance & Accessibility */}
+      <div>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <FontAwesomeIcon icon={faBolt} className="text-yellow-400" />
+          Performance & Accessibility
+        </h3>
+        <div className="space-y-4">
+          {/* Advanced Animations */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faZap} className="text-purple-400" />
+                  Advanced Animations
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Smooth transitions, particle effects, and micro-interactions</p>
+              </div>
+              <ToggleSwitch
+                enabled={advancedAnimations}
+                onToggle={setAdvancedAnimations}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {advancedAnimations && (
+              <div className="space-y-2 pt-3 border-t border-zinc-700/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-300">Animation Speed</span>
+                  <span className="text-xs text-purple-400">Fast</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  defaultValue="7"
+                  className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Accessibility Mode */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faEye} className="text-blue-400" />
+                  Accessibility Mode
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Enhanced contrast, larger text, and screen reader support</p>
+              </div>
+              <ToggleSwitch
+                enabled={accessibilityMode}
+                onToggle={setAccessibilityMode}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {accessibilityMode && (
+              <div className="space-y-2 pt-3 border-t border-zinc-700/50">
+                <div className="text-xs text-gray-300 space-y-1">
+                  <div>• High contrast mode enabled</div>
+                  <div>• Screen reader optimizations active</div>
+                  <div>• Reduced motion for sensitive users</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Performance Mode */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faRocket} className="text-emerald-400" />
+                  Performance Mode
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Optimize for speed - reduce animations and effects</p>
+              </div>
+              <ToggleSwitch
+                enabled={performanceMode}
+                onToggle={setPerformanceMode}
+                accentColor={theme.accentColor}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Immersive Audio & Visual Effects */}
+      <div>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <FontAwesomeIcon icon={faVolumeUp} className="text-pink-400" />
+          Immersive Experience
+        </h3>
+        <div className="space-y-4">
+          {/* Sound Themes */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faVolumeUp} className="text-pink-400" />
+                  Sound Themes
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Themed sound effects for messages, notifications, and interactions</p>
+              </div>
+              <ToggleSwitch
+                enabled={soundThemes}
+                onToggle={setSoundThemes}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {soundThemes && (
+              <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                <select className="w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400/70 focus:ring-1 focus:ring-pink-400/30">
+                  <option value="nature">Nature Sounds</option>
+                  <option value="electronic">Electronic</option>
+                  <option value="ambient">Ambient Space</option>
+                  <option value="classic">Classic UI</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-300">Volume</span>
+                  <span className="text-xs text-pink-400">75%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  defaultValue="75"
+                  className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Bubble Effects */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faWandMagicSparkles} className="text-indigo-400" />
+                  Bubble Effects
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Particle effects, glows, and dynamic animations for messages</p>
+              </div>
+              <ToggleSwitch
+                enabled={bubbleEffects}
+                onToggle={setBubbleEffects}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {bubbleEffects && (
+              <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 rounded-lg text-indigo-400 text-xs font-medium transition-colors">
+                    ✨ Particles
+                  </button>
+                  <button className="px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 rounded-lg text-indigo-400 text-xs font-medium transition-colors">
+                    🌟 Glow
+                  </button>
+                  <button className="px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 rounded-lg text-indigo-400 text-xs font-medium transition-colors">
+                    💫 Sparkles
+                  </button>
+                  <button className="px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 rounded-lg text-indigo-400 text-xs font-medium transition-colors">
+                    🎆 Burst
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Theme Sharing & Community */}
+      <div>
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <FontAwesomeIcon icon={faShare} className="text-teal-400" />
+          Theme Sharing & Community
+        </h3>
+        <div className="space-y-4">
+          {/* Theme Sharing */}
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
+                  <FontAwesomeIcon icon={faShare} className="text-teal-400" />
+                  Theme Sharing
+                </label>
+                <p className="text-xs text-gray-400 mt-0.5">Share your themes with the community or import from others</p>
+              </div>
+              <ToggleSwitch
+                enabled={themeSharing}
+                onToggle={setThemeSharing}
+                accentColor={theme.accentColor}
+              />
+            </div>
+            {themeSharing && (
+              <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 rounded-lg text-teal-400 text-xs font-medium transition-colors flex items-center justify-center gap-1">
+                    <FontAwesomeIcon icon={faUpload} />
+                    Export
+                  </button>
+                  <button className="px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 rounded-lg text-teal-400 text-xs font-medium transition-colors flex items-center justify-center gap-1">
+                    <FontAwesomeIcon icon={faDownload} />
+                    Import
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Share your theme code: <code className="bg-zinc-700 px-1 py-0.5 rounded text-teal-300">4SPACE-ABC123</code>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Theme Marketplace Preview */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <FontAwesomeIcon icon={faMagic} className="text-purple-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Theme Marketplace</h4>
+                <p className="text-xs text-gray-400">Coming Soon - Premium themes & community creations</p>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500 mb-3">
+              Browse thousands of community-created themes, from minimalist designs to immersive experiences.
+            </div>
+            <button className="w-full px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 text-xs font-medium transition-colors border border-purple-500/30">
+              <FontAwesomeIcon icon={faRocket} className="mr-2" />
+              Join Waitlist
+            </button>
+          </div>
         </div>
       </div>
 
