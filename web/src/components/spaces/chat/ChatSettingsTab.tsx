@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faEye, faCheck, faBell, faLock, faShield,
   faUserSecret, faDownload, faImage, faVideo, faMobileAlt,
-  faFingerprint, faClipboard, faCog, faGlobe, faFont, faLayerGroup
+  faFingerprint, faClipboard, faCog, faGlobe
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../../ui/ToggleSwitch';
 import { useChatSettingsStore } from '../../../store/chatSettingsStore';
@@ -15,10 +15,6 @@ interface ChatSettingsTabProps {
 
 export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
   const {
-    fontSize,
-    setFontSize,
-    messageDensity,
-    setMessageDensity,
     applyToAllRooms,
     setApplyToAllRooms,
     theme,

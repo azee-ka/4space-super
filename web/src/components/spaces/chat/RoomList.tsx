@@ -1,66 +1,99 @@
-// Borderless Shadow-Based Room List - Matching Spaces/SpaceView Design
+// Enhanced Room List with Categories and Modal Creation
 // web/src/components/spaces/chat/RoomList.tsx
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faHashtag, faLock, faPlus, faSearch, faFilter,
-  faChevronDown, faVolumeUp, faVideo, faCog
+  faHashtag, faLock, faPlus, faSearch,
+  faChevronDown, faVolumeUp, faVideo, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import type { Room } from '@4space/shared/src/services/messages.service';
 import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 import { getAccentColorHex } from '../../../utils/themeUtils';
+import { CreateRoomModal } from './CreateRoomModal';
 
 interface RoomsListProps {
   rooms: Room[];
   selectedRoomId?: string;
   onSelectRoom: (roomId: string) => void;
-  onCreateRoom?: () => void;
-  isLoading?: boolean;
+  spaceId?: string;
   onlineUsers?: Map<string, any>;
-  filterUnread?: boolean; 
-  onFilterChange?: (value: boolean) => void;
+  spaceCategories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
 }
 
 export function RoomsList({
   rooms,
   selectedRoomId,
   onSelectRoom,
-  onCreateRoom,
-  isLoading,
+  spaceId,
   onlineUsers = new Map(),
-  filterUnread = false, // Add this with default
-  onFilterChange, // Add this
+  spaceCategories = []
 }: RoomsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    'General': true // Default expanded
+  });
+  const [showCreateModal, setShowCreateModal] = useState(false);
   
   // Get accent color from theme
   const { theme } = useChatSettingsStore();
-  
+
   // Get accent color value
   const accentColor = getAccentColorHex(theme.accentColor);
 
-  // Group rooms by category
-  const groupedRooms = rooms.reduce((acc, room) => {
-    const category = room.category || 'General';
-    if (!acc[category]) {
-      acc[category] = [];
-      expandedCategories[category] = true;
-    }
-    acc[category].push(room);
-    return acc;
-  }, {} as Record<string, Room[]>);
+  // Handle missing space ID
+  if (!spaceId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-xl bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-yellow-400 text-2xl" />
+          </div>
+          <p className="text-gray-400">No space selected</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Filter rooms
-  const filteredRooms = (categoryRooms: Room[]) => 
-    categoryRooms.filter(room => {
-      const matchesSearch = !searchQuery || 
-        room.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesUnread = !filterUnread || (room.unread_count && room.unread_count > 0);
-      return matchesSearch && matchesUnread;
+  // Group rooms by category
+  const roomsByCategory = useMemo(() => {
+    const grouped: Record<string, Room[]> = {};
+
+    rooms.forEach(room => {
+      const category = room.category || 'General';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(room);
     });
+
+    return grouped;
+  }, [rooms]);
+
+  // Get all categories
+  const categories = useMemo(() => {
+    return Object.keys(roomsByCategory).sort((a, b) => {
+      // Keep General first
+      if (a === 'General') return -1;
+      if (b === 'General') return 1;
+      return a.localeCompare(b);
+    });
+  }, [roomsByCategory]);
+
+  // Filter rooms by search query
+  const filterRooms = (rooms: Room[]) =>
+    rooms.filter(room =>
+      !searchQuery ||
+      room.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
 
   const getRoomIcon = (room: Room) => {
     if (room.type === 'voice') return faVolumeUp;
@@ -76,14 +109,7 @@ export function RoomsList({
     return 'cyan';
   };
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
-
-  if (isLoading) {
+  if (rooms.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
@@ -98,20 +124,18 @@ export function RoomsList({
           <FontAwesomeIcon icon={faHashtag} className="text-2xl text-cyan-400" />
         </div>
         <p className="text-gray-400 text-sm mb-4">No rooms yet</p>
-        {onCreateRoom && (
-          <button
-            onClick={onCreateRoom}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: `${accentColor}15`,
-              color: accentColor,
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
-          >
-            Create Room
-          </button>
-        )}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: `${accentColor}15`,
+            color: accentColor,
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
+        >
+          Create Room
+        </button>
       </div>
     );
   }
@@ -135,30 +159,30 @@ export function RoomsList({
             />
           </div>
           
-          {onCreateRoom && (
-            <button
-              onClick={onCreateRoom}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
-              style={{
-                backgroundColor: `${accentColor}15`,
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
-            >
-              <FontAwesomeIcon icon={faPlus} className="text-cyan-400 text-sm" />
-            </button>
-          )}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+            style={{
+              backgroundColor: `${accentColor}15`,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${accentColor}30`}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${accentColor}15`}
+          >
+            <FontAwesomeIcon icon={faPlus} className="text-cyan-400 text-sm" />
+          </button>
         </div>
 
       </div>
 
       {/* Rooms List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4">
-        {Object.entries(groupedRooms).map(([category, categoryRooms]) => {
-          const filtered = filteredRooms(categoryRooms);
-          const isExpanded = expandedCategories[category] !== false;
-          
-          if (filtered.length === 0) return null;
+        {categories.map((category) => {
+          const categoryRooms = roomsByCategory[category] || [];
+          const filteredRooms = filterRooms(categoryRooms);
+
+          if (filteredRooms.length === 0) return null;
+
+          const isExpanded = expandedCategories[category];
 
           return (
             <div key={category} className="mb-4">
@@ -175,7 +199,7 @@ export function RoomsList({
                 </motion.div>
                 <span className="flex-1 text-left">{category}</span>
                 <span className="px-2 py-0.5 rounded-lg bg-zinc-700/50 text-gray-400 text-[10px] font-bold">
-                  {filtered.length}
+                  {filteredRooms.length}
                 </span>
               </button>
 
@@ -189,7 +213,7 @@ export function RoomsList({
                     transition={{ duration: 0.2 }}
                     className="space-y-1 overflow-hidden"
                   >
-                    {filtered.map((room) => {
+                    {filteredRooms.map((room) => {
                       const isSelected = selectedRoomId === room.id;
                       const color = getRoomColor(room);
                       
@@ -254,6 +278,14 @@ export function RoomsList({
           );
         })}
       </div>
+
+      {/* Create Room Modal */}
+      <CreateRoomModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        spaceId={spaceId}
+        categories={spaceCategories}
+      />
     </div>
   );
 }
