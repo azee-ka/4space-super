@@ -9,8 +9,8 @@ import {
   faPalette, faCamera, faFileAlt, faLink
 } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
-import { ToggleSwitch } from '../../ui/ToggleSwitch';
+import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
+import { ToggleSwitch } from '../../../ui/ToggleSwitch';
 
 interface RoomSettingsTabProps {
   selectedRoomId?: string;

@@ -8,9 +8,9 @@ import {
   faEye, faPaperPlane, faCheckCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../store/authStore';
-import { useSpaceMembers, spaceKeys } from '../../hooks/useSpaces';
+import { supabase } from '../../../lib/supabase';
+import { useAuthStore } from '../../../store/authStore';
+import { useSpaceMembers, spaceKeys } from '../../../hooks/useSpaces';
 import { logger } from '@4space/shared/src/utils/logger';
 
 interface InviteToSpaceModalProps {

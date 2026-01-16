@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { useSpaces, useCreateSpace } from '../hooks/useSpaces';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { CreateSpaceModal } from '../components/spaces/CreateSpaceModal';
+import { CreateSpaceModal } from '../components/spaces/spaceModals/CreateSpaceModal';
 import { Navbar } from '../components/navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPlus, faGlobe, faLock, faUsers, faHeart, faBriefcase, faRocket,
-  faChevronRight, faClock, faBolt, faComments, faFolder, faCheckCircle,
-  faArrowTrendUp, faChartLine, faUserPlus, faArchive, faSearch, 
-  faBell, faHistory, faLayerGroup, faWandMagicSparkles, faCircleNodes, 
-  faBrain, faCode, faImage, faMicrophone, faInbox, faPaperPlane,
+  faChevronRight, faBolt, faComments, faFolder, faCheckCircle,
+  faArrowTrendUp, faChartLine, faSearch, 
+  faBell, faHistory, faLayerGroup, faWandMagicSparkles,
+  faCode, faImage, faMicrophone, faInbox, faPaperPlane,
   faEnvelope, faCheck, faXmark, faSpinner, faChevronDown, faStar
 } from '@fortawesome/free-solid-svg-icons';
 import type { Space } from '@4space/shared';

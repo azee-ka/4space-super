@@ -4,7 +4,7 @@ import {
   faTimes, faSpinner, faRocket, faLock, faUsers, 
   faBriefcase, faGlobe, faShieldAlt, faUserFriends, faBuilding
 } from '@fortawesome/free-solid-svg-icons';
-import { useCreateSpace } from '../../hooks/useSpaces';
+import { useCreateSpace } from '../../../hooks/useSpaces';
 
 interface CreateSpaceModalProps {
   isOpen: boolean;

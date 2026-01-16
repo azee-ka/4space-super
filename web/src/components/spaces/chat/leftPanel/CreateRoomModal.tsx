@@ -8,7 +8,7 @@ import {
   faFileAlt, faStar, faRocket,
   faBriefcase, faLightbulb, faCamera, faPlus
 } from '@fortawesome/free-solid-svg-icons';
-import { useCreateRoom } from '../../../hooks/useMessages';
+import { useCreateRoom } from '../../../../hooks/useMessages';
 
 interface CreateRoomModalProps {
   isOpen: boolean;

@@ -5,8 +5,8 @@ import {
   faCog, faShieldAlt, faUsers, faBell, faGlobe,
   faUserFriends, faVolumeUp, faEye, faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
-import { ToggleSwitch } from '../../ui/ToggleSwitch';
+import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
+import { ToggleSwitch } from '../../../ui/ToggleSwitch';
 
 interface SpaceSettingsTabProps {
   onBack?: () => void;

@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import CustomTextarea from '../../ui/CustomTextarea';
+import CustomTextarea from '../../../ui/CustomTextarea';
 
 interface MessageInputProps {
   onSend: (content: string, type?: string, attachments?: any[]) => void;

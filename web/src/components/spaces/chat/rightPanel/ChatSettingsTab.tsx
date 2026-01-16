@@ -17,8 +17,8 @@ import {
   faAdjust, faInfoCircle, faBan, faUserTimes, faUserCheck,
   faClone, faChevronRight, faSkull, faHashtag
 } from '@fortawesome/free-solid-svg-icons';
-import { ToggleSwitch } from '../../ui/ToggleSwitch';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
+import { ToggleSwitch } from '../../../ui/ToggleSwitch';
+import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
 
 interface ChatSettingsTabProps {
   roomId?: string;

@@ -6,7 +6,7 @@ import {
   faTimes, faExclamationTriangle, faLock, faUsers, faBuilding,
   faArrowRight, faCheck, faSpinner, faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
-import { useConvertSpacePrivacy } from '../../hooks/useSpaces';
+import { useConvertSpacePrivacy } from '../../../hooks/useSpaces';
 
 interface ConvertSpaceModalProps {
   isOpen: boolean;

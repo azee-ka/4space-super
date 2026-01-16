@@ -11,10 +11,10 @@ import {
   faShare, faDownload, faMagic, faSun, faMoon, faCloud,
   faZap, faWandMagicSparkles, faBrain, faRocket
 } from '@fortawesome/free-solid-svg-icons';
-import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../store/chatSettingsStore';
-import { themePresets, getThemesByCategory } from '../../../utils/themePresets';
-import { ColorPicker } from '../../ui/ColorPicker';
-import { getAccentColorHex } from '../../../utils/themeUtils';
+import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../../store/chatSettingsStore';
+import { themePresets, getThemesByCategory } from '../../../../utils/themePresets';
+import { ColorPicker } from '../../../ui/ColorPicker';
+import { getAccentColorHex } from '../../../../utils/themeUtils';
 
 // Toggle Switch Component with smooth animation and accent color support
 const ToggleSwitch = memo(({ enabled, onToggle, accentColor }: { enabled: boolean; onToggle: (value: boolean) => void; accentColor?: string }) => {
@@ -249,7 +249,6 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
                 enabled={applyToAllRooms}
                 onToggle={handleApplyToAllRooms}
                 accentColor={theme.accentColor}
-                size="sm"
               />
             </div>
           </div>
@@ -263,8 +262,6 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
                 enabled={applyToCategory}
                 onToggle={handleApplyToCategory}
                 accentColor={theme.accentColor}
-                disabled={applyToAllRooms}
-                size="sm"
               />
             </div>
           </div>

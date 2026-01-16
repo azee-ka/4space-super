@@ -5,10 +5,10 @@ import { useSpace, useSpaceStats, useSpaceMembers } from '../hooks/useSpaces';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { Navbar } from '../components/navbar/Navbar';
-import { InviteToSpaceModal } from '../components/spaces/InviteToSpaceModal';
-import { SpaceMembersModal } from '../components/spaces/SpaceMembersModal';
-import { WidgetLibraryModal } from '../components/spaces/WidgetLibraryModal';
-import { ConvertSpaceModal } from '../components/spaces/ConvertSpaceModal';
+import { InviteToSpaceModal } from '../components/spaces/spaceModals/InviteToSpaceModal';
+import { SpaceMembersModal } from '../components/spaces/spaceModals/SpaceMembersModal';
+import { WidgetLibraryModal } from '../components/spaces/spaceModals/WidgetLibraryModal';
+import { ConvertSpaceModal } from '../components/spaces/spaceModals/ConvertSpaceModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faArrowLeft, faComments, faFolder, faFileAlt, faCheckCircle, 

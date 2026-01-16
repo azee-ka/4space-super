@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import DropdownButton from '../../ui/DropdownButton';
+import DropdownButton from '../../../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faReply, faEdit, faTrash, faThumbtack, faBookmark, faEllipsisV,
@@ -13,7 +13,7 @@ import type { Message } from '@4space/shared/src/services/messages.service';
 import DOMPurify from 'dompurify';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import type { ChatTheme } from '../../../store/chatSettingsStore';
+import type { ChatTheme } from '../../../../store/chatSettingsStore';
 
 interface MessageItemProps {
   message: Message;

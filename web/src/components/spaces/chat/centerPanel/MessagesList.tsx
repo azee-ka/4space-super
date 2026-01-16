@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
-import type { ChatTheme } from '../../../store/chatSettingsStore';
-import { getAccentColorHex } from '../../../utils/themeUtils';
+import type { ChatTheme } from '../../../../store/chatSettingsStore';
+import { getAccentColorHex } from '../../../../utils/themeUtils';
 import { MessageItem } from './MessageItem';
 
 interface MessagesListProps {

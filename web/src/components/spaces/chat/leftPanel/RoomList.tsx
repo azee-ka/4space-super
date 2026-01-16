@@ -9,8 +9,8 @@ import {
   faChevronDown, faVolumeUp, faVideo, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import type { Room } from '@4space/shared/src/services/messages.service';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
-import { getAccentColorHex } from '../../../utils/themeUtils';
+import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
+import { getAccentColorHex } from '../../../../utils/themeUtils';
 
 interface RoomsListProps {
   rooms: Room[];
