@@ -29,6 +29,8 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
   const {
     applyToAllRooms,
     setApplyToAllRooms,
+    applyToCategory,
+    setApplyToCategory,
     theme,
   } = useChatSettingsStore();
 
@@ -94,22 +96,41 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
 
   return (
     <div className="p-4 space-y-4">
-      {/* Apply to All Rooms */}
-      <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/15 transition-colors border border-purple-500/20">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
-            <FontAwesomeIcon icon={faGlobe} className="text-purple-400 text-sm" />
+      {/* Apply Scope */}
+      <div className="p-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/15 transition-colors border border-purple-500/20 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <FontAwesomeIcon icon={faGlobe} className="text-purple-400 text-sm" />
+            </div>
+            <div>
+              <span className="text-sm text-white font-medium">Apply Across All Rooms</span>
+              <p className="text-xs text-gray-500">Share settings globally</p>
+            </div>
           </div>
-          <div>
-            <span className="text-sm text-white font-medium">Apply to All Rooms</span>
-            <p className="text-xs text-gray-500">Use globally</p>
-          </div>
+          <ToggleSwitch
+            enabled={applyToAllRooms}
+            onToggle={setApplyToAllRooms}
+            accentColor={theme.accentColor}
+          />
         </div>
-        <ToggleSwitch
-          enabled={applyToAllRooms}
-          onToggle={setApplyToAllRooms}
-          accentColor={theme.accentColor}
-        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <FontAwesomeIcon icon={faHashtag} className="text-purple-400 text-sm" />
+            </div>
+            <div>
+              <span className="text-sm text-white font-medium">Apply Within Category</span>
+              <p className="text-xs text-gray-500">Share settings across category rooms</p>
+            </div>
+          </div>
+          <ToggleSwitch
+            enabled={applyToCategory}
+            onToggle={setApplyToCategory}
+            accentColor={theme.accentColor}
+            disabled={applyToAllRooms}
+          />
+        </div>
       </div>
 
       {/* Privacy & Visibility */}
@@ -565,7 +586,7 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
             </h4>
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 hover:bg-zinc-800/50 transition-colors">
-                <button className="w-full text-left group">
+                <div className="w-full cursor-pointer group" onClick={() => console.log('Delete room clicked')}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center border border-red-500/30">
@@ -578,16 +599,11 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
                     </div>
                     <FontAwesomeIcon icon={faChevronRight} className="text-red-400/60 text-sm group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="ml-13">
-                    <button className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 text-xs font-medium transition-all hover:scale-105">
-                      Confirm Deletion
-                    </button>
-                  </div>
-                </button>
+                </div>
               </div>
 
               <div className="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 hover:bg-zinc-800/50 transition-colors">
-                <button className="w-full text-left group">
+                <div className="w-full cursor-pointer group" onClick={() => console.log('Nuclear option clicked')}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-red-800/20 flex items-center justify-center border border-red-700/30">
@@ -600,12 +616,7 @@ export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSe
                     </div>
                     <FontAwesomeIcon icon={faChevronRight} className="text-red-300/60 text-sm group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="ml-13">
-                    <button className="px-4 py-2 bg-red-800/20 hover:bg-red-800/30 border border-red-700/30 rounded-lg text-red-300 text-xs font-medium transition-all hover:scale-105">
-                      ⚠️ Execute Nuclear Protocol
-                    </button>
-                  </div>
-                </button>
+                </div>
               </div>
             </div>
           </div>

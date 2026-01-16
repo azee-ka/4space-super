@@ -45,6 +45,7 @@ import { ChatSettingsTab } from '../components/spaces/chat/ChatSettingsTab';
 import { SearchMessages } from '../components/spaces/chat/SearchMessages';
 import { PinnedMessages } from '../components/spaces/chat/PinnedMessages';
 import { RoomsList } from '../components/spaces/chat/RoomList';
+import { CreateRoomModal } from '../components/spaces/chat/CreateRoomModal';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { useUpdateMessage } from '../hooks/useMessages';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
@@ -135,15 +136,13 @@ export function SpaceChatView() {
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>(getRoomFromHash());
   
-  // Get settings for current room
-  const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId);
-  const { theme } = roomSettings;
   const [replyTo, setReplyTo] = useState<MessageType | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageType | null>(null);
   
   // Sidebar states
   const [leftSidebarTab, setLeftSidebarTab] = useState<LeftSidebarTab>('rooms');
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('settings');
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [overlayView, setOverlayView] = useState<OverlayView>(null);
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
 
@@ -164,6 +163,11 @@ export function SpaceChatView() {
   
   // Fetch selected room data
   const { data: selectedRoom } = useRoom(selectedRoomId);
+
+  // Get settings for current room (after room data is available)
+  const roomCategory = selectedRoom?.category || 'General';
+  const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId, roomCategory);
+  const { theme } = roomSettings;
 
   // Fetch room members
   const { data: roomMembers = [] } = useRoomMembers(selectedRoomId);
@@ -566,6 +570,7 @@ return (
           isLoading={loadingRooms}
           onlineUsers={onlineUsers}
           onOpenSettings={() => setShowGeneralSettings(!showGeneralSettings)}
+          onOpenCreateRoomModal={() => setShowCreateRoomModal(true)}
           showGeneralSettings={showGeneralSettings}
           categories={spaceCategories}
           onCategoriesChange={setSpaceCategoriesState}
@@ -586,11 +591,21 @@ return (
       {theme.backgroundType === 'featured' && theme.backgroundImage && (
         <>
           {/* Tiled pattern using actual img elements for proper sizing - BEHIND everything */}
-          <div className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden" style={{ gap: 0, height: '100%' }}>
+          <div
+            key={theme.backgroundImage}
+            className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden"
+            style={{ gap: 0, height: '100%' }}
+          >
             {[...Array(30)].map((_, i) => (
               <img
                 key={i}
-                src={i % 2 === 0 ? theme.backgroundImage : (theme.backgroundImage || '').replace('.png', '-mirror.png')}
+                src={
+                  i % 2 === 0
+                    ? theme.backgroundImage
+                    : (theme.backgroundImage || '').includes('.png')
+                      ? (theme.backgroundImage || '').replace('.png', '-mirror.png')
+                      : theme.backgroundImage
+                }
                 alt=""
                 className="flex-shrink-0 h-full"
                 style={{ 
@@ -627,6 +642,8 @@ return (
               onReaction={handleReaction}
               onRemoveReaction={handleRemoveReaction}
               theme={theme}
+              fontSize={roomSettings.fontSize}
+              messageDensity={roomSettings.messageDensity}
               typingUsers={typingUsers}
             />
 
@@ -721,7 +738,7 @@ return (
           activeTab={rightSidebarTab}
           onTabChange={setRightSidebarTab}
           theme={theme}
-          onThemeChange={(newTheme) => useChatSettingsStore.getState().setTheme(newTheme)}
+          onThemeChange={(newTheme, roomId, category) => useChatSettingsStore.getState().setTheme(newTheme, roomId, category)}
           messages={messages}
           roomMembers={roomMembers}
           onlineUsers={onlineUsers}
@@ -780,6 +797,13 @@ return (
         </motion.div>
       )}
     </AnimatePresence>
+
+    <CreateRoomModal
+      isOpen={showCreateRoomModal}
+      onClose={() => setShowCreateRoomModal(false)}
+      spaceId={spaceId}
+      categories={spaceCategories}
+    />
   </div>
 );
 }
@@ -797,6 +821,7 @@ interface LeftSidebarProps {
   isLoading: boolean;
   onlineUsers: Map<string, any>;
   onOpenSettings?: () => void;
+  onOpenCreateRoomModal?: () => void;
   showGeneralSettings?: boolean;
   categories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
   onCategoriesChange?: (categories: Array<{ id: string; name: string; icon: string; color: string; description: string }>) => void;
@@ -816,6 +841,7 @@ function LeftSidebar({
   isLoading,
   onlineUsers,
   onOpenSettings,
+  onOpenCreateRoomModal,
   showGeneralSettings = false,
   categories = [],
   onCategoriesChange,
@@ -1168,6 +1194,7 @@ function LeftSidebar({
                 spaceId={_spaceId}
                 onlineUsers={onlineUsers}
                 spaceCategories={categories}
+                onCreateRoom={() => onOpenCreateRoomModal?.()}
               />
             </div>
           </>
@@ -1240,7 +1267,7 @@ interface RightSidebarProps {
   activeTab: RightSidebarTab;
   onTabChange: (tab: RightSidebarTab) => void;
   theme: any;
-  onThemeChange: (theme: any) => void;
+  onThemeChange: (theme: any, roomId?: string, category?: string) => void;
   messages: any[];
   roomMembers: any[];
   onlineUsers: Map<string, any>;
@@ -1263,6 +1290,7 @@ function RightSidebar({
   spaceId,
   getAccentFocusClass,
 }: RightSidebarProps) {
+  const roomCategory = selectedRoom?.category || 'General';
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'orange' },
     { id: 'media', icon: faImages, label: 'Media', color: 'green' },
@@ -1333,7 +1361,7 @@ function RightSidebar({
           {activeTab === 'media' && <MediaTab />}
           {activeTab === 'links' && <LinksTab />}
           {activeTab === 'customization' && (
-            <CustomizationTab theme={theme} onThemeChange={onThemeChange} />
+            <CustomizationTab theme={theme} onThemeChange={onThemeChange} roomId={selectedRoomId} roomCategory={roomCategory} />
           )}
         </div>
       </div>

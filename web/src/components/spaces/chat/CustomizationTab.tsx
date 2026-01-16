@@ -60,10 +60,12 @@ function adjustColor(color: string, brightness: number): string {
 
 interface CustomizationTabProps {
   theme: ChatTheme;
-  onThemeChange: (theme: ChatTheme) => void;
+  onThemeChange: (theme: ChatTheme, roomId?: string, category?: string) => void;
+  roomId?: string;
+  roomCategory?: string;
 }
 
-export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps) {
+export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }: CustomizationTabProps) {
   const {
     fontSize, setFontSize,
     messageDensity, setMessageDensity,
@@ -74,6 +76,8 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     setAmbientIntensity,
     applyToAllRooms,
     setApplyToAllRooms,
+    applyToCategory,
+    setApplyToCategory,
   } = useChatSettingsStore();
 
   // Revolutionary new settings
@@ -90,10 +94,22 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleThemeUpdate = useCallback((updates: Partial<ChatTheme>) => {
-    const newTheme = { ...theme, ...updates };
-    setStoreTheme(newTheme);
-    onThemeChange(newTheme);
-  }, [theme, setStoreTheme, onThemeChange]);
+    const nextTheme: ChatTheme = { ...theme, ...updates };
+    if (updates.backgroundType) {
+      const nextType = updates.backgroundType;
+      if (nextType !== 'image' && nextType !== 'featured') {
+        nextTheme.backgroundImage = undefined;
+      }
+      if (nextType !== 'pattern' && nextType !== 'artistic') {
+        nextTheme.backgroundPattern = undefined;
+      }
+      if (nextType !== 'gradient') {
+        nextTheme.backgroundColor2 = undefined;
+      }
+    }
+    setStoreTheme(nextTheme, roomId, roomCategory);
+    onThemeChange(nextTheme, roomId, roomCategory);
+  }, [theme, setStoreTheme, onThemeChange, roomId, roomCategory]);
 
   // Handle image upload
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,19 +166,39 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
       sentTextColor: '#ffffff',
       receivedTextColor: '#ffffff',
     };
-    setStoreTheme(defaultTheme);
-    onThemeChange(defaultTheme);
-    setFontSize(14);
-    setMessageDensity('comfortable');
-  }, [setStoreTheme, onThemeChange, setFontSize, setMessageDensity]);
+    setStoreTheme(defaultTheme, roomId, roomCategory);
+    onThemeChange(defaultTheme, roomId, roomCategory);
+    setFontSize(14, roomId, roomCategory);
+    setMessageDensity('comfortable', roomId, roomCategory);
+  }, [setStoreTheme, onThemeChange, setFontSize, setMessageDensity, roomId, roomCategory]);
 
   const applyPreset = useCallback((presetId: string) => {
     const preset = themePresets.find(p => p.id === presetId);
     if (preset) {
-      setStoreTheme(preset.theme);
-      onThemeChange(preset.theme);
+      setStoreTheme(preset.theme, roomId, roomCategory);
+      onThemeChange(preset.theme, roomId, roomCategory);
     }
-  }, [setStoreTheme, onThemeChange]);
+  }, [setStoreTheme, onThemeChange, roomId, roomCategory]);
+
+  const handleApplyToAllRooms = (enabled: boolean) => {
+    setApplyToAllRooms(enabled);
+    if (enabled) {
+      setStoreTheme(theme);
+      onThemeChange(theme);
+      setFontSize(fontSize);
+      setMessageDensity(messageDensity);
+    }
+  };
+
+  const handleApplyToCategory = (enabled: boolean) => {
+    setApplyToCategory(enabled);
+    if (enabled) {
+      setStoreTheme(theme, undefined, roomCategory);
+      onThemeChange(theme, undefined, roomCategory);
+      setFontSize(fontSize, undefined, roomCategory);
+      setMessageDensity(messageDensity, undefined, roomCategory);
+    }
+  };
 
   return (
     <div className="p-6 space-y-8 overflow-y-auto h-full">
@@ -202,16 +238,36 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           </div>
         )}
         
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-700/50">
-          <div>
-            <label className="text-sm font-medium text-white cursor-pointer">Apply to All Rooms</label>
-            <p className="text-xs text-gray-400 mt-0.5">Use these settings for all chat rooms</p>
+        <div className="pt-3 border-t border-zinc-700/50 space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-medium text-white cursor-pointer">Apply Across All Rooms</label>
+              <p className="text-xs text-gray-400 mt-0.5">Share settings globally across every room</p>
+            </div>
+            <div className="flex-shrink-0">
+              <ToggleSwitch
+                enabled={applyToAllRooms}
+                onToggle={handleApplyToAllRooms}
+                accentColor={theme.accentColor}
+                size="sm"
+              />
+            </div>
           </div>
-          <ToggleSwitch
-            enabled={applyToAllRooms}
-            onToggle={setApplyToAllRooms}
-            accentColor={theme.accentColor}
-          />
+          <div className="flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-medium text-white cursor-pointer">Apply Within Category</label>
+              <p className="text-xs text-gray-400 mt-0.5">Share settings across rooms in the same category</p>
+            </div>
+            <div className="flex-shrink-0">
+              <ToggleSwitch
+                enabled={applyToCategory}
+                onToggle={handleApplyToCategory}
+                accentColor={theme.accentColor}
+                disabled={applyToAllRooms}
+                size="sm"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -826,7 +882,7 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           max="20"
           step="1"
           value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value))}
+              onChange={(e) => setFontSize(Number(e.target.value), roomId, roomCategory)}
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
         />
         <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -843,7 +899,7 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           {(['compact', 'comfortable', 'spacious'] as const).map((density) => (
             <button
               key={density}
-              onClick={() => setMessageDensity(density)}
+              onClick={() => setMessageDensity(density, roomId, roomCategory)}
               className={`px-4 py-3 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
                 messageDensity === density
                   ? 'bg-green-500/20 text-green-400 ring-2 ring-green-500/50'

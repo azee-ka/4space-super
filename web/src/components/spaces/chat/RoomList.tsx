@@ -11,7 +11,6 @@ import {
 import type { Room } from '@4space/shared/src/services/messages.service';
 import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 import { getAccentColorHex } from '../../../utils/themeUtils';
-import { CreateRoomModal } from './CreateRoomModal';
 
 interface RoomsListProps {
   rooms: Room[];
@@ -20,6 +19,7 @@ interface RoomsListProps {
   spaceId?: string;
   onlineUsers?: Map<string, any>;
   spaceCategories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
+  onCreateRoom?: () => void;
 }
 
 export function RoomsList({
@@ -28,13 +28,13 @@ export function RoomsList({
   onSelectRoom,
   spaceId,
   onlineUsers = new Map(),
-  spaceCategories = []
+  spaceCategories = [],
+  onCreateRoom,
 }: RoomsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     'General': true // Default expanded
   });
-  const [showCreateModal, setShowCreateModal] = useState(false);
   
   // Get accent color from theme
   const { theme } = useChatSettingsStore();
@@ -125,7 +125,7 @@ export function RoomsList({
         </div>
         <p className="text-gray-400 text-sm mb-4">No rooms yet</p>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => onCreateRoom?.()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
           style={{
             backgroundColor: `${accentColor}15`,
@@ -160,7 +160,7 @@ export function RoomsList({
           </div>
           
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => onCreateRoom?.()}
             className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
             style={{
               backgroundColor: `${accentColor}15`,
@@ -279,13 +279,6 @@ export function RoomsList({
         })}
       </div>
 
-      {/* Create Room Modal */}
-      <CreateRoomModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        spaceId={spaceId}
-        categories={spaceCategories}
-      />
     </div>
   );
 }

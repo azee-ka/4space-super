@@ -13,7 +13,7 @@ import type { Message } from '@4space/shared/src/services/messages.service';
 import DOMPurify from 'dompurify';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { useChatSettingsStore } from '../../../store/chatSettingsStore';
+import type { ChatTheme } from '../../../store/chatSettingsStore';
 
 interface MessageItemProps {
   message: Message;
@@ -30,6 +30,9 @@ interface MessageItemProps {
   onRemoveReaction?: (messageId: string, emoji: string) => void;
   onScrollToMessage?: (messageId: string) => void;
   currentUserId?: string;
+  theme?: ChatTheme;
+  fontSize?: number;
+  messageDensity?: 'compact' | 'comfortable' | 'spacious';
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -75,8 +78,21 @@ export function MessageItem({
   onRemoveReaction,
   onScrollToMessage,
   currentUserId,
+  theme,
+  fontSize = 14,
+  messageDensity = 'comfortable',
 }: MessageItemProps) {
-  const { theme, fontSize, messageDensity } = useChatSettingsStore();
+  const resolvedTheme: ChatTheme = theme || {
+    backgroundType: 'solid',
+    backgroundColor: '#000000',
+    sentBubbleColor: '#7c3aed',
+    receivedBubbleColor: '#27272a',
+    bubbleShapePreset: 'pill',
+    bubbleBorderRadius: 12,
+    accentColor: 'purple',
+    sentTextColor: '#ffffff',
+    receivedTextColor: '#ffffff',
+  };
   const [showActions, setShowActions] = useState(false);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -319,12 +335,12 @@ export function MessageItem({
   }, [message.reactions, optimisticReactions, currentUserId]);
 
   const getBorderRadius = () => {
-    const radius = theme.bubbleShapePreset === 'custom' 
-      ? theme.bubbleBorderRadius 
-      : theme.bubbleShapePreset === 'square' ? 0
-      : theme.bubbleShapePreset === 'rounded' ? 8
-      : theme.bubbleShapePreset === 'pill' ? 12
-      : theme.bubbleShapePreset === 'extra-rounded' ? 20
+    const radius = resolvedTheme.bubbleShapePreset === 'custom' 
+      ? resolvedTheme.bubbleBorderRadius 
+      : resolvedTheme.bubbleShapePreset === 'square' ? 0
+      : resolvedTheme.bubbleShapePreset === 'rounded' ? 8
+      : resolvedTheme.bubbleShapePreset === 'pill' ? 12
+      : resolvedTheme.bubbleShapePreset === 'extra-rounded' ? 20
       : 12;
     
     // For square bubbles, no grouping effect needed
@@ -361,22 +377,22 @@ export function MessageItem({
   const getBubbleColor = () => {
     if (isOwn) {
       // Use gradient if available, otherwise solid color
-      if (theme.sentBubbleGradient) {
-        return { background: theme.sentBubbleGradient };
+      if (resolvedTheme.sentBubbleGradient) {
+        return { background: resolvedTheme.sentBubbleGradient };
       }
-      return { backgroundColor: theme.sentBubbleColor };
+      return { backgroundColor: resolvedTheme.sentBubbleColor };
     }
     // Received bubbles
-    if (theme.receivedBubbleGradient) {
-      return { background: theme.receivedBubbleGradient };
+    if (resolvedTheme.receivedBubbleGradient) {
+      return { background: resolvedTheme.receivedBubbleGradient };
     }
-    return { backgroundColor: theme.receivedBubbleColor };
+    return { backgroundColor: resolvedTheme.receivedBubbleColor };
   };
 
   const getTextColor = () => {
     return isOwn 
-      ? (theme.sentTextColor || '#ffffff') 
-      : (theme.receivedTextColor || '#ffffff');
+      ? (resolvedTheme.sentTextColor || '#ffffff') 
+      : (resolvedTheme.receivedTextColor || '#ffffff');
   };
 
   const getReadStatus = () => {

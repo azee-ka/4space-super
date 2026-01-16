@@ -206,10 +206,17 @@ export class MessagesService {
       });
   
     if (memberError) {
-      console.error('[MessagesService] Failed to add creator as room member:', memberError);
-      // This is critical - if this fails, the user won't be able to use the room
-      // Consider deleting the room if member creation fails
-      throw new Error('Failed to join room after creation');
+      const isConflict =
+        (memberError as any)?.code === '23505' ||
+        (memberError as any)?.status === 409 ||
+        `${(memberError as any)?.message || ''}`.toLowerCase().includes('duplicate');
+
+      if (!isConflict) {
+        console.error('[MessagesService] Failed to add creator as room member:', memberError);
+        // This is critical - if this fails, the user won't be able to use the room
+        // Consider deleting the room if member creation fails
+        throw new Error('Failed to join room after creation');
+      }
     }
   
     console.log('[MessagesService] Creator added as admin member');

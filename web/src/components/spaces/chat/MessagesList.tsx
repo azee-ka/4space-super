@@ -24,6 +24,8 @@ interface MessagesListProps {
   typingUsers?: Map<string, any>;
   optimisticMessages?: any[]; // Messages being sent
   theme?: ChatTheme;
+  fontSize?: number;
+  messageDensity?: 'compact' | 'comfortable' | 'spacious';
 }
 
 export function MessagesList({
@@ -43,6 +45,8 @@ export function MessagesList({
   typingUsers = new Map(),
   optimisticMessages = [],
   theme,
+  fontSize,
+  messageDensity,
 }: MessagesListProps) {
   const [scrollIndicator, setScrollIndicator] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -555,6 +559,9 @@ export function MessagesList({
                       onRemoveReaction={onRemoveReaction}
                       onScrollToMessage={scrollToMessage}
                       currentUserId={currentUserId}
+                      theme={theme}
+                      fontSize={fontSize}
+                      messageDensity={messageDensity}
                     />
                   </motion.div>
                 );
