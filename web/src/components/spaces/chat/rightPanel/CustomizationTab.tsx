@@ -920,18 +920,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* AI Theme Suggestions */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faRobot} className="text-cyan-400" />
                   AI Theme Suggestions
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Get personalized theme recommendations based on your usage patterns</p>
               </div>
-              <ToggleSwitch
-                enabled={aiThemeSuggestions}
-                onToggle={setAiThemeSuggestions}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={aiThemeSuggestions}
+                  onToggle={setAiThemeSuggestions}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {aiThemeSuggestions && (
               <div className="space-y-3 pt-3 border-t border-zinc-700/50">
@@ -949,18 +951,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Dynamic Time-Based Themes */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faClock} className="text-orange-400" />
                   Dynamic Time Themes
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Automatically adjust theme based on time of day</p>
               </div>
-              <ToggleSwitch
-                enabled={dynamicTimeTheme}
-                onToggle={setDynamicTimeTheme}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={dynamicTimeTheme}
+                  onToggle={setDynamicTimeTheme}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {dynamicTimeTheme && (
               <div className="space-y-3 pt-3 border-t border-zinc-700/50">
@@ -1012,18 +1016,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Advanced Animations */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faZap} className="text-purple-400" />
                   Advanced Animations
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Smooth transitions, particle effects, and micro-interactions</p>
               </div>
-              <ToggleSwitch
-                enabled={advancedAnimations}
-                onToggle={setAdvancedAnimations}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={advancedAnimations}
+                  onToggle={setAdvancedAnimations}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {advancedAnimations && (
               <div className="space-y-2 pt-3 border-t border-zinc-700/50">
@@ -1045,18 +1051,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Accessibility Mode */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faEye} className="text-blue-400" />
                   Accessibility Mode
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Enhanced contrast, larger text, and screen reader support</p>
               </div>
-              <ToggleSwitch
-                enabled={accessibilityMode}
-                onToggle={setAccessibilityMode}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={accessibilityMode}
+                  onToggle={setAccessibilityMode}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {accessibilityMode && (
               <div className="space-y-2 pt-3 border-t border-zinc-700/50">
@@ -1072,18 +1080,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Performance Mode */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faRocket} className="text-emerald-400" />
                   Performance Mode
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Optimize for speed - reduce animations and effects</p>
               </div>
-              <ToggleSwitch
-                enabled={performanceMode}
-                onToggle={setPerformanceMode}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={performanceMode}
+                  onToggle={setPerformanceMode}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1099,18 +1109,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Sound Themes */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faVolumeUp} className="text-pink-400" />
                   Sound Themes
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Themed sound effects for messages, notifications, and interactions</p>
               </div>
-              <ToggleSwitch
-                enabled={soundThemes}
-                onToggle={setSoundThemes}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={soundThemes}
+                  onToggle={setSoundThemes}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {soundThemes && (
               <div className="space-y-3 pt-3 border-t border-zinc-700/50">
@@ -1139,18 +1151,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Advanced Bubble Effects */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faWandMagicSparkles} className="text-indigo-400" />
                   Bubble Effects
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Particle effects, glows, and dynamic animations for messages</p>
               </div>
-              <ToggleSwitch
-                enabled={bubbleEffects}
-                onToggle={setBubbleEffects}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={bubbleEffects}
+                  onToggle={setBubbleEffects}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {bubbleEffects && (
               <div className="space-y-3 pt-3 border-t border-zinc-700/50">
@@ -1184,18 +1198,20 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
           {/* Theme Sharing */}
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium text-white cursor-pointer flex items-center gap-2">
                   <FontAwesomeIcon icon={faShare} className="text-teal-400" />
                   Theme Sharing
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Share your themes with the community or import from others</p>
               </div>
-              <ToggleSwitch
-                enabled={themeSharing}
-                onToggle={setThemeSharing}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={themeSharing}
+                  onToggle={setThemeSharing}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
             {themeSharing && (
               <div className="space-y-3 pt-3 border-t border-zinc-700/50">
