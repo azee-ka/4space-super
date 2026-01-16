@@ -882,12 +882,12 @@ function RightSidebar({
   selectedRoom,
 }: RightSidebarProps) {
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
-    { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
-    { id: 'metadata', icon: faHashtag, label: 'Room Info', color: 'pink' },
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'orange' },
     { id: 'media', icon: faImages, label: 'Media', color: 'green' },
     { id: 'links', icon: faLink, label: 'Links', color: 'blue' },
+    { id: 'metadata', icon: faHashtag, label: 'Room Info', color: 'pink' },
     { id: 'customization', icon: faPalette, label: 'Theme', color: 'purple' },
+    { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
   ];
 
   return (
@@ -929,9 +929,9 @@ function RightSidebar({
           {activeTab === 'settings' && <ChatSettingsTab roomId={undefined} />}
           {activeTab === 'metadata' && (
             <RoomMetadataTab
-              room={undefined}
-              memberCount={0}
-              messageCount={0}
+              room={selectedRoom}
+              memberCount={roomMembers.length}
+              messageCount={messages.length}
               onUpdateRoom={(updates) => {
                 console.log('Update room:', updates);
               }}
@@ -1029,24 +1029,123 @@ function MetricsTab({ onlineUsers }: { onlineUsers: Map<string, any> }) {
 }
 
 function ProductivityTab() {
-  const handleCreateMeeting = () => {
-    // TODO: Implement meeting creation
-    alert('Meeting creation coming soon!');
+  const { id: spaceId } = useParams<{ id: string }>();
+  const createRoomMutation = useCreateRoom();
+
+  const handleCreateMeeting = async () => {
+    if (!spaceId) {
+      alert('No space selected.');
+      return;
+    }
+
+    const titleInput = window.prompt('Meeting title?');
+    const title = titleInput?.trim();
+    if (!title) return;
+
+    const whenInput = window.prompt('When is the meeting? (optional)');
+    const when = whenInput?.trim();
+
+    try {
+      const newRoom = await createRoomMutation.mutateAsync({
+        space_id: spaceId,
+        name: `Meeting: ${title}`,
+        description: when ? `Scheduled for ${when}.` : 'Meeting room created from Productivity actions.',
+        type: 'text',
+        category: 'Meetings',
+        is_private: false,
+      });
+
+      if (newRoom?.id) {
+        window.location.hash = newRoom.id;
+      }
+    } catch (error) {
+      console.error('Failed to create meeting room:', error);
+      alert('Failed to create meeting room. Please try again.');
+    }
   };
 
   const handleCreateTask = () => {
-    // TODO: Implement task creation
-    alert('Task creation coming soon!');
+    if (!spaceId) {
+      alert('No space selected.');
+      return;
+    }
+
+    const titleInput = window.prompt('Task title?');
+    const title = titleInput?.trim();
+    if (!title) return;
+
+    const dueInput = window.prompt('Due date? (optional)');
+    const due = dueInput?.trim();
+
+    createRoomMutation
+      .mutateAsync({
+        space_id: spaceId,
+        name: `Task: ${title}`,
+        description: due ? `Due ${due}.` : 'Task created from Productivity actions.',
+        type: 'text',
+        category: 'Tasks',
+        is_private: false,
+      })
+      .then((newRoom) => {
+        if (newRoom?.id) {
+          window.location.hash = newRoom.id;
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to create task room:', error);
+        alert('Failed to create task. Please try again.');
+      });
   };
 
   const handleCreateNote = () => {
-    // TODO: Implement note creation
-    alert('Note creation coming soon!');
+    if (!spaceId) {
+      alert('No space selected.');
+      return;
+    }
+
+    const titleInput = window.prompt('Note title?');
+    const title = titleInput?.trim();
+    if (!title) return;
+
+    const bodyInput = window.prompt('Add a quick note? (optional)');
+    const body = bodyInput?.trim();
+
+    createRoomMutation.mutateAsync({
+      space_id: spaceId,
+      name: `Note: ${title}`,
+      description: body || 'Note created from Productivity actions.',
+      type: 'text',
+      category: 'Notes',
+      is_private: false,
+    }).then((newRoom) => {
+      if (newRoom?.id) {
+        window.location.hash = newRoom.id;
+      }
+    }).catch((error) => {
+      console.error('Failed to create note:', error);
+      alert('Failed to create note. Please try again.');
+    });
   };
 
   const handleSetReminder = () => {
-    // TODO: Implement reminder
-    alert('Reminder creation coming soon!');
+    const reminderInput = window.prompt('Reminder text?');
+    const reminderText = reminderInput?.trim();
+    if (!reminderText) return;
+
+    const minutesInput = window.prompt('Remind in how many minutes?');
+    const minutes = minutesInput ? Number(minutesInput) : NaN;
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      alert('Please enter a valid number of minutes.');
+      return;
+    }
+
+    const delayMs = minutes * 60 * 1000;
+    const scheduledAt = new Date(Date.now() + delayMs).toLocaleString();
+    alert(`Reminder set for ${scheduledAt}.`);
+
+    window.setTimeout(() => {
+      alert(`Reminder: ${reminderText}`);
+    }, delayMs);
   };
 
   return (
