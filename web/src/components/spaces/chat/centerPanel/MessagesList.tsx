@@ -383,9 +383,17 @@ export function MessagesList({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="absolute top-4 left-[40%] -translate-x-1/2 transform z-[70] px-4 py-0 rounded-full bg-black/90 backdrop-blur-sm border border-cyan-400/60 shadow-lg shadow-cyan-500/10"
+          className="absolute top-4 left-[45%] -translate-x-1/2 transform z-[70] px-4 py-0 rounded-full bg-black/90 backdrop-blur-sm border-[1px] border-solid shadow-lg flex items-center justify-center"
+          style={{
+            borderColor: theme ? `${getAccentColorHex(theme.accentColor)}80` : '#06b6d480',
+            boxShadow: theme ? `0 0 20px ${getAccentColorHex(theme.accentColor)}10` : '0 0 20px rgba(6, 182, 212, 0.1)'
+          }}
         >
-          <span className="text-sm font-semibold text-cyan-200">
+          <span className="text-[14px] font-semibold"
+          style={{
+            color: theme ? getAccentColorHex(theme.accentColor) : '#06b6d4'
+          }}
+          >
             {scrollIndicator}
           </span>
         </motion.div>
@@ -461,7 +469,7 @@ export function MessagesList({
                 className="flex justify-center my-4"
               >
                 <div
-                  className={`px-3 py-1 rounded-full backdrop-blur-sm border-[1px] border-solid ${
+                  className={`px-2 py-0 rounded-full flex items-center justify-center backdrop-blur-sm border-[1px] border-solid ${
                     group.separator.type === 'date'
                       ? 'bg-black/95 shadow-lg'
                       : 'bg-black/90'
@@ -478,8 +486,8 @@ export function MessagesList({
                   <span
                     className={`font-semibold ${
                       group.separator.type === 'date'
-                        ? 'text-xs'
-                        : 'text-[10px]'
+                        ? 'text-[12px]'
+                        : 'text-[12px]'
                     }`}
                     style={{
                       color: theme ? getAccentColorHex(theme.accentColor) : '#06b6d4'
