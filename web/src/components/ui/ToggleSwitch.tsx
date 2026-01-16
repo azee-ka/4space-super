@@ -1,34 +1,40 @@
 // Toggle Switch Component
 import { memo } from 'react';
 import { motion } from 'framer-motion';
+import { getAccentColorHex } from '../../utils/themeUtils';
 
 interface ToggleSwitchProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
+  accentColor?: string; // accent color name (e.g., 'purple', 'cyan')
 }
 
-export const ToggleSwitch = memo(({ enabled, onToggle, size = 'md', disabled = false }: ToggleSwitchProps) => {
+export const ToggleSwitch = memo(({ enabled, onToggle, size = 'md', disabled = false, accentColor }: ToggleSwitchProps) => {
   const sizes = {
     sm: {
       container: 'w-8 h-4',
       circle: 'w-3 h-3',
-      translate: 'translate-x-4',
+      onX: 16, // Position when enabled (right side)
+      offX: 2, // Position when disabled (left side, accounting for padding)
     },
     md: {
       container: 'w-11 h-6',
       circle: 'w-5 h-5',
-      translate: 'translate-x-5',
+      onX: 20, // Position when enabled (right side)
+      offX: 2, // Position when disabled (left side, accounting for padding)
     },
     lg: {
       container: 'w-14 h-7',
       circle: 'w-6 h-6',
-      translate: 'translate-x-7',
+      onX: 28, // Position when enabled (right side)
+      offX: 2, // Position when disabled (left side, accounting for padding)
     },
   };
 
   const sizeConfig = sizes[size];
+  const accentHex = accentColor ? getAccentColorHex(accentColor) : '#a855f7'; // Default purple
 
   return (
     <button
@@ -41,20 +47,15 @@ export const ToggleSwitch = memo(({ enabled, onToggle, size = 'md', disabled = f
         disabled
           ? 'opacity-50 cursor-not-allowed bg-zinc-700'
           : enabled
-          ? 'bg-purple-600'
+          ? 'transition-colors duration-200'
           : 'bg-zinc-700'
       }`}
+      style={enabled && !disabled ? { backgroundColor: accentHex } : undefined}
     >
       <motion.div
-        layout
-        transition={{
-          type: 'spring',
-          stiffness: 500,
-          damping: 30,
-        }}
-        className={`${sizeConfig.circle} rounded-full bg-white shadow-lg ${
-          enabled ? sizeConfig.translate : 'translate-x-0'
-        }`}
+        className={`${sizeConfig.circle} rounded-full bg-white shadow-lg`}
+        animate={{ x: enabled ? sizeConfig.onX : sizeConfig.offX }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       />
     </button>
   );

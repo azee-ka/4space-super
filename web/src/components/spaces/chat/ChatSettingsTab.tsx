@@ -21,6 +21,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
     setMessageDensity,
     applyToAllRooms,
     setApplyToAllRooms,
+    theme,
   } = useChatSettingsStore();
 
   // Privacy settings (these would need to be added to the store)
@@ -52,6 +53,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
         <ToggleSwitch
           enabled={applyToAllRooms}
           onToggle={setApplyToAllRooms}
+          accentColor={theme.accentColor}
         />
       </div>
 
@@ -84,6 +86,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
                 enabled={item.enabled}
                 onToggle={item.onToggle}
                 size="sm"
+                accentColor={theme.accentColor}
               />
             </div>
           ))}
@@ -141,6 +144,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
                 enabled={item.enabled}
                 onToggle={item.onToggle}
                 size="sm"
+                accentColor={theme.accentColor}
               />
             </div>
           ))}
@@ -174,6 +178,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
                 enabled={item.enabled}
                 onToggle={item.onToggle}
                 size="sm"
+                accentColor={theme.accentColor}
               />
             </div>
           ))}

@@ -3,6 +3,25 @@ import type { ChatTheme } from '../store/chatSettingsStore';
 import { getPatternBackgroundCSS } from './patternBackgrounds';
 import { getArtisticPatternCSS } from './artisticPatterns';
 
+// Utility function to get accent color hex value from color name
+export function getAccentColorHex(accentColor: string): string {
+  const accentColorMap: Record<string, string> = {
+    cyan: '#06b6d4',
+    purple: '#a855f7',
+    pink: '#ec4899',
+    green: '#10b981',
+    yellow: '#eab308',
+    blue: '#3b82f6',
+    orange: '#f97316',
+    red: '#ef4444',
+    fuchsia: '#d946ef',
+    amber: '#f59e0b',
+    indigo: '#6366f1',
+    gray: '#6b7280',
+  };
+  return accentColorMap[accentColor] || '#a855f7'; // Default to purple if not found
+}
+
 export function getBackgroundStyle(theme: ChatTheme): Record<string, string> {
   const style: Record<string, string> = {};
 

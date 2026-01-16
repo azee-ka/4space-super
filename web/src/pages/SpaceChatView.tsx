@@ -22,6 +22,7 @@ import {
   useSpaceRooms,
   useRoom,
   useRoomMessages,
+  useRoomMembers,
   useSendMessage,
   useDeleteMessage,
   usePinMessage,
@@ -83,6 +84,9 @@ export function SpaceChatView() {
   
   // Fetch selected room data
   const { data: selectedRoom } = useRoom(selectedRoomId);
+
+  // Fetch room members
+  const { data: roomMembers = [] } = useRoomMembers(selectedRoomId);
   
   // Fetch room messages (infinite query)
   const {
@@ -537,6 +541,7 @@ return (
               onBookmark={handleBookmark}
               onReaction={handleReaction}
               onRemoveReaction={handleRemoveReaction}
+              theme={theme}
               typingUsers={typingUsers}
             />
 
@@ -632,6 +637,10 @@ return (
           onTabChange={setRightSidebarTab}
           theme={theme}
           onThemeChange={(newTheme) => useChatSettingsStore.getState().setTheme(newTheme)}
+          messages={messages}
+          roomMembers={roomMembers}
+          onlineUsers={onlineUsers}
+          selectedRoom={selectedRoom}
         />
       </div>
     </motion.div>
@@ -856,6 +865,10 @@ interface RightSidebarProps {
   onTabChange: (tab: RightSidebarTab) => void;
   theme: any;
   onThemeChange: (theme: any) => void;
+  messages: any[];
+  roomMembers: any[];
+  onlineUsers: Map<string, any>;
+  selectedRoom: any;
 }
 
 function RightSidebar({
@@ -863,6 +876,10 @@ function RightSidebar({
   onTabChange,
   theme,
   onThemeChange,
+  messages,
+  roomMembers,
+  onlineUsers,
+  selectedRoom,
 }: RightSidebarProps) {
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
     { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
@@ -922,10 +939,13 @@ function RightSidebar({
           )}
           {activeTab === 'metrics' && (
             <RoomMetrics
-              roomId={undefined}
-              messageCount={0}
-              memberCount={0}
-              onlineCount={0}
+              messageCount={selectedRoom?.message_count || messages.length}
+              memberCount={roomMembers.length}
+              onlineCount={onlineUsers.size}
+              messages={messages}
+              roomMembers={roomMembers}
+              onlineUsers={onlineUsers}
+              selectedRoom={selectedRoom}
             />
           )}
           {activeTab === 'media' && <MediaTab />}
@@ -1086,213 +1106,6 @@ function NotesTab() {
   );
 }
 
-// function ChatSettingsTab() {
-//   const {
-//     formattingButtonsEnabled, setFormattingButtonsEnabled,
-//     showLinkPreviews, setShowLinkPreviews,
-//     groupMessages, setGroupMessages,
-//     messageAnimations, setMessageAnimations,
-//     notifications, setNotifications,
-//     muteRoom, setMuteRoom,
-//     autoDeleteMessages, setAutoDeleteMessages,
-//     messageHistory, setMessageHistory,
-//   } = useChatSettingsStore();
-
-//   // Format value for display
-//   const formatValue = (value: string) => {
-//     if (value === 'all') return 'All Messages';
-//     if (value === 'mentions') return 'Mentions Only';
-//     if (value === 'none') return 'Off';
-//     if (value === 'never') return 'Never';
-//     if (value === '7days') return '7 Days';
-//     if (value === '30days') return '30 Days';
-//     if (value === '90days') return '90 Days';
-//     if (value === '1year') return '1 Year';
-//     if (value === 'unlimited') return 'Unlimited';
-//     return value;
-//   };
-
-//   return (
-//     <div className="p-4 space-y-4">
-//       {/* Room Settings */}
-//       <div>
-//         <div className="flex items-center gap-2.5 mb-2">
-//           <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-//             <FontAwesomeIcon icon={faCog} className="text-cyan-400" />
-//           </div>
-//           <h3 className="text-xs font-bold text-white">Room Settings</h3>
-//         </div>
-        
-//         <div className="space-y-2">
-//           {/* Notifications */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={muteRoom ? faBellSlash : faBell} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Notifications</span>
-//             </div>
-//             <DropdownButton
-//               placement="bottom-end"
-//               toggleContent={
-//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-//                   {formatValue(notifications)}
-//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-//                 </button>
-//               }
-//             >
-//               {({ closeDropdown }) => (
-//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[160px]">
-//                   {(['all', 'mentions', 'none'] as const).map((value) => (
-//                     <button
-//                       key={value}
-//                       onClick={() => {
-//                         setNotifications(value);
-//                         closeDropdown();
-//                       }}
-//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-//                         notifications === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-//                       }`}
-//                     >
-//                       {formatValue(value)}
-//                     </button>
-//                   ))}
-//                 </div>
-//               )}
-//             </DropdownButton>
-//           </div>
-
-//           {/* Mute Room */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={muteRoom ? faVolumeMute : faBell} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Mute Room</span>
-//             </div>
-//             <ToggleSwitch enabled={muteRoom} onToggle={() => setMuteRoom(!muteRoom)} />
-//           </div>
-
-//           {/* Auto-delete Messages */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faClock} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Auto-delete Messages</span>
-//             </div>
-//             <DropdownButton
-//               placement="bottom-end"
-//               toggleContent={
-//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-//                   {formatValue(autoDeleteMessages)}
-//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-//                 </button>
-//               }
-//             >
-//               {({ closeDropdown }) => (
-//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
-//                   {(['never', '7days', '30days', '1year'] as const).map((value) => (
-//                     <button
-//                       key={value}
-//                       onClick={() => {
-//                         setAutoDeleteMessages(value);
-//                         closeDropdown();
-//                       }}
-//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-//                         autoDeleteMessages === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-//                       }`}
-//                     >
-//                       {formatValue(value)}
-//                     </button>
-//                   ))}
-//                 </div>
-//               )}
-//             </DropdownButton>
-//           </div>
-
-//           {/* Message History */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faStickyNote} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Message History</span>
-//             </div>
-//             <DropdownButton
-//               placement="bottom-end"
-//               toggleContent={
-//                 <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
-//                   {formatValue(messageHistory)}
-//                   <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
-//                 </button>
-//               }
-//             >
-//               {({ closeDropdown }) => (
-//                 <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[140px]">
-//                   {(['unlimited', '30days', '90days', '1year'] as const).map((value) => (
-//                     <button
-//                       key={value}
-//                       onClick={() => {
-//                         setMessageHistory(value);
-//                         closeDropdown();
-//                       }}
-//                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${
-//                         messageHistory === value ? 'bg-cyan-500/10 text-cyan-400' : 'text-white'
-//                       }`}
-//                     >
-//                       {formatValue(value)}
-//                     </button>
-//                   ))}
-//                 </div>
-//               )}
-//             </DropdownButton>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Chat Settings */}
-//       <div>
-//         <div className="flex items-center gap-2.5 mb-2">
-//           <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-//             <FontAwesomeIcon icon={faCog} className="text-purple-400" />
-//           </div>
-//           <h3 className="text-xs font-bold text-white">Chat Settings</h3>
-//         </div>
-        
-//         <div className="space-y-2">
-//           {/* Formatting Buttons */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faBold} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Formatting Buttons</span>
-//             </div>
-//             <ToggleSwitch enabled={formattingButtonsEnabled} onToggle={() => setFormattingButtonsEnabled(!formattingButtonsEnabled)} />
-//           </div>
-
-//           {/* Show Link Previews */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faLink} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Show Link Previews</span>
-//             </div>
-//             <ToggleSwitch enabled={showLinkPreviews} onToggle={() => setShowLinkPreviews(!showLinkPreviews)} />
-//           </div>
-
-//           {/* Group Messages */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Group Messages</span>
-//             </div>
-//             <ToggleSwitch enabled={groupMessages} onToggle={() => setGroupMessages(!groupMessages)} />
-//           </div>
-
-//           {/* Message Animations */}
-//           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
-//             <div className="flex items-center gap-2.5">
-//               <FontAwesomeIcon icon={faBolt} className="text-gray-400 text-sm" />
-//               <span className="text-sm text-white font-medium">Message Animations</span>
-//             </div>
-//             <ToggleSwitch enabled={messageAnimations} onToggle={() => setMessageAnimations(!messageAnimations)} />
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
 
 function MediaTab() {
   return (

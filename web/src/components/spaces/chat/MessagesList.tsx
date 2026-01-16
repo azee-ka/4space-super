@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
+import type { ChatTheme } from '../../../store/chatSettingsStore';
+import { getAccentColorHex } from '../../../utils/themeUtils';
 import { MessageItem } from './MessageItem';
 
 interface MessagesListProps {
@@ -21,6 +23,7 @@ interface MessagesListProps {
   onRemoveReaction: (messageId: string, emoji: string) => void;
   typingUsers?: Map<string, any>;
   optimisticMessages?: any[]; // Messages being sent
+  theme?: ChatTheme;
 }
 
 export function MessagesList({
@@ -39,6 +42,7 @@ export function MessagesList({
   onRemoveReaction,
   typingUsers = new Map(),
   optimisticMessages = [],
+  theme,
 }: MessagesListProps) {
   const [scrollIndicator, setScrollIndicator] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -452,16 +456,31 @@ export function MessagesList({
                 animate={{ opacity: 1, y: 0 }}
                 className="flex justify-center my-4"
               >
-                <div className={`px-3 py-1 rounded-full backdrop-blur-sm border-[1px] border-solid ${
-                  group.separator.type === 'date'
-                    ? 'bg-black/95 border-cyan-400/80 shadow-lg shadow-cyan-500/10'
-                    : 'bg-black/90 border-cyan-400/60'
-                }`}>
-                  <span className={`font-semibold ${
+                <div
+                  className={`px-3 py-1 rounded-full backdrop-blur-sm border-[1px] border-solid ${
                     group.separator.type === 'date'
-                      ? 'text-xs text-cyan-200'
-                      : 'text-[10px] text-cyan-300'
-                  }`}>
+                      ? 'bg-black/95 shadow-lg'
+                      : 'bg-black/90'
+                  }`}
+                  style={{
+                    borderColor: theme ? `${getAccentColorHex(theme.accentColor)}80` : '#06b6d480',
+                    boxShadow: group.separator.type === 'date' && theme
+                      ? `0 0 20px ${getAccentColorHex(theme.accentColor)}10`
+                      : group.separator.type === 'date'
+                      ? '0 0 20px rgba(6, 182, 212, 0.1)'
+                      : undefined
+                  }}
+                >
+                  <span
+                    className={`font-semibold ${
+                      group.separator.type === 'date'
+                        ? 'text-xs'
+                        : 'text-[10px]'
+                    }`}
+                    style={{
+                      color: theme ? getAccentColorHex(theme.accentColor) : '#06b6d4'
+                    }}
+                  >
                     {group.separator.text}
                   </span>
                 </div>

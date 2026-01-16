@@ -10,6 +10,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { Room } from '@4space/shared/src/services/messages.service';
 import { useChatSettingsStore } from '../../../store/chatSettingsStore';
+import { getAccentColorHex } from '../../../utils/themeUtils';
 
 interface RoomsListProps {
   rooms: Room[];
@@ -39,18 +40,7 @@ export function RoomsList({
   const { theme } = useChatSettingsStore();
   
   // Get accent color value
-  const getAccentColor = () => {
-    switch (theme.accentColor) {
-      case 'cyan': return '#06b6d4';
-      case 'purple': return '#a855f7';
-      case 'pink': return '#ec4899';
-      case 'green': return '#10b981';
-      case 'yellow': return '#eab308';
-      default: return '#a855f7';
-    }
-  };
-  
-  const accentColor = getAccentColor();
+  const accentColor = getAccentColorHex(theme.accentColor);
 
   // Group rooms by category
   const groupedRooms = rooms.reduce((acc, room) => {

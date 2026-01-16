@@ -11,23 +11,29 @@ import {
 import { useChatSettingsStore, type BackgroundType, type BubbleShapePreset, type ChatTheme } from '../../../store/chatSettingsStore';
 import { themePresets, getThemesByCategory } from '../../../utils/themePresets';
 import { ColorPicker } from '../../ui/ColorPicker';
+import { getAccentColorHex } from '../../../utils/themeUtils';
 
-// Toggle Switch Component with smooth animation
-const ToggleSwitch = memo(({ enabled, onToggle }: { enabled: boolean; onToggle: (value: boolean) => void }) => (
-  <motion.button
-    onClick={() => onToggle(!enabled)}
-    className={`w-12 h-6 rounded-full transition-colors flex items-center ${
-      enabled ? 'bg-purple-500' : 'bg-zinc-700'
-    }`}
-    whileTap={{ scale: 0.95 }}
-  >
-    <motion.div
-      className="w-5 h-5 rounded-full bg-white"
-      animate={{ x: enabled ? 24 : 2 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-    />
-  </motion.button>
-));
+// Toggle Switch Component with smooth animation and accent color support
+const ToggleSwitch = memo(({ enabled, onToggle, accentColor }: { enabled: boolean; onToggle: (value: boolean) => void; accentColor?: string }) => {
+  const accentHex = accentColor ? getAccentColorHex(accentColor) : '#a855f7'; // Default purple
+
+  return (
+    <motion.button
+      onClick={() => onToggle(!enabled)}
+      className={`w-12 h-6 rounded-full transition-colors flex items-center ${
+        enabled ? 'transition-colors duration-200' : 'bg-zinc-700'
+      }`}
+      style={enabled ? { backgroundColor: accentHex } : undefined}
+      whileTap={{ scale: 0.95 }}
+    >
+      <motion.div
+        className="w-5 h-5 rounded-full bg-white"
+        animate={{ x: enabled ? 24 : 2 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      />
+    </motion.button>
+  );
+});
 
 // Helper function to adjust color brightness
 function adjustColor(color: string, brightness: number): string {
@@ -112,6 +118,10 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
     { value: 'blue', label: 'Blue', color: '#3b82f6' },
     { value: 'orange', label: 'Orange', color: '#f97316' },
     { value: 'red', label: 'Red', color: '#ef4444' },
+    { value: 'fuchsia', label: 'Fuchsia', color: '#d946ef' },
+    { value: 'amber', label: 'Amber', color: '#f59e0b' },
+    { value: 'indigo', label: 'Indigo', color: '#6366f1' },
+    { value: 'gray', label: 'Gray', color: '#6b7280' },
   ];
 
   const handleReset = useCallback(() => {
@@ -153,6 +163,7 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           <ToggleSwitch
             enabled={ambientLighting}
             onToggle={setAmbientLighting}
+            accentColor={theme.accentColor}
           />
         </div>
         
@@ -185,6 +196,7 @@ export function CustomizationTab({ theme, onThemeChange }: CustomizationTabProps
           <ToggleSwitch
             enabled={applyToAllRooms}
             onToggle={setApplyToAllRooms}
+            accentColor={theme.accentColor}
           />
         </div>
       </div>
