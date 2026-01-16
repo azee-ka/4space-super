@@ -48,6 +48,7 @@ import { RoomsList } from '../components/spaces/chat/RoomList';
 import { CreateRoomModal } from '../components/spaces/chat/CreateRoomModal';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { useUpdateMessage } from '../hooks/useMessages';
+import { useShouldUseMirroredBackground, useBackgroundSizing } from '../hooks/useWindowSize';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
@@ -84,6 +85,10 @@ export function SpaceChatView() {
   const chatSettings = useChatSettingsStore();
   const ambientLighting = useChatSettingsStore((state) => state.ambientLighting);
   const ambientIntensity = useChatSettingsStore((state) => state.ambientIntensity);
+
+  // Determine if we should use mirrored backgrounds for seamless stitching
+  const shouldUseMirror = useShouldUseMirroredBackground();
+  const { tileCount, imageHeight } = useBackgroundSizing();
 
   // Helper function to get accent color focus classes
   const getAccentFocusClass = (accentColor: string) => {
@@ -348,7 +353,6 @@ const handleSelectRoom = async (roomId: string) => {
         .maybeSingle(); // Use maybeSingle instead of single to avoid error on no results
       
       if (!membership) {
-        console.log('[SpaceChatView] Auto-joining room:', roomId);
         const { error: insertError } = await supabase
           .from('room_members')
           .insert({
@@ -587,34 +591,38 @@ return (
       className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10"
       style={centerPanelBackgroundStyle}
     >
-      {/* For featured themes, add alternating mirrored pattern using absolute positioned divs */}
+      {/* For featured themes, conditionally use mirrored backgrounds for seamless stitching */}
       {theme.backgroundType === 'featured' && theme.backgroundImage && (
         <>
-          {/* Tiled pattern using actual img elements for proper sizing - BEHIND everything */}
+          {/* Smart tiled pattern that adapts to screen size and prevents stretching */}
           <div
-            key={theme.backgroundImage}
+            key={`${theme.backgroundImage}-${shouldUseMirror}`}
             className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden"
-            style={{ gap: 0, height: '100%' }}
+            style={{ gap: 0 }}
           >
-            {[...Array(30)].map((_, i) => (
-              <img
-                key={i}
-                src={
-                  i % 2 === 0
-                    ? theme.backgroundImage
-                    : (theme.backgroundImage || '').includes('.png')
-                      ? (theme.backgroundImage || '').replace('.png', '-mirror.png')
-                      : theme.backgroundImage
-                }
-                alt=""
-                className="flex-shrink-0 h-full"
-                style={{ 
-                  width: 'auto', // Width scales with aspect ratio
-                  objectFit: 'cover', // Fill height, maintain aspect ratio
-                  objectPosition: 'center',
-                }}
-              />
-            ))}
+            {[...Array(shouldUseMirror ? tileCount * 2 : tileCount)].map((_, i) => {
+              // When using mirror, alternate between original and mirrored images for seamless tiling
+              // When not using mirror, just use the original image repeatedly
+              const useMirrorImage = shouldUseMirror && i % 2 === 1;
+              const imageSrc = useMirrorImage
+                ? theme.backgroundImage?.replace('/src/assets/chat_themes_3/', '/src/assets/chat_themes_3_mirror/')
+                : theme.backgroundImage;
+
+              return (
+                <img
+                  key={i}
+                  src={imageSrc}
+                  alt=""
+                  className="flex-shrink-0"
+                  style={{
+                    height: imageHeight, // Dynamic height based on screen size
+                    width: 'auto', // Let width scale naturally with aspect ratio
+                    objectFit: 'cover', // Fill space while maintaining aspect ratio
+                    objectPosition: 'center',
+                  }}
+                />
+              );
+            })}
           </div>
           
           {/* Dark overlay on top of images but behind content - dims the background */}

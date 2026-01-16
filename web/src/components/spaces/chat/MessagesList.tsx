@@ -398,7 +398,7 @@ export function MessagesList({
         className="h-full min-h-0 overflow-y-auto bg-transparent relative messages-scrollbar"
       >
         {/* Smooth gradient overlay for dynamic bubble colors - creates spectrum effect */}
-        <div
+        {/* <div
           className="absolute inset-y-0 left-0 pointer-events-none z-10"
           style={{ right: '14px' }}
         >
@@ -435,7 +435,7 @@ export function MessagesList({
           background: #4b5563;
         }
 `}</style>
-        </div>
+        </div> */}
         
 
       {/* Load More Indicator */}
