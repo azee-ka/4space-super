@@ -569,7 +569,7 @@ return (
           showGeneralSettings={showGeneralSettings}
           categories={spaceCategories}
           onCategoriesChange={setSpaceCategoriesState}
-          theme={chatSettings}
+          theme={theme}
           getAccentFocusClass={getAccentFocusClass}
         />
       </div>
