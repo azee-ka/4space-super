@@ -175,7 +175,7 @@ export function CreateRoomModal({ isOpen, onClose, spaceId, categories }: Create
                     const selectedCategory = categories.find(cat => cat.id === e.target.value);
                     setFormData(prev => ({ ...prev, category: selectedCategory || null }));
                   }}
-                  className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white focus:outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/30 text-sm"
+                  className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white focus:outline-none focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/30 text-sm"
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>

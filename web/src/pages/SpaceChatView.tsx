@@ -13,6 +13,7 @@ import {
   faFilter, faTimes, faExclamationTriangle, faEdit, faTrash, faPlus,
   faImage, faPoll, faRobot, faKey, faLock, faMicrophone, faUserCheck,
   faComments, faEnvelope,
+  faShieldHalved,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -82,6 +83,49 @@ export function SpaceChatView() {
   const chatSettings = useChatSettingsStore();
   const ambientLighting = useChatSettingsStore((state) => state.ambientLighting);
   const ambientIntensity = useChatSettingsStore((state) => state.ambientIntensity);
+
+  // Helper function to get accent color focus classes
+  const getAccentFocusClass = (accentColor: string) => {
+    const colorMap: Record<string, string> = {
+      'purple': 'focus:border-purple-400/70 focus:ring-purple-400/30',
+      'blue': 'focus:border-blue-400/70 focus:ring-blue-400/30',
+      'cyan': 'focus:border-cyan-400/70 focus:ring-cyan-400/30',
+      'green': 'focus:border-green-400/70 focus:ring-green-400/30',
+      'emerald': 'focus:border-emerald-400/70 focus:ring-emerald-400/30',
+      'teal': 'focus:border-teal-400/70 focus:ring-teal-400/30',
+      'indigo': 'focus:border-indigo-400/70 focus:ring-indigo-400/30',
+      'violet': 'focus:border-violet-400/70 focus:ring-violet-400/30',
+      'pink': 'focus:border-pink-400/70 focus:ring-pink-400/30',
+      'rose': 'focus:border-rose-400/70 focus:ring-rose-400/30',
+      'orange': 'focus:border-orange-400/70 focus:ring-orange-400/30',
+      'amber': 'focus:border-amber-400/70 focus:ring-amber-400/30',
+      'yellow': 'focus:border-yellow-400/70 focus:ring-yellow-400/30',
+      'lime': 'focus:border-lime-400/70 focus:ring-lime-400/30',
+      'red': 'focus:border-red-400/70 focus:ring-red-400/30',
+    };
+    return colorMap[accentColor] || 'focus:border-purple-400/70 focus:ring-purple-400/30';
+  };
+
+  const getAccentBorderClass = (accentColor: string) => {
+    const colorMap: Record<string, string> = {
+      'purple': 'border-purple-400/40',
+      'blue': 'border-blue-400/40',
+      'cyan': 'border-cyan-400/40',
+      'green': 'border-green-400/40',
+      'emerald': 'border-emerald-400/40',
+      'teal': 'border-teal-400/40',
+      'indigo': 'border-indigo-400/40',
+      'violet': 'border-violet-400/40',
+      'pink': 'border-pink-400/40',
+      'rose': 'border-rose-400/40',
+      'orange': 'border-orange-400/40',
+      'amber': 'border-amber-400/40',
+      'yellow': 'border-yellow-400/40',
+      'lime': 'border-lime-400/40',
+      'red': 'border-red-400/40',
+    };
+    return colorMap[accentColor] || 'border-purple-400/40';
+  };
   
   // Get room from URL hash
   const getRoomFromHash = () => {
@@ -525,6 +569,8 @@ return (
           showGeneralSettings={showGeneralSettings}
           categories={spaceCategories}
           onCategoriesChange={setSpaceCategoriesState}
+          theme={chatSettings}
+          getAccentFocusClass={getAccentFocusClass}
         />
       </div>
     </motion.div>
@@ -682,6 +728,7 @@ return (
           selectedRoom={selectedRoom}
           selectedRoomId={selectedRoomId}
           spaceId={spaceId}
+          getAccentFocusClass={getAccentFocusClass}
         />
       </div>
     </motion.div>
@@ -753,6 +800,8 @@ interface LeftSidebarProps {
   showGeneralSettings?: boolean;
   categories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
   onCategoriesChange?: (categories: Array<{ id: string; name: string; icon: string; color: string; description: string }>) => void;
+  theme: any;
+  getAccentFocusClass: (accentColor: string) => string;
 }
 
 function LeftSidebar({
@@ -770,6 +819,8 @@ function LeftSidebar({
   showGeneralSettings = false,
   categories = [],
   onCategoriesChange,
+  theme,
+  getAccentFocusClass,
 }: LeftSidebarProps) {
   const [openUtility, setOpenUtility] = useState<Exclude<LeftSidebarTab, 'rooms'> | null>(null);
   const [filterUnread, setFilterUnread] = useState(false); // Add this state
@@ -867,7 +918,7 @@ function LeftSidebar({
                       };
                       onCategoriesChange?.([...categories, newCategory]);
                     }}
-                    className="w-full p-3 bg-zinc-800/30 hover:bg-zinc-800/50 rounded-lg text-gray-400 hover:text-white transition-colors border-2 border-dashed border-zinc-600/50 hover:border-purple-400/50"
+                    className={`w-full p-3 bg-zinc-800/30 hover:bg-zinc-800/50 rounded-lg text-gray-400 hover:text-white transition-colors border-2 border-dashed border-zinc-600/50 hover:border-${theme.accentColor}-400/50`}
                   >
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
                     Add Category
@@ -910,9 +961,64 @@ function LeftSidebar({
                           enabled={item.enabled}
                           onToggle={item.onToggle}
                           size="sm"
+                          accentColor={theme.accentColor}
                         />
                       </div>
                     ))}
+                  </div>
+
+                  {/* Default Room Configuration */}
+                  <div className="space-y-3">
+                    {/* Default Slow Mode Input */}
+                    <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <FontAwesomeIcon icon={faClock} className="text-indigo-400 text-sm" />
+                        <span className="text-sm text-white font-medium">Default Slow Mode</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        max="300"
+                        defaultValue="0"
+                        className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass(theme.accentColor)}`}
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Default slow mode for new rooms (seconds)</p>
+                    </div>
+
+                    {/* Default Max Members Input */}
+                    <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <FontAwesomeIcon icon={faUsers} className="text-teal-400 text-sm" />
+                        <span className="text-sm text-white font-medium">Default Max Members</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10000"
+                        defaultValue="100"
+                        className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass(theme.accentColor)}`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Default member limit for new rooms</p>
+                    </div>
+
+                    {/* Default Moderation Level Select */}
+                    <div className="p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <FontAwesomeIcon icon={faShieldHalved} className="text-rose-400 text-sm" />
+                        <span className="text-sm text-white font-medium">Default Moderation</span>
+                      </div>
+                      <select
+                        defaultValue="medium"
+                        className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass(theme.accentColor)}`}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="extreme">Extreme</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Default moderation level for new rooms</p>
+                    </div>
                   </div>
 
                   {/* Content & Features */}
@@ -941,6 +1047,7 @@ function LeftSidebar({
                           enabled={item.enabled}
                           onToggle={item.onToggle}
                           size="sm"
+                          accentColor={theme.accentColor}
                         />
                       </div>
                     ))}
@@ -972,6 +1079,7 @@ function LeftSidebar({
                           enabled={item.enabled}
                           onToggle={item.onToggle}
                           size="sm"
+                          accentColor={theme.accentColor}
                         />
                       </div>
                     ))}
@@ -1139,6 +1247,7 @@ interface RightSidebarProps {
   selectedRoom: any;
   selectedRoomId?: string;
   spaceId: string;
+  getAccentFocusClass: (accentColor: string) => string;
 }
 
 function RightSidebar({
@@ -1152,6 +1261,7 @@ function RightSidebar({
   selectedRoom,
   selectedRoomId,
   spaceId,
+  getAccentFocusClass,
 }: RightSidebarProps) {
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'orange' },
@@ -1198,7 +1308,7 @@ function RightSidebar({
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          {activeTab === 'settings' && <ChatSettingsTab roomId={selectedRoomId} />}
+          {activeTab === 'settings' && <ChatSettingsTab roomId={selectedRoomId} getAccentFocusClass={getAccentFocusClass} />}
           {activeTab === 'metadata' && (
             <RoomMetadataTab
               room={selectedRoom}

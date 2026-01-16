@@ -21,14 +21,16 @@ import { useChatSettingsStore } from '../../../store/chatSettingsStore';
 
 interface ChatSettingsTabProps {
   roomId?: string;
+  getAccentFocusClass?: (accentColor: string) => string;
 }
 
-export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
+export function ChatSettingsTab({ roomId: _roomId, getAccentFocusClass }: ChatSettingsTabProps) {
   const {
     applyToAllRooms,
     setApplyToAllRooms,
     theme,
   } = useChatSettingsStore();
+
 
   // Privacy settings (these would need to be added to the store)
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -166,6 +168,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
             enabled={messagePreviewInNotifications}
             onToggle={setMessagePreviewInNotifications}
             size="sm"
+            accentColor={theme.accentColor}
           />
         </div>
       </div>
@@ -397,7 +400,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
             <select
               value={notificationFrequency}
               onChange={(e) => setNotificationFrequency(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-teal-400/70 focus:ring-1 focus:ring-teal-400/30"
+              className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
             >
               <option value="all">All Messages</option>
               <option value="mentions">Mentions Only</option>
@@ -451,7 +454,7 @@ export function ChatSettingsTab({ roomId: _roomId }: ChatSettingsTabProps) {
             <select
               value={messageRetention}
               onChange={(e) => setMessageRetention(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-400/70 focus:ring-1 focus:ring-indigo-400/30"
+              className={`w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
             >
               <option value="forever">Keep Forever</option>
               <option value="1year">1 Year</option>
