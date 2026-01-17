@@ -7,6 +7,7 @@ export type NotificationPreference = 'all' | 'mentions' | 'important' | 'none';
 export type AutoDeleteMessages = 'never' | '7days' | '30days' | '1year';
 export type MessageHistory = 'unlimited' | '30days' | '90days' | '1year';
 export type MessageRetention = 'forever' | '1hour' | '24hours' | '1week' | '1month' | '6months' | '1year';
+export type MessageRetentionPermission = 'anyone' | 'admins';
 export type ModerationLevel = 'low' | 'medium' | 'high' | 'extreme';
 export type DefaultRoomPrivacy = 'public' | 'private' | 'hidden';
 
@@ -20,6 +21,12 @@ export interface ChatTheme {
   receivedBubbleColor: string;
   sentBubbleGradient?: string;
   receivedBubbleGradient?: string;
+  sentBubbleGradientStops?: string[];
+  sentBubbleGradientIntensity?: number;
+  sentBubbleGradientAuto?: boolean;
+  receivedBubbleGradientStops?: string[];
+  receivedBubbleGradientIntensity?: number;
+  receivedBubbleGradientAuto?: boolean;
   bubbleShapePreset: BubbleShapePreset;
   bubbleBorderRadius: number;
   accentColor: string;
@@ -138,6 +145,7 @@ export interface RoomSettings {
   defaultRole: string;
   moderationLevel: ModerationLevel;
   messageRetention: MessageRetention;
+  messageRetentionPermission: MessageRetentionPermission;
   showJoinLeaveMessages: boolean;
   allowMessageEditing: boolean;
   allowMessageDeletion: boolean;
@@ -171,6 +179,10 @@ export const DEFAULT_CHAT_THEME: ChatTheme = {
   backgroundColor: '#000000',
   sentBubbleColor: '#7c3aed',
   receivedBubbleColor: '#27272a',
+  sentBubbleGradientIntensity: 70,
+  sentBubbleGradientAuto: true,
+  receivedBubbleGradientIntensity: 70,
+  receivedBubbleGradientAuto: true,
   bubbleShapePreset: 'pill',
   bubbleBorderRadius: 12,
   accentColor: 'purple',
@@ -274,6 +286,7 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   defaultRole: 'member',
   moderationLevel: 'low',
   messageRetention: 'forever',
+  messageRetentionPermission: 'anyone',
   showJoinLeaveMessages: false,
   allowMessageEditing: true,
   allowMessageDeletion: true,

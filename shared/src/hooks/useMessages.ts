@@ -276,6 +276,8 @@ export function createMessageHooks(supabase: SupabaseClient) {
           reply_to: reply_to,
           is_pinned: false,
           is_system: false,
+          ttl: variables.ttl,
+          expires_at: variables.expires_at,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           attachments: variables.attachments || [],
@@ -389,8 +391,18 @@ export function createMessageHooks(supabase: SupabaseClient) {
     const queryClient = useQueryClient();
 
     return useMutation({
-      mutationFn: ({ messageId, pin }: { messageId: string; pin: boolean }) =>
-        pin ? messagesService.pinMessage(messageId) : messagesService.unpinMessage(messageId),
+      mutationFn: ({
+        messageId,
+        pin,
+        pinnedUntil,
+      }: {
+        messageId: string;
+        pin: boolean;
+        pinnedUntil?: string | null;
+      }) =>
+        pin
+          ? messagesService.pinMessage(messageId, pinnedUntil)
+          : messagesService.unpinMessage(messageId),
       onSuccess: (_, { messageId }) => {
         // Invalidate to refetch pinned messages
         queryClient.invalidateQueries({ queryKey: messageKeys.all });

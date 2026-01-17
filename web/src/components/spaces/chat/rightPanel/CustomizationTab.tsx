@@ -38,25 +38,29 @@ const ToggleSwitch = memo(({ enabled, onToggle, accentColor }: { enabled: boolea
   );
 });
 
-// Helper function to adjust color brightness
-function adjustColor(color: string, brightness: number): string {
-  // Convert hex to RGB
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
-  
-  // Adjust brightness
-  const newR = Math.max(0, Math.min(255, r + brightness));
-  const newG = Math.max(0, Math.min(255, g + brightness));
-  const newB = Math.max(0, Math.min(255, b + brightness));
-  
-  // Convert back to hex
-  return `#${[newR, newG, newB].map(x => {
-    const hex = x.toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  }).join('')}`;
-}
+const GradientStopSwatch = ({
+  label,
+  color,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  color: string;
+  onChange: (color: string) => void;
+  disabled?: boolean;
+}) => (
+  <div className={`flex flex-col items-center gap-1 ${disabled ? 'opacity-40' : ''}`}>
+    <span className="text-[10px] text-gray-500">{label}</span>
+    <ColorPicker
+      variant="compact"
+      disabled={disabled}
+      color={color}
+      onChange={onChange}
+      previewColor={color}
+      label={`Stop ${label}`}
+    />
+  </div>
+);
 
 interface CustomizationTabProps {
   theme: ChatTheme;
@@ -90,6 +94,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
     updateSettings,
   } = useChatSettingsStore();
 
+  
   // UI state for which category tab is selected (for display only, doesn't change theme)
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<BackgroundType>(theme.backgroundType);
 
@@ -100,8 +105,91 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const clampIntensity = (value: number) => Math.max(0, Math.min(100, value));
+
+  const hexToRgb = (hex: string) => {
+    const normalized = hex.replace('#', '');
+    const fullHex = normalized.length === 3
+      ? normalized.split('').map((c) => c + c).join('')
+      : normalized.padEnd(6, '0').slice(0, 6);
+    const r = parseInt(fullHex.slice(0, 2), 16);
+    const g = parseInt(fullHex.slice(2, 4), 16);
+    const b = parseInt(fullHex.slice(4, 6), 16);
+    return { r, g, b };
+  };
+
+  const blendHex = (from: string, to: string, amount: number) => {
+    const safeAmount = clampIntensity(amount) / 100;
+    const fromRgb = hexToRgb(from);
+    const toRgb = hexToRgb(to);
+    const blend = (a: number, b: number) => Math.round(a + (b - a) * safeAmount);
+    const r = blend(fromRgb.r, toRgb.r);
+    const g = blend(fromRgb.g, toRgb.g);
+    const b = blend(fromRgb.b, toRgb.b);
+    return `#${[r, g, b].map((val) => val.toString(16).padStart(2, '0')).join('')}`;
+  };
+
+  const deriveSpectrumStops = (base: string, count: number) => {
+    const stopCount = Math.max(2, Math.min(4, count));
+    const start = blendHex(base, '#ffffff', 8);
+    const end = blendHex(base, '#000000', 16);
+    if (stopCount === 2) return [start, end];
+    const stops: string[] = [];
+    for (let i = 0; i < stopCount; i += 1) {
+      const step = stopCount === 1 ? 0 : (i / (stopCount - 1)) * 100;
+      stops.push(blendHex(start, end, step));
+    }
+    return stops;
+  };
+
+  const buildBubbleGradient = (base: string, stops: string[], intensity: number) => {
+    const safeStops = stops.length >= 2 ? stops : deriveSpectrumStops(base, 2);
+    const factor = clampIntensity(intensity) / 100;
+    const gradientStops = safeStops
+      .map((color, index) => {
+        const basePos = safeStops.length === 1 ? 0.5 : index / (safeStops.length - 1);
+        const position = 50 + (basePos * 100 - 50) * factor;
+        return `${color} ${Math.round(position)}%`;
+      })
+      .join(', ');
+    return `linear-gradient(135deg, ${gradientStops})`;
+  };
+
+  const extractGradientColors = (gradient?: string) => {
+    if (!gradient) return null;
+    const matches = gradient.match(/#[0-9a-fA-F]{3,6}/g);
+    if (!matches || matches.length < 2) return null;
+    return matches.slice(0, 4);
+  };
+
+  const getStopCount = (stops?: string[]) => Math.max(2, Math.min(4, stops?.length || 3));
+
+  const normalizeStops = (stops: string[] | undefined, base: string, count: number) => {
+    if (!stops || stops.length < 2) return deriveSpectrumStops(base, count);
+    if (stops.length === count) return stops;
+    if (stops.length > count) return stops.slice(0, count);
+    const fallback = deriveSpectrumStops(base, count);
+    return fallback.map((color, index) => stops[index] || color);
+  };
+
   const handleThemeUpdate = useCallback((updates: Partial<ChatTheme>) => {
     const nextTheme: ChatTheme = { ...theme, ...updates };
+    if (updates.sentBubbleGradient && !updates.sentBubbleGradientStops) {
+      const colors = extractGradientColors(updates.sentBubbleGradient);
+      if (colors && colors.length >= 2) {
+        nextTheme.sentBubbleGradientStops = colors;
+        nextTheme.sentBubbleGradientIntensity = nextTheme.sentBubbleGradientIntensity ?? 100;
+        nextTheme.sentBubbleGradientAuto = false;
+      }
+    }
+    if (updates.receivedBubbleGradient && !updates.receivedBubbleGradientStops) {
+      const colors = extractGradientColors(updates.receivedBubbleGradient);
+      if (colors && colors.length >= 2) {
+        nextTheme.receivedBubbleGradientStops = colors;
+        nextTheme.receivedBubbleGradientIntensity = nextTheme.receivedBubbleGradientIntensity ?? 100;
+        nextTheme.receivedBubbleGradientAuto = false;
+      }
+    }
     if (updates.backgroundType) {
       const nextType = updates.backgroundType;
       if (nextType !== 'image' && nextType !== 'featured') {
@@ -117,6 +205,37 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
     setStoreTheme(nextTheme, roomId, roomCategory);
     onThemeChange(nextTheme, roomId, roomCategory);
   }, [theme, setStoreTheme, onThemeChange, roomId, roomCategory]);
+
+  useEffect(() => {
+    if (theme.sentBubbleGradient && !theme.sentBubbleGradientStops) {
+      const colors = extractGradientColors(theme.sentBubbleGradient);
+      if (colors && colors.length >= 2) {
+        handleThemeUpdate({
+          sentBubbleGradientStops: colors,
+          sentBubbleGradientIntensity: theme.sentBubbleGradientIntensity ?? 100,
+          sentBubbleGradientAuto: false,
+        });
+      }
+    }
+    if (theme.receivedBubbleGradient && !theme.receivedBubbleGradientStops) {
+      const colors = extractGradientColors(theme.receivedBubbleGradient);
+      if (colors && colors.length >= 2) {
+        handleThemeUpdate({
+          receivedBubbleGradientStops: colors,
+          receivedBubbleGradientIntensity: theme.receivedBubbleGradientIntensity ?? 100,
+          receivedBubbleGradientAuto: false,
+        });
+      }
+    }
+  }, [
+    theme.sentBubbleGradient,
+    theme.sentBubbleGradientStops,
+    theme.sentBubbleGradientIntensity,
+    theme.receivedBubbleGradient,
+    theme.receivedBubbleGradientStops,
+    theme.receivedBubbleGradientIntensity,
+    handleThemeUpdate,
+  ]);
 
   // Handle image upload
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,6 +254,11 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
       fileInputRef.current.value = '';
     }
   }, [handleThemeUpdate]);
+
+  const sentStopCount = getStopCount(theme.sentBubbleGradientStops);
+  const receivedStopCount = getStopCount(theme.receivedBubbleGradientStops);
+  const sentStops = normalizeStops(theme.sentBubbleGradientStops, theme.sentBubbleColor, sentStopCount);
+  const receivedStops = normalizeStops(theme.receivedBubbleGradientStops, theme.receivedBubbleColor, receivedStopCount);
 
   // Bubble shape presets
   const bubbleShapePresets: Array<{ value: BubbleShapePreset; label: string; radius: number }> = [
@@ -695,8 +819,13 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <button
                 onClick={() => {
                   if (!theme.sentBubbleGradient) {
+                    const intensity = theme.sentBubbleGradientIntensity ?? 70;
+                    const nextStops = deriveSpectrumStops(theme.sentBubbleColor, sentStopCount);
                     handleThemeUpdate({ 
-                      sentBubbleGradient: `linear-gradient(135deg, ${theme.sentBubbleColor} 0%, ${adjustColor(theme.sentBubbleColor, -20)} 100%)`
+                      sentBubbleGradientStops: nextStops,
+                      sentBubbleGradientIntensity: intensity,
+                      sentBubbleGradientAuto: true,
+                      sentBubbleGradient: buildBubbleGradient(theme.sentBubbleColor, nextStops, intensity),
                     });
                   }
                 }}
@@ -716,13 +845,119 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
                 const updates: Partial<ChatTheme> = { sentBubbleColor: color };
                 // Update gradient if enabled
                 if (theme.sentBubbleGradient) {
-                  updates.sentBubbleGradient = `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`;
+                  const intensity = theme.sentBubbleGradientIntensity ?? 70;
+                  const auto = theme.sentBubbleGradientAuto !== false;
+                  const nextStops = auto
+                    ? deriveSpectrumStops(color, sentStopCount)
+                    : normalizeStops(theme.sentBubbleGradientStops, color, sentStopCount);
+                  updates.sentBubbleGradientStops = nextStops;
+                  updates.sentBubbleGradientIntensity = intensity;
+                  updates.sentBubbleGradientAuto = auto;
+                  updates.sentBubbleGradient = buildBubbleGradient(color, nextStops, intensity);
                 }
                 handleThemeUpdate(updates);
               }}
               previewColor={theme.sentBubbleColor}
               label=""
             />
+
+            {theme.sentBubbleGradient && (
+              <div className="rounded-xl bg-zinc-900/50 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400 font-medium">Gradient Spectrum</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center rounded-lg bg-zinc-800/70 p-0.5">
+                      {[2, 3, 4].map((count) => (
+                        <button
+                          key={count}
+                          onClick={() => {
+                            const nextStops = deriveSpectrumStops(theme.sentBubbleColor, count);
+                            const intensity = theme.sentBubbleGradientIntensity ?? 70;
+                            handleThemeUpdate({
+                              sentBubbleGradientStops: nextStops,
+                              sentBubbleGradientIntensity: intensity,
+                              sentBubbleGradientAuto: false,
+                              sentBubbleGradient: buildBubbleGradient(theme.sentBubbleColor, nextStops, intensity),
+                            });
+                          }}
+                          className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                            sentStopCount === count
+                              ? 'bg-cyan-500/30 text-cyan-200'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {count}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const nextStops = deriveSpectrumStops(theme.sentBubbleColor, 3);
+                        const intensity = theme.sentBubbleGradientIntensity ?? 70;
+                        handleThemeUpdate({
+                          sentBubbleGradientStops: nextStops,
+                          sentBubbleGradientIntensity: intensity,
+                          sentBubbleGradientAuto: true,
+                          sentBubbleGradient: buildBubbleGradient(theme.sentBubbleColor, nextStops, intensity),
+                        });
+                      }}
+                      className="text-[11px] text-gray-500 hover:text-white transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {Array.from({ length: 4 }).map((_, index) => {
+                    const isActive = index < sentStopCount;
+                    const colorValue = sentStops[index] || theme.sentBubbleColor;
+                    return (
+                      <GradientStopSwatch
+                        key={`sent-stop-${index}`}
+                        label={`${index + 1}`}
+                        color={colorValue}
+                        disabled={!isActive}
+                        onChange={(color) => {
+                          const nextStops = normalizeStops(theme.sentBubbleGradientStops, theme.sentBubbleColor, sentStopCount)
+                            .map((stop, stopIndex) => (stopIndex === index ? color : stop))
+                            .slice(0, sentStopCount);
+                          const intensity = theme.sentBubbleGradientIntensity ?? 70;
+                          handleThemeUpdate({
+                            sentBubbleGradientStops: nextStops,
+                            sentBubbleGradientIntensity: intensity,
+                            sentBubbleGradientAuto: false,
+                            sentBubbleGradient: buildBubbleGradient(theme.sentBubbleColor, nextStops, intensity),
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 font-medium">Intensity</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={theme.sentBubbleGradientIntensity ?? 70}
+                    onChange={(e) => {
+                      const intensity = clampIntensity(Number(e.target.value));
+                      const nextStops = normalizeStops(theme.sentBubbleGradientStops, theme.sentBubbleColor, sentStopCount);
+                      handleThemeUpdate({
+                        sentBubbleGradientIntensity: intensity,
+                        sentBubbleGradient: buildBubbleGradient(theme.sentBubbleColor, nextStops, intensity),
+                      });
+                    }}
+                    className="flex-1 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs text-cyan-400 font-bold w-10 text-right">
+                    {theme.sentBubbleGradientIntensity ?? 70}%
+                  </span>
+                </div>
+              </div>
+            )}
             
             {/* Preview */}
             <div className="h-12 rounded-xl border-2 border-zinc-700 flex items-center justify-center">
@@ -754,8 +989,13 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <button
                 onClick={() => {
                   if (!theme.receivedBubbleGradient) {
+                    const intensity = theme.receivedBubbleGradientIntensity ?? 70;
+                    const nextStops = deriveSpectrumStops(theme.receivedBubbleColor, receivedStopCount);
                     handleThemeUpdate({ 
-                      receivedBubbleGradient: `linear-gradient(135deg, ${theme.receivedBubbleColor} 0%, ${adjustColor(theme.receivedBubbleColor, -15)} 100%)`
+                      receivedBubbleGradientStops: nextStops,
+                      receivedBubbleGradientIntensity: intensity,
+                      receivedBubbleGradientAuto: true,
+                      receivedBubbleGradient: buildBubbleGradient(theme.receivedBubbleColor, nextStops, intensity),
                     });
                   }
                 }}
@@ -775,13 +1015,119 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
                 const updates: Partial<ChatTheme> = { receivedBubbleColor: color };
                 // Update gradient if enabled
                 if (theme.receivedBubbleGradient) {
-                  updates.receivedBubbleGradient = `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%)`;
+                  const intensity = theme.receivedBubbleGradientIntensity ?? 70;
+                  const auto = theme.receivedBubbleGradientAuto !== false;
+                  const nextStops = auto
+                    ? deriveSpectrumStops(color, receivedStopCount)
+                    : normalizeStops(theme.receivedBubbleGradientStops, color, receivedStopCount);
+                  updates.receivedBubbleGradientStops = nextStops;
+                  updates.receivedBubbleGradientIntensity = intensity;
+                  updates.receivedBubbleGradientAuto = auto;
+                  updates.receivedBubbleGradient = buildBubbleGradient(color, nextStops, intensity);
                 }
                 handleThemeUpdate(updates);
               }}
               previewColor={theme.receivedBubbleColor}
               label=""
             />
+
+            {theme.receivedBubbleGradient && (
+              <div className="rounded-xl bg-zinc-900/50 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400 font-medium">Gradient Spectrum</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center rounded-lg bg-zinc-800/70 p-0.5">
+                      {[2, 3, 4].map((count) => (
+                        <button
+                          key={count}
+                          onClick={() => {
+                            const nextStops = deriveSpectrumStops(theme.receivedBubbleColor, count);
+                            const intensity = theme.receivedBubbleGradientIntensity ?? 70;
+                            handleThemeUpdate({
+                              receivedBubbleGradientStops: nextStops,
+                              receivedBubbleGradientIntensity: intensity,
+                              receivedBubbleGradientAuto: false,
+                              receivedBubbleGradient: buildBubbleGradient(theme.receivedBubbleColor, nextStops, intensity),
+                            });
+                          }}
+                          className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                            receivedStopCount === count
+                              ? 'bg-cyan-500/30 text-cyan-200'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {count}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const nextStops = deriveSpectrumStops(theme.receivedBubbleColor, 3);
+                        const intensity = theme.receivedBubbleGradientIntensity ?? 70;
+                        handleThemeUpdate({
+                          receivedBubbleGradientStops: nextStops,
+                          receivedBubbleGradientIntensity: intensity,
+                          receivedBubbleGradientAuto: true,
+                          receivedBubbleGradient: buildBubbleGradient(theme.receivedBubbleColor, nextStops, intensity),
+                        });
+                      }}
+                      className="text-[11px] text-gray-500 hover:text-white transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {Array.from({ length: 4 }).map((_, index) => {
+                    const isActive = index < receivedStopCount;
+                    const colorValue = receivedStops[index] || theme.receivedBubbleColor;
+                    return (
+                      <GradientStopSwatch
+                        key={`received-stop-${index}`}
+                        label={`${index + 1}`}
+                        color={colorValue}
+                        disabled={!isActive}
+                        onChange={(color) => {
+                          const nextStops = normalizeStops(theme.receivedBubbleGradientStops, theme.receivedBubbleColor, receivedStopCount)
+                            .map((stop, stopIndex) => (stopIndex === index ? color : stop))
+                            .slice(0, receivedStopCount);
+                          const intensity = theme.receivedBubbleGradientIntensity ?? 70;
+                          handleThemeUpdate({
+                            receivedBubbleGradientStops: nextStops,
+                            receivedBubbleGradientIntensity: intensity,
+                            receivedBubbleGradientAuto: false,
+                            receivedBubbleGradient: buildBubbleGradient(theme.receivedBubbleColor, nextStops, intensity),
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 font-medium">Intensity</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={theme.receivedBubbleGradientIntensity ?? 70}
+                    onChange={(e) => {
+                      const intensity = clampIntensity(Number(e.target.value));
+                      const nextStops = normalizeStops(theme.receivedBubbleGradientStops, theme.receivedBubbleColor, receivedStopCount);
+                      handleThemeUpdate({
+                        receivedBubbleGradientIntensity: intensity,
+                        receivedBubbleGradient: buildBubbleGradient(theme.receivedBubbleColor, nextStops, intensity),
+                      });
+                    }}
+                    className="flex-1 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs text-cyan-400 font-bold w-10 text-right">
+                    {theme.receivedBubbleGradientIntensity ?? 70}%
+                  </span>
+                </div>
+              </div>
+            )}
             
             {/* Preview */}
             <div className="h-12 rounded-xl border-2 border-zinc-700 flex items-center justify-center">
@@ -1003,11 +1349,13 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5">Keep themes synchronized across all your devices</p>
               </div>
-              <ToggleSwitch
-                enabled={themeSync}
-                onToggle={(value) => updateSettings({ themeSync: value })}
-                accentColor={theme.accentColor}
-              />
+              <div className="flex-shrink-0">
+                <ToggleSwitch
+                  enabled={themeSync}
+                  onToggle={(value) => updateSettings({ themeSync: value })}
+                  accentColor={theme.accentColor}
+                />
+              </div>
             </div>
           </div>
         </div>

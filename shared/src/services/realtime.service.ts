@@ -14,6 +14,8 @@ export interface Message {
   edited_at?: string;
   deleted_at?: string;
   is_pinned: boolean;
+  pinned_at?: string;
+  pinned_until?: string;
   ttl?: number;
   expires_at?: string;
   metadata?: any;

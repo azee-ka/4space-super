@@ -10,7 +10,12 @@ interface SendMessageInput {
   room_id: string;
   space_id: string;
   content: string;
+  message_type?: string;
   reply_to_id?: string;
+  attachments?: any[];
+  metadata?: any;
+  ttl?: number;
+  expires_at?: string;
 }
 
 interface Message {
@@ -53,12 +58,14 @@ export function useSendMessage() {
             space_id: input.space_id,
             sender_id: user.id,
             content: input.content,
-            message_type: input.message_type || 'text',
-            reply_to_id: input.reply_to_id,
-            attachments: input.attachments || [],
-            metadata: input.metadata || {},
-            is_pinned: false,
-            is_system: false,
+          message_type: input.message_type || 'text',
+          reply_to_id: input.reply_to_id,
+          attachments: input.attachments || [],
+          metadata: input.metadata || {},
+          is_pinned: false,
+          is_system: false,
+          ttl: input.ttl,
+          expires_at: input.expires_at || null,
           })
           .select(`
             *,
@@ -110,6 +117,8 @@ export function useSendMessage() {
           reply_to_id: variables.reply_to_id,
           is_pinned: false,
           is_system: false,
+          ttl: variables.ttl,
+          expires_at: variables.expires_at,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           attachments: variables.attachments || [],

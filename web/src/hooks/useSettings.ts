@@ -13,5 +13,6 @@ export const useSpaceSettings = settingsHooks.useSpaceSettings;
 export const useUpdateSpaceSettings = settingsHooks.useUpdateSpaceSettings;
 export const useRoomSettings = settingsHooks.useRoomSettings;
 export const useUpdateRoomSettings = settingsHooks.useUpdateRoomSettings;
+export const useUpdateRoomMessageRetention = settingsHooks.useUpdateRoomMessageRetention;
 export const useRoomMemberSettings = settingsHooks.useRoomMemberSettings;
 export const useUpdateRoomMemberSettings = settingsHooks.useUpdateRoomMemberSettings;

@@ -467,6 +467,8 @@ export type Database = {
           forward_from_id: string | null
           id: string
           is_pinned: boolean | null
+          pinned_at: string | null
+          pinned_until: string | null
           is_system: boolean | null
           message_type: string | null
           metadata: Json | null
@@ -491,6 +493,8 @@ export type Database = {
           forward_from_id?: string | null
           id?: string
           is_pinned?: boolean | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           is_system?: boolean | null
           message_type?: string | null
           metadata?: Json | null
@@ -515,6 +519,8 @@ export type Database = {
           forward_from_id?: string | null
           id?: string
           is_pinned?: boolean | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           is_system?: boolean | null
           message_type?: string | null
           metadata?: Json | null
@@ -819,6 +825,35 @@ export type Database = {
           },
         ]
       }
+      room_settings: {
+        Row: {
+          created_at: string | null
+          room_id: string
+          settings: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          room_id: string
+          settings?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          room_id?: string
+          settings?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_settings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: true
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           category: string | null
@@ -1032,6 +1067,35 @@ export type Database = {
           },
         ]
       }
+      space_settings: {
+        Row: {
+          created_at: string | null
+          settings: Json
+          space_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          settings?: Json
+          space_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          settings?: Json
+          space_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_settings_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: true
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spaces: {
         Row: {
           color: string | null
@@ -1144,6 +1208,35 @@ export type Database = {
           },
         ]
       }
+      user_chat_settings: {
+        Row: {
+          created_at: string | null
+          settings: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          settings?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          settings?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_chat_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1158,6 +1251,10 @@ export type Database = {
       add_space_member: {
         Args: { p_role?: string; p_space_id: string; p_user_id: string }
         Returns: Json
+      }
+      add_space_members_to_room: {
+        Args: { p_room_id: string }
+        Returns: undefined
       }
       clean_old_typing_indicators: { Args: never; Returns: undefined }
       create_notification: {

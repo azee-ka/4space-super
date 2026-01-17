@@ -35,6 +35,8 @@ export interface Message {
   edited_at?: string;
   deleted_at?: string;
   is_pinned: boolean;
+  pinned_at?: string;
+  pinned_until?: string;
   is_system: boolean;
   ttl?: number;
   expires_at?: string;
@@ -106,6 +108,8 @@ export interface SendMessageInput {
   reply_to_id?: string;
   attachments?: any[];
   metadata?: any;
+  ttl?: number;
+  expires_at?: string;
 }
 
 export interface CreateRoomInput {
@@ -250,11 +254,13 @@ export class MessagesService {
   // ============================================
 
   async getRoomMessages(roomId: string, limit = 50, before?: string): Promise<Message[]> {
+    const now = new Date().toISOString();
     let query = this.supabase
       .from('messages')
       .select('*')  // Just get messages, no joins
       .eq('room_id', roomId)
       .is('deleted_at', null)
+      .or(`expires_at.is.null,expires_at.gt.${now},is_pinned.eq.true`)
       .order('created_at', { ascending: false })
       .limit(limit);
   
@@ -269,9 +275,21 @@ export class MessagesService {
       throw error;
     }
   
+    const nowMs = Date.now();
+    const visibleMessages = (messages || []).filter((msg) => {
+      if (!msg.expires_at) return true;
+      const expiresAt = new Date(msg.expires_at).getTime();
+      if (expiresAt > nowMs) return true;
+      if (msg.is_pinned) {
+        if (!msg.pinned_until) return true;
+        return new Date(msg.pinned_until).getTime() > nowMs;
+      }
+      return false;
+    });
+
     // Enrich each message separately
     const enrichedMessages = await Promise.all(
-      (messages || []).map(async (msg) => {
+      visibleMessages.map(async (msg) => {
         // Fetch sender
         const { data: sender } = await this.supabase
           .from('profiles')
@@ -347,6 +365,8 @@ export class MessagesService {
         metadata: input.metadata || {},
         is_pinned: false,
         is_system: false,
+        ttl: input.ttl,
+        expires_at: input.expires_at || null,
       })
       .select(`
         *,
@@ -390,10 +410,14 @@ export class MessagesService {
     if (error) throw error;
   }
 
-  async pinMessage(messageId: string): Promise<void> {
+  async pinMessage(messageId: string, pinnedUntil?: string | null): Promise<void> {
     const { error } = await this.supabase
       .from('messages')
-      .update({ is_pinned: true })
+      .update({
+        is_pinned: true,
+        pinned_at: new Date().toISOString(),
+        pinned_until: pinnedUntil || null,
+      })
       .eq('id', messageId);
 
     if (error) throw error;
@@ -402,13 +426,18 @@ export class MessagesService {
   async unpinMessage(messageId: string): Promise<void> {
     const { error } = await this.supabase
       .from('messages')
-      .update({ is_pinned: false })
+      .update({
+        is_pinned: false,
+        pinned_at: null,
+        pinned_until: null,
+      })
       .eq('id', messageId);
 
     if (error) throw error;
   }
 
   async getPinnedMessages(roomId: string): Promise<Message[]> {
+    const now = new Date().toISOString();
     const { data, error } = await this.supabase
       .from('messages')
       .select(`
@@ -418,6 +447,8 @@ export class MessagesService {
       .eq('room_id', roomId)
       .eq('is_pinned', true)
       .is('deleted_at', null)
+      .or(`pinned_until.is.null,pinned_until.gt.${now}`)
+      .order('pinned_at', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -598,7 +629,13 @@ export class MessagesService {
       .eq('message.space_id', spaceId);
 
     if (error) throw error;
-    return (data || []).map(b => b.message as any);
+    return (data || [])
+      .map(b => b.message as any)
+      .filter((message) => {
+        if (!message) return false;
+        if (!message.deleted_at) return true;
+        return message.sender_id === user.id;
+      });
   }
 
   // ============================================
@@ -606,6 +643,7 @@ export class MessagesService {
   // ============================================
 
   async searchMessages(roomId: string, query: string): Promise<Message[]> {
+    const now = new Date().toISOString();
     const { data, error } = await this.supabase
       .from('messages')
       .select(`
@@ -614,12 +652,23 @@ export class MessagesService {
       `)
       .eq('room_id', roomId)
       .is('deleted_at', null)
+      .or(`expires_at.is.null,expires_at.gt.${now},is_pinned.eq.true`)
       .ilike('content', `%${query}%`)
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (error) throw error;
-    return data || [];
+    const nowMs = Date.now();
+    return (data || []).filter((msg) => {
+      if (!msg.expires_at) return true;
+      const expiresAt = new Date(msg.expires_at).getTime();
+      if (expiresAt > nowMs) return true;
+      if (msg.is_pinned) {
+        if (!msg.pinned_until) return true;
+        return new Date(msg.pinned_until).getTime() > nowMs;
+      }
+      return false;
+    });
   }
 
   // ============================================

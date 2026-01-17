@@ -37,3 +37,4 @@ export { createSettingsHooks, settingsKeys } from './hooks/useSettings';
 
 // Utilities
 export { EncryptionService } from './utils/encryption';
+export * from './utils/messageRetention';

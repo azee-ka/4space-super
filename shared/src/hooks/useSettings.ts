@@ -94,6 +94,23 @@ export function createSettingsHooks(supabase: SupabaseClient) {
     });
   }
 
+  function useUpdateRoomMessageRetention() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: ({
+        roomId,
+        retention,
+      }: {
+        roomId: string;
+        retention: RoomSettings['messageRetention'];
+      }) => settingsService.updateRoomMessageRetention(roomId, retention),
+      onSuccess: (settings, variables) => {
+        queryClient.setQueryData(settingsKeys.room(variables.roomId), settings);
+      },
+    });
+  }
+
   function useRoomMemberSettings(roomId: string | undefined) {
     return useQuery({
       queryKey: settingsKeys.roomMember(roomId || 'unknown'),
@@ -127,6 +144,7 @@ export function createSettingsHooks(supabase: SupabaseClient) {
     useUpdateSpaceSettings,
     useRoomSettings,
     useUpdateRoomSettings,
+    useUpdateRoomMessageRetention,
     useRoomMemberSettings,
     useUpdateRoomMemberSettings,
   };

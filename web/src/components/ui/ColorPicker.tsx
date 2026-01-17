@@ -20,12 +20,22 @@ interface ColorPickerProps {
   onChange: (color: string) => void;
   previewColor: string;
   label?: string;
+  variant?: 'default' | 'compact';
+  disabled?: boolean;
 }
 
-export function ColorPicker({ color, onChange, previewColor, label }: ColorPickerProps) {
+export function ColorPicker({
+  color,
+  onChange,
+  previewColor,
+  label,
+  variant = 'default',
+  disabled = false,
+}: ColorPickerProps) {
   const [mode, setMode] = useState<'hex' | 'rgb' | 'hsl'>('hex');
   const [hexValue, setHexValue] = useState(color);
   const previewButtonRef = useRef<HTMLDivElement>(null);
+  const isCompact = variant === 'compact';
   
   // Use popper for positioning - pass ref as anchor element, positioned at top-left
   const { dropdownRef, showDropdown, setShowDropdown } = usePopperDropdown(
@@ -200,25 +210,38 @@ export function ColorPicker({ color, onChange, previewColor, label }: ColorPicke
     setRgbValue(hexToRgb(newHex));
   }, [onChange, hslToHex, hexToRgb]);
 
+  const handleToggle = () => {
+    if (!disabled) {
+      setShowDropdown(!showDropdown);
+    }
+  };
+
   return (
     <>
       {/* Color Preview Button */}
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center gap-3 ${isCompact ? 'flex-col' : ''}`}>
         <div
           ref={previewButtonRef}
-          className="w-16 h-16 rounded-xl border-2 border-zinc-700 flex-shrink-0 cursor-pointer hover:border-purple-500/50 transition-colors shadow-lg"
+          className={`${isCompact ? 'w-9 h-9 rounded-lg border border-zinc-700' : 'w-16 h-16 rounded-xl border-2 border-zinc-700'} flex-shrink-0 cursor-pointer transition-colors shadow-lg ${
+            disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-purple-500/50'
+          }`}
           style={{ backgroundColor: previewColor }}
-          onClick={() => setShowDropdown(!showDropdown)}
+          onClick={handleToggle}
           title="Click to open color picker"
         />
-        <button
-          onClick={() => setShowDropdown(!showDropdown)}
-          className="px-4 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 border border-zinc-700 text-white text-sm font-medium flex items-center gap-2 transition-colors"
-        >
-          <FontAwesomeIcon icon={faPalette} />
-          {label || 'Pick Color'}
-        </button>
-        {label && (
+        {!isCompact && (
+          <button
+            onClick={handleToggle}
+            disabled={disabled}
+            className={`px-4 py-2 rounded-lg border border-zinc-700 text-white text-sm font-medium flex items-center gap-2 transition-colors ${
+              disabled ? 'bg-zinc-800/40 opacity-60 cursor-not-allowed' : 'bg-zinc-800/50 hover:bg-zinc-800/70'
+            }`}
+          >
+            <FontAwesomeIcon icon={faPalette} />
+            {label || 'Pick Color'}
+          </button>
+        )}
+        {label && !isCompact && (
           <input
             type="text"
             value={hexValue}
@@ -236,6 +259,7 @@ export function ColorPicker({ color, onChange, previewColor, label }: ColorPicke
                 setHexValue(color);
               }
             }}
+            disabled={disabled}
             className="flex-1 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700 text-white text-xs font-mono"
             placeholder="#000000"
           />

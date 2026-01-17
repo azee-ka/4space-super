@@ -433,6 +433,9 @@ export function MessageItem({
 
   const readStatus = getReadStatus();
   const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
+  const showMetaLine = !message.deleted_at && (
+    !!message.edited_at || showTimestamps || (readStatus && showMessageStatus && showReadReceipts)
+  );
 
   // Get all reactions in a flat list for the dropdown
   const allReactions = reactionsToUse || [];
@@ -525,7 +528,7 @@ export function MessageItem({
               ) : (
                 <>
                   <div 
-                    className="whitespace-pre-wrap break-words pb-0 leading-[1.3]"
+                    className={`whitespace-pre-wrap break-words leading-[1.3] ${showMetaLine ? 'pb-4 pr-14' : 'pb-0'}`}
                     style={{ 
                       color: getTextColor(),
                       fontSize: `${fontSize}px`,
@@ -539,41 +542,43 @@ export function MessageItem({
                     }}
                   />
 
-                  <div className={`flex items-center gap-1 mt-0 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                    {message.edited_at && (
-                      <span 
-                        className="text-[9px] opacity-40 italic"
-                        style={{ color: getTextColor() }}
-                      >
-                        edited
-                      </span>
-                    )}
-                    {showTimestamps && (
-                      <span 
-                        className="text-[10px] opacity-70"
-                        style={{ color: getTextColor() }}
-                      >
-                        {formatTime(message.created_at)}
-                      </span>
-                    )}
-                    {readStatus && showMessageStatus && showReadReceipts && (
-                      <motion.div 
-                        className="flex items-center" 
-                        title={readStatus.title}
-                        key={isOptimistic ? 'sending' : 'sent'}
-                        initial={{ scale: 0.9, opacity: 0.8 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 400,
-                          damping: 35,
-                          mass: 0.5
-                        }}
-                      >
-                        <readStatus.component className={`${readStatus.color} w-3.5 h-2.5 transition-colors duration-300`} />
-                      </motion.div>
-                    )}
-                  </div>
+                  {showMetaLine && (
+                    <div className="absolute bottom-1 right-2 flex items-center gap-1">
+                      {message.edited_at && (
+                        <span 
+                          className="text-[9px] opacity-60 italic"
+                          style={{ color: getTextColor() }}
+                        >
+                          edited
+                        </span>
+                      )}
+                      {showTimestamps && (
+                        <span 
+                          className="text-[10px] opacity-70"
+                          style={{ color: getTextColor() }}
+                        >
+                          {formatTime(message.created_at)}
+                        </span>
+                      )}
+                      {readStatus && showMessageStatus && showReadReceipts && (
+                        <motion.div 
+                          className="flex items-center" 
+                          title={readStatus.title}
+                          key={isOptimistic ? 'sending' : 'sent'}
+                          initial={{ scale: 0.9, opacity: 0.8 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 400,
+                            damping: 35,
+                            mass: 0.5
+                          }}
+                        >
+                          <readStatus.component className={`${readStatus.color} w-3.5 h-2.5 transition-colors duration-300`} />
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
 

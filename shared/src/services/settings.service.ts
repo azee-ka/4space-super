@@ -5,11 +5,13 @@ import {
   DEFAULT_ROOM_SETTINGS,
   DEFAULT_SPACE_SETTINGS,
   DEFAULT_USER_CHAT_SETTINGS,
+  type MessageRetention,
   type RoomMemberSettings,
   type RoomSettings,
   type SpaceSettings,
   type UserChatSettings,
 } from '../types/chatSettings';
+import { formatMessageRetention } from '../utils/messageRetention';
 
 function mergeRoomOverrides(
   base: Record<string, any>,
@@ -73,6 +75,54 @@ export class SettingsService {
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
     return user;
+  }
+
+  private async getUserLabel(userId: string) {
+    const { data } = await this.supabase
+      .from('profiles')
+      .select('display_name, username')
+      .eq('id', userId)
+      .single();
+    return data?.display_name || data?.username || 'Someone';
+  }
+
+  private async logMessageRetentionChange(
+    roomId: string,
+    previous: MessageRetention,
+    next: MessageRetention
+  ) {
+    if (previous === next) return;
+
+    const user = await this.requireUser();
+    const userLabel = await this.getUserLabel(user.id);
+    const label = formatMessageRetention(next);
+    const content =
+      next === 'forever'
+        ? `${userLabel} turned off disappearing messages.`
+        : `${userLabel} set disappearing messages to ${label}.`;
+
+    const { data: room } = await this.supabase
+      .from('rooms')
+      .select('space_id')
+      .eq('id', roomId)
+      .single();
+
+    if (!room?.space_id) return;
+
+    await this.supabase.from('messages').insert({
+      room_id: roomId,
+      space_id: room.space_id,
+      sender_id: user.id,
+      content,
+      message_type: 'system',
+      is_pinned: false,
+      is_system: true,
+      metadata: {
+        event: 'message_retention_changed',
+        previous,
+        next,
+      },
+    });
   }
 
   async getUserChatSettings(): Promise<UserChatSettings> {
@@ -167,6 +217,7 @@ export class SettingsService {
 
   async updateRoomSettings(roomId: string, updates: Partial<RoomSettings>): Promise<RoomSettings> {
     const current = await this.getRoomSettings(roomId);
+    const previousRetention = current.messageRetention;
     const next = mergeRoomSettings(current, updates);
 
     const { data, error } = await this.supabase
@@ -177,7 +228,28 @@ export class SettingsService {
 
     if (error) throw error;
 
-    return mergeRoomSettings(DEFAULT_ROOM_SETTINGS, data.settings as Partial<RoomSettings>);
+    const merged = mergeRoomSettings(DEFAULT_ROOM_SETTINGS, data.settings as Partial<RoomSettings>);
+    if (updates.messageRetention && updates.messageRetention !== previousRetention) {
+      await this.logMessageRetentionChange(roomId, previousRetention, updates.messageRetention);
+    }
+    return merged;
+  }
+
+  async updateRoomMessageRetention(
+    roomId: string,
+    retention: MessageRetention
+  ): Promise<RoomSettings> {
+    const current = await this.getRoomSettings(roomId);
+    const { data, error } = await this.supabase.rpc('set_room_message_retention', {
+      room_id_input: roomId,
+      retention_input: retention,
+    });
+
+    if (error) throw error;
+
+    const merged = mergeRoomSettings(DEFAULT_ROOM_SETTINGS, (data || {}) as Partial<RoomSettings>);
+    await this.logMessageRetentionChange(roomId, current.messageRetention, retention);
+    return merged;
   }
 
   async getRoomMemberSettings(roomId: string): Promise<RoomMemberSettings> {
