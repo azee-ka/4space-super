@@ -35,6 +35,7 @@ interface LeftSidebarProps {
   onOpenSettings?: () => void;
   onOpenCreateRoomModal?: () => void;
   showGeneralSettings?: boolean;
+  canManageSpaceSettings?: boolean;
   categories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
   onCategoriesChange?: (categories: Array<{ id: string; name: string; icon: string; color: string; description: string }>) => void;
   theme: any;
@@ -55,6 +56,7 @@ export function LeftSidebar({
   onOpenSettings,
   onOpenCreateRoomModal,
   showGeneralSettings = false,
+  canManageSpaceSettings = false,
   categories = [],
   onCategoriesChange,
   theme,
@@ -63,6 +65,7 @@ export function LeftSidebar({
   const [openUtility, setOpenUtility] = useState<Exclude<LeftSidebarTab, 'rooms'> | null>(null);
   const [filterUnread, setFilterUnread] = useState(false); // Add this state
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const canShowSettings = showGeneralSettings && canManageSpaceSettings;
 
   const utilityTabs: Array<{ id: Exclude<LeftSidebarTab, 'rooms'>; icon: any; label: string; color: string }> = [
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'purple' },
@@ -89,7 +92,7 @@ export function LeftSidebar({
     <div className="h-full flex flex-col" ref={dropdownRef}>
       {/* Main Content Area - Takes Most Space */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        {showGeneralSettings ? (
+        {canShowSettings ? (
           /* General Settings View */
           <div className="h-full flex flex-col">
             <div className="px-5 py-4 border-b border-zinc-800/50">
@@ -387,13 +390,15 @@ export function LeftSidebar({
                   </button>
 
                   {/* Settings Button */}
-                  <button
-                    onClick={() => onOpenSettings?.()}
-                    className="w-7 h-7 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors text-gray-400 hover:text-white"
-                    title="General Settings"
-                  >
-                    <FontAwesomeIcon icon={faCog} className="text-xs" />
-                  </button>
+                  {canManageSpaceSettings && (
+                    <button
+                      onClick={() => onOpenSettings?.()}
+                      className="w-7 h-7 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors text-gray-400 hover:text-white"
+                      title="General Settings"
+                    >
+                      <FontAwesomeIcon icon={faCog} className="text-xs" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

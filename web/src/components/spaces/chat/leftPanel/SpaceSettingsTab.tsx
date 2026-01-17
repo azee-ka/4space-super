@@ -7,25 +7,27 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
 import { ToggleSwitch } from '../../../ui/ToggleSwitch';
+import { useSpaceSettings, useUpdateSpaceSettings } from '../../../../hooks/useSettings';
+import { DEFAULT_SPACE_SETTINGS } from '@4space/shared/src/types/chatSettings';
 
 interface SpaceSettingsTabProps {
   onBack?: () => void;
+  spaceId?: string;
+  canManageSpaceSettings?: boolean;
 }
 
-export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
+export function SpaceSettingsTab({ onBack, spaceId, canManageSpaceSettings = false }: SpaceSettingsTabProps) {
   const [activeSection, setActiveSection] = useState<'general' | 'privacy' | 'notifications' | 'members'>('general');
   const { theme } = useChatSettingsStore();
+  const { data: spaceSettingsData } = useSpaceSettings(spaceId);
+  const updateSpaceSettings = useUpdateSpaceSettings();
+  const spaceSettings = spaceSettingsData || DEFAULT_SPACE_SETTINGS;
+  const isLocked = !spaceId || !canManageSpaceSettings;
+  const lockedToggleProps = isLocked ? { disabled: true } : {};
 
-  // Mock space settings - in real app these would come from the database
-  const [spaceSettings, setSpaceSettings] = useState({
-    allowPublicRooms: true,
-    requireRoomApproval: false,
-    defaultRoomPrivacy: 'public',
-    memberInvites: true,
-    guestAccess: false,
-    notificationDefaults: 'all',
-    moderationLevel: 'medium'
-  });
+  if (!canManageSpaceSettings) {
+    return null;
+  }
 
   const sections = [
     { id: 'general', label: 'General', icon: faCog },
@@ -35,7 +37,11 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
   ];
 
   const updateSetting = (key: string, value: any) => {
-    setSpaceSettings(prev => ({ ...prev, [key]: value }));
+    if (!spaceId || isLocked) return;
+    updateSpaceSettings.mutate({
+      spaceId,
+      updates: { [key]: value },
+    });
   };
 
   return (
@@ -87,6 +93,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={spaceSettings.allowPublicRooms}
                 onToggle={(value) => updateSetting('allowPublicRooms', value)}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -96,6 +103,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={spaceSettings.requireRoomApproval}
                 onToggle={(value) => updateSetting('requireRoomApproval', value)}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -105,6 +113,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={spaceSettings.memberInvites}
                 onToggle={(value) => updateSetting('memberInvites', value)}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -113,7 +122,8 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
               <select
                 value={spaceSettings.defaultRoomPrivacy}
                 onChange={(e) => updateSetting('defaultRoomPrivacy', e.target.value)}
-                className="w-full px-2 py-1.5 bg-zinc-800/70 border border-zinc-600/50 rounded text-white text-xs focus:outline-none focus:border-purple-400/70"
+                disabled={isLocked}
+                className={`w-full px-2 py-1.5 bg-zinc-800/70 border border-zinc-600/50 rounded text-white text-xs focus:outline-none focus:border-purple-400/70 ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <option value="public">Public - Anyone can join</option>
                 <option value="private">Private - Invite only</option>
@@ -132,6 +142,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={spaceSettings.guestAccess}
                 onToggle={(value) => updateSetting('guestAccess', value)}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -141,6 +152,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={true}
                 onToggle={() => {}}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -187,6 +199,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={true}
                 onToggle={() => {}}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 
@@ -196,6 +209,7 @@ export function SpaceSettingsTab({ onBack }: SpaceSettingsTabProps) {
                 enabled={true}
                 onToggle={() => {}}
                 accentColor={theme.accentColor}
+                {...lockedToggleProps}
               />
             </div>
 

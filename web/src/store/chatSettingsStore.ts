@@ -2,69 +2,10 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ChatTheme, MessageDensity, UserChatSettings } from '@4space/shared/src/types/chatSettings';
+import { DEFAULT_USER_CHAT_SETTINGS } from '@4space/shared/src/types/chatSettings';
 
-export type BackgroundType = 'featured' | 'solid' | 'gradient' | 'pattern' | 'artistic' | 'image';
-export type BubbleShapePreset = 'square' | 'rounded' | 'pill' | 'extra-rounded' | 'custom';
-
-export interface ChatTheme {
-  // Background settings
-  backgroundType: BackgroundType;
-  backgroundColor: string; // solid color or gradient colors
-  backgroundColor2?: string; // for gradients
-  backgroundImage?: string; // base64 or URL
-  backgroundPattern?: string; // pattern name (for both pattern and artistic)
-  
-  // Bubble settings
-  sentBubbleColor: string;
-  receivedBubbleColor: string;
-  sentBubbleGradient?: string; // Optional gradient for sent bubbles (e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
-  receivedBubbleGradient?: string; // Optional gradient for received bubbles
-  bubbleShapePreset: BubbleShapePreset;
-  bubbleBorderRadius: number; // 0-24 for custom radius
-  accentColor: string;
-  
-  // Text colors for readability
-  sentTextColor: string; // text color in sent bubbles
-  receivedTextColor: string; // text color in received bubbles
-}
-
-interface ChatSettingsState {
-  // Chat Settings
-  formattingButtonsEnabled: boolean;
-  showTimestamps: boolean;
-  showReadReceipts: boolean;
-  showAvatars: boolean;
-  showLinkPreviews: boolean;
-  groupMessages: boolean;
-  messageAnimations: boolean;
-  
-  // Room Settings
-  notifications: 'all' | 'mentions' | 'none';
-  muteRoom: boolean;
-  autoDeleteMessages: 'never' | '7days' | '30days' | '1year';
-  messageHistory: 'unlimited' | '30days' | '90days' | '1year';
-  
-  // Appearance Settings (moved from customization to avoid duplicates)
-  fontSize: number;
-  messageDensity: 'compact' | 'comfortable' | 'spacious';
-  theme: ChatTheme;
-  ambientLighting: boolean; // Ambient lighting for sidebars
-  ambientIntensity: number; // 0-100, intensity of ambient lighting
-  applyToAllRooms: boolean; // Apply settings to all rooms globally
-  applyToCategory: boolean; // Apply settings to all rooms in a category
-  
-  // Per-room settings storage
-  roomSettings: Record<string, {
-    fontSize?: number;
-    messageDensity?: 'compact' | 'comfortable' | 'spacious';
-    theme?: ChatTheme;
-  }>;
-  categorySettings: Record<string, {
-    fontSize?: number;
-    messageDensity?: 'compact' | 'comfortable' | 'spacious';
-    theme?: ChatTheme;
-  }>;
-  
+interface ChatSettingsState extends UserChatSettings {
   // Setters
   setFormattingButtonsEnabled: (enabled: boolean) => void;
   setShowTimestamps: (enabled: boolean) => void;
@@ -73,22 +14,24 @@ interface ChatSettingsState {
   setShowLinkPreviews: (enabled: boolean) => void;
   setGroupMessages: (enabled: boolean) => void;
   setMessageAnimations: (enabled: boolean) => void;
-  setNotifications: (value: 'all' | 'mentions' | 'none') => void;
+  setNotifications: (value: UserChatSettings['notifications']) => void;
   setMuteRoom: (enabled: boolean) => void;
-  setAutoDeleteMessages: (value: 'never' | '7days' | '30days' | '1year') => void;
-  setMessageHistory: (value: 'unlimited' | '30days' | '90days' | '1year') => void;
+  setAutoDeleteMessages: (value: UserChatSettings['autoDeleteMessages']) => void;
+  setMessageHistory: (value: UserChatSettings['messageHistory']) => void;
   setFontSize: (size: number, roomId?: string, category?: string) => void;
-  setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious', roomId?: string, category?: string) => void;
+  setMessageDensity: (density: MessageDensity, roomId?: string, category?: string) => void;
   setTheme: (theme: ChatTheme, roomId?: string, category?: string) => void;
   setAmbientLighting: (enabled: boolean) => void;
   setAmbientIntensity: (intensity: number) => void;
   setApplyToAllRooms: (apply: boolean) => void;
   setApplyToCategory: (apply: boolean) => void;
-  
+  updateSettings: (updates: Partial<UserChatSettings>) => void;
+  hydrateSettings: (settings: Partial<UserChatSettings>) => void;
+
   // Get settings for a specific room
   getSettingsForRoom: (roomId?: string, category?: string) => {
     fontSize: number;
-    messageDensity: 'compact' | 'comfortable' | 'spacious';
+    messageDensity: MessageDensity;
     theme: ChatTheme;
   };
 }
@@ -96,40 +39,8 @@ interface ChatSettingsState {
 export const useChatSettingsStore = create<ChatSettingsState>()(
   persist(
     (set) => ({
-      // Chat Settings defaults
-      formattingButtonsEnabled: true,
-      showTimestamps: true,
-      showReadReceipts: true,
-      showAvatars: true,
-      showLinkPreviews: true,
-      groupMessages: true,
-      messageAnimations: true,
-      // Room Settings defaults
-      notifications: 'all',
-      muteRoom: false,
-      autoDeleteMessages: 'never',
-      messageHistory: 'unlimited',
-      // Appearance Settings defaults
-      fontSize: 14,
-      messageDensity: 'comfortable',
-      theme: {
-        backgroundType: 'solid',
-        backgroundColor: '#000000',
-        sentBubbleColor: '#7c3aed', // Purple - original default
-        receivedBubbleColor: '#27272a',
-        bubbleShapePreset: 'pill',
-        bubbleBorderRadius: 12,
-        accentColor: 'purple',
-        sentTextColor: '#ffffff',
-        receivedTextColor: '#ffffff',
-      },
-      ambientLighting: true, // Enabled by default for nice effect
-      ambientIntensity: 50, // Default 50% intensity
-      applyToAllRooms: false, // By default, settings apply to current room only
-      applyToCategory: false, // Optional category-level sharing
-      roomSettings: {}, // Per-room settings storage
-      categorySettings: {}, // Per-category settings storage
-      
+      ...DEFAULT_USER_CHAT_SETTINGS,
+
       // Setters
       setFormattingButtonsEnabled: (enabled: boolean) => {
         set({ formattingButtonsEnabled: enabled });
@@ -152,16 +63,16 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
       setMessageAnimations: (enabled: boolean) => {
         set({ messageAnimations: enabled });
       },
-      setNotifications: (value: 'all' | 'mentions' | 'none') => {
+      setNotifications: (value: UserChatSettings['notifications']) => {
         set({ notifications: value });
       },
       setMuteRoom: (enabled: boolean) => {
         set({ muteRoom: enabled });
       },
-      setAutoDeleteMessages: (value: 'never' | '7days' | '30days' | '1year') => {
+      setAutoDeleteMessages: (value: UserChatSettings['autoDeleteMessages']) => {
         set({ autoDeleteMessages: value });
       },
-      setMessageHistory: (value: 'unlimited' | '30days' | '90days' | '1year') => {
+      setMessageHistory: (value: UserChatSettings['messageHistory']) => {
         set({ messageHistory: value });
       },
       setFontSize: (size: number, roomId?: string, category?: string) => {
@@ -192,7 +103,7 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
           return { fontSize: size };
         });
       },
-      setMessageDensity: (density: 'compact' | 'comfortable' | 'spacious', roomId?: string, category?: string) => {
+      setMessageDensity: (density: MessageDensity, roomId?: string, category?: string) => {
         set((state) => {
           if (!state.applyToAllRooms && category && state.applyToCategory) {
             return {
@@ -264,6 +175,18 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
           applyToAllRooms: apply ? false : state.applyToAllRooms,
         }));
       },
+      updateSettings: (updates: Partial<UserChatSettings>) => {
+        set((state) => ({
+          ...state,
+          ...updates,
+        }));
+      },
+      hydrateSettings: (settings: Partial<UserChatSettings>) => {
+        set((state) => ({
+          ...state,
+          ...settings,
+        }));
+      },
       
       // Get settings for a specific room
       getSettingsForRoom(roomId?: string, category?: string) {
@@ -298,3 +221,34 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
     }
   )
 );
+
+export const selectUserChatSettings = (state: ChatSettingsState): UserChatSettings => {
+  const {
+    setFormattingButtonsEnabled: _setFormattingButtonsEnabled,
+    setShowTimestamps: _setShowTimestamps,
+    setShowReadReceipts: _setShowReadReceipts,
+    setShowAvatars: _setShowAvatars,
+    setShowLinkPreviews: _setShowLinkPreviews,
+    setGroupMessages: _setGroupMessages,
+    setMessageAnimations: _setMessageAnimations,
+    setNotifications: _setNotifications,
+    setMuteRoom: _setMuteRoom,
+    setAutoDeleteMessages: _setAutoDeleteMessages,
+    setMessageHistory: _setMessageHistory,
+    setFontSize: _setFontSize,
+    setMessageDensity: _setMessageDensity,
+    setTheme: _setTheme,
+    setAmbientLighting: _setAmbientLighting,
+    setAmbientIntensity: _setAmbientIntensity,
+    setApplyToAllRooms: _setApplyToAllRooms,
+    setApplyToCategory: _setApplyToCategory,
+    updateSettings: _updateSettings,
+    hydrateSettings: _hydrateSettings,
+    getSettingsForRoom: _getSettingsForRoom,
+    ...settings
+  } = state;
+
+  return settings;
+};
+
+export type { BackgroundType, BubbleShapePreset, ChatTheme, MessageDensity } from '@4space/shared/src/types/chatSettings';

@@ -11,31 +11,28 @@ import {
 import { motion } from 'framer-motion';
 import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
 import { ToggleSwitch } from '../../../ui/ToggleSwitch';
+import { useRoomSettings, useUpdateRoomSettings } from '../../../../hooks/useSettings';
+import { DEFAULT_ROOM_SETTINGS } from '@4space/shared/src/types/chatSettings';
 
 interface RoomSettingsTabProps {
   selectedRoomId?: string;
   spaceId?: string;
+  canManageRoomSettings?: boolean;
 }
 
-export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProps) {
+export function RoomSettingsTab({ selectedRoomId, spaceId, canManageRoomSettings = false }: RoomSettingsTabProps) {
   const [activeSection, setActiveSection] = useState<'general' | 'privacy' | 'notifications' | 'categories' | 'moderation'>('general');
   const { theme } = useChatSettingsStore();
 
-  // Mock room settings - in real app these would come from the database
-  const [roomSettings, setRoomSettings] = useState({
-    isPrivate: false,
-    allowInvites: true,
-    requireApproval: false,
-    maxMembers: 100,
-    slowMode: 0,
-    allowFileUploads: true,
-    allowVoiceMessages: true,
-    allowPolls: true,
-    moderationLevel: 'low',
-    allowBots: false,
-    isArchived: false,
-    defaultRole: 'member'
-  });
+  const { data: roomSettingsData } = useRoomSettings(selectedRoomId);
+  const updateRoomSettings = useUpdateRoomSettings();
+  const roomSettings = roomSettingsData || DEFAULT_ROOM_SETTINGS;
+  const isLocked = !selectedRoomId || !canManageRoomSettings;
+  const lockedToggleProps = isLocked ? { disabled: true } : {};
+
+  if (!canManageRoomSettings) {
+    return null;
+  }
 
   const sections = [
     { id: 'general', label: 'General', icon: faCog },
@@ -46,7 +43,11 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
   ];
 
   const updateSetting = (key: string, value: any) => {
-    setRoomSettings(prev => ({ ...prev, [key]: value }));
+    if (!selectedRoomId || isLocked) return;
+    updateRoomSettings.mutate({
+      roomId: selectedRoomId,
+      updates: { [key]: value },
+    });
   };
 
   return (
@@ -100,6 +101,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.allowFileUploads}
                     onToggle={(value) => updateSetting('allowFileUploads', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -111,6 +113,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.allowVoiceMessages}
                     onToggle={(value) => updateSetting('allowVoiceMessages', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -122,6 +125,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.allowPolls}
                     onToggle={(value) => updateSetting('allowPolls', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -133,6 +137,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.allowBots}
                     onToggle={(value) => updateSetting('allowBots', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -144,7 +149,8 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     max="300"
                     value={roomSettings.slowMode}
                     onChange={(e) => updateSetting('slowMode', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/30"
+                    disabled={isLocked}
+                    className={`w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/30 ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                   />
                   <p className="text-xs text-gray-400">Minimum time between messages (0 = disabled)</p>
                 </div>
@@ -162,10 +168,18 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.isArchived}
                     onToggle={(value) => updateSetting('isArchived', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
-                <button className="w-full px-4 py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium transition-colors">
+                <button
+                  disabled={isLocked}
+                  className={`w-full px-4 py-3 border rounded-lg text-red-400 text-sm font-medium transition-colors ${
+                    isLocked
+                      ? 'bg-red-600/10 border-red-500/20 opacity-60 cursor-not-allowed'
+                      : 'bg-red-600/20 hover:bg-red-600/30 border-red-500/30'
+                  }`}
+                >
                   <FontAwesomeIcon icon={faTrash} className="mr-2" />
                   Delete Room (Dangerous)
                 </button>
@@ -188,6 +202,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.isPrivate}
                     onToggle={(value) => updateSetting('isPrivate', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -199,6 +214,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.requireApproval}
                     onToggle={(value) => updateSetting('requireApproval', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
 
@@ -210,6 +226,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                   <ToggleSwitch
                     enabled={roomSettings.allowInvites}
                     onToggle={(value) => updateSetting('allowInvites', value)}
+                    {...lockedToggleProps}
                   />
                 </div>
               </div>
@@ -219,14 +236,15 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
               <h3 className="text-sm font-bold text-white mb-4">Member Limits</h3>
               <div className="space-y-2">
                 <label className="text-sm text-white font-medium">Maximum Members</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10000"
-                  value={roomSettings.maxMembers}
-                  onChange={(e) => updateSetting('maxMembers', parseInt(e.target.value) || 100)}
-                  className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/30"
-                />
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={roomSettings.maxMembers}
+                    onChange={(e) => updateSetting('maxMembers', parseInt(e.target.value) || 100)}
+                    disabled={isLocked}
+                    className={`w-full px-3 py-2 bg-zinc-800/70 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/30 ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  />
                 <p className="text-xs text-gray-400">Set to 0 for unlimited members</p>
               </div>
             </div>
@@ -314,7 +332,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     <span className="text-sm text-white font-medium">Auto-sort rooms</span>
                     <p className="text-xs text-gray-400">Automatically organize rooms by activity</p>
                   </div>
-                  <ToggleSwitch enabled={true} onToggle={() => {}} />
+                  <ToggleSwitch enabled={true} onToggle={() => {}} disabled={isLocked} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -322,7 +340,7 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     <span className="text-sm text-white font-medium">Show empty categories</span>
                     <p className="text-xs text-gray-400">Display categories even when empty</p>
                   </div>
-                  <ToggleSwitch enabled={false} onToggle={() => {}} />
+                  <ToggleSwitch enabled={false} onToggle={() => {}} disabled={isLocked} />
                 </div>
               </div>
             </div>
@@ -343,7 +361,12 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                 ].map((option) => (
                   <button
                     key={option.level}
-                    onClick={() => updateSetting('moderationLevel', option.level.toLowerCase())}
+                    onClick={() => {
+                      if (!isLocked) {
+                        updateSetting('moderationLevel', option.level.toLowerCase());
+                      }
+                    }}
+                    disabled={isLocked}
                     className={`w-full p-3 rounded-lg border transition-all text-left ${
                       roomSettings.moderationLevel === option.level.toLowerCase()
                         ? `bg-${option.color}-500/20 border-${option.color}-500/50`
@@ -372,7 +395,11 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     <span className="text-sm text-white font-medium">Spam Detection</span>
                     <p className="text-xs text-gray-400">Automatically flag suspicious messages</p>
                   </div>
-                  <ToggleSwitch enabled={true} onToggle={() => {}} />
+                  <ToggleSwitch
+                    enabled={roomSettings.autoModeration.spamDetection}
+                    onToggle={(value) => updateSetting('autoModeration', { ...roomSettings.autoModeration, spamDetection: value })}
+                    disabled={isLocked}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -380,7 +407,11 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     <span className="text-sm text-white font-medium">Link Filtering</span>
                     <p className="text-xs text-gray-400">Block suspicious or harmful links</p>
                   </div>
-                  <ToggleSwitch enabled={true} onToggle={() => {}} />
+                  <ToggleSwitch
+                    enabled={roomSettings.autoModeration.linkFiltering}
+                    onToggle={(value) => updateSetting('autoModeration', { ...roomSettings.autoModeration, linkFiltering: value })}
+                    disabled={isLocked}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -388,7 +419,11 @@ export function RoomSettingsTab({ selectedRoomId, spaceId }: RoomSettingsTabProp
                     <span className="text-sm text-white font-medium">Image Moderation</span>
                     <p className="text-xs text-gray-400">Scan uploaded images for content</p>
                   </div>
-                  <ToggleSwitch enabled={false} onToggle={() => {}} />
+                  <ToggleSwitch
+                    enabled={roomSettings.autoModeration.imageModeration}
+                    onToggle={(value) => updateSetting('autoModeration', { ...roomSettings.autoModeration, imageModeration: value })}
+                    disabled={isLocked}
+                  />
                 </div>
               </div>
             </div>

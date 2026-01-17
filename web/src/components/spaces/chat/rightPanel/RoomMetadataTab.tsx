@@ -13,13 +13,15 @@ interface RoomMetadataTabProps {
   memberCount: number;
   messageCount: number;
   onUpdateRoom: (updates: Partial<Room>) => void;
+  canManageRoomSettings?: boolean;
 }
 
-export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom }: RoomMetadataTabProps) {
+export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom, canManageRoomSettings = false }: RoomMetadataTabProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedName, setEditedName] = useState(room?.name || '');
   const [editedDescription, setEditedDescription] = useState(room?.description || '');
+  const allowEdits = canManageRoomSettings;
 
   if (!room) {
     return (
@@ -30,6 +32,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
   }
 
   const handleSaveName = () => {
+    if (!allowEdits) return;
     if (editedName.trim()) {
       onUpdateRoom({ name: editedName.trim() });
       setIsEditingName(false);
@@ -37,6 +40,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
   };
 
   const handleSaveDescription = () => {
+    if (!allowEdits) return;
     onUpdateRoom({ description: editedDescription.trim() });
     setIsEditingDescription(false);
   };
@@ -65,7 +69,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
               </div>
               <h3 className="text-sm font-bold text-white">Room Name</h3>
             </div>
-            {!isEditingName && (
+            {allowEdits && !isEditingName && (
               <button
                 onClick={() => {
                   setEditedName(room.name);
@@ -77,7 +81,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
               </button>
             )}
           </div>
-          {isEditingName ? (
+          {allowEdits && isEditingName ? (
             <div className="space-y-3">
               <input
                 type="text"
@@ -123,7 +127,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
               </div>
               <h3 className="text-sm font-bold text-white">Description</h3>
             </div>
-            {!isEditingDescription && (
+            {allowEdits && !isEditingDescription && (
               <button
                 onClick={() => {
                   setEditedDescription(room.description || '');
@@ -135,7 +139,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
               </button>
             )}
           </div>
-          {isEditingDescription ? (
+          {allowEdits && isEditingDescription ? (
             <div className="space-y-3">
               <textarea
                 value={editedDescription}
@@ -162,7 +166,7 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
           ) : (
             <div className="bg-zinc-800/30 rounded-lg p-3 border border-zinc-700/30">
               <p className="text-gray-300 text-sm leading-relaxed">
-                {room.description || 'No description set. Click the edit button to add one.'}
+                {room.description || (allowEdits ? 'No description set. Click the edit button to add one.' : 'No description set.')}
               </p>
             </div>
           )}
@@ -314,9 +318,11 @@ export function RoomMetadataTab({ room, memberCount, messageCount, onUpdateRoom 
             <FontAwesomeIcon icon={faLink} className="text-gray-600 text-lg mb-2" />
             <p className="text-gray-500 text-sm mb-1">No resources added yet</p>
             <p className="text-gray-600 text-xs">Pinned links and important files will appear here</p>
-            <button className="mt-3 w-full px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 text-sm transition-colors font-medium">
-              + Add Resource
-            </button>
+            {allowEdits && (
+              <button className="mt-3 w-full px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 text-sm transition-colors font-medium">
+                + Add Resource
+              </button>
+            )}
           </div>
         </motion.div>
       </div>

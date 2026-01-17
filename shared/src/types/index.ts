@@ -8,6 +8,8 @@ export interface User {
   created_at: string;
 }
 
+export * from './chatSettings';
+
 export interface Space {
   id: string;
   name: string;

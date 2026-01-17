@@ -19,6 +19,7 @@ interface MessageItemProps {
   message: Message;
   isOwn: boolean;
   showAvatar?: boolean;
+  showUsername?: boolean;
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
   onReply?: (message: Message) => void;
@@ -33,6 +34,11 @@ interface MessageItemProps {
   theme?: ChatTheme;
   fontSize?: number;
   messageDensity?: 'compact' | 'comfortable' | 'spacious';
+  showTimestamps?: boolean;
+  showReadReceipts?: boolean;
+  showMessageStatus?: boolean;
+  reactionsEnabled?: boolean;
+  forwardingEnabled?: boolean;
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -67,6 +73,7 @@ export function MessageItem({
   message,
   isOwn,
   showAvatar = true,
+  showUsername = true,
   isFirstInGroup = true,
   isLastInGroup = true,
   onReply,
@@ -81,6 +88,11 @@ export function MessageItem({
   theme,
   fontSize = 14,
   messageDensity = 'comfortable',
+  showTimestamps = true,
+  showReadReceipts = true,
+  showMessageStatus = true,
+  reactionsEnabled = true,
+  forwardingEnabled = true,
 }: MessageItemProps) {
   const resolvedTheme: ChatTheme = theme || {
     backgroundType: 'solid',
@@ -464,11 +476,11 @@ export function MessageItem({
         </div>
       )}
       
-      {!isFirstInGroup && !isOwn && <div className="w-8" />}
+      {showAvatar && !isFirstInGroup && !isOwn && <div className="w-8" />}
 
       <div className={`flex-1 flex ${isOwn ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className="max-w-[65%] relative min-w-0">
-          {showAvatar && isFirstInGroup && !isOwn && (
+          {showUsername && isFirstInGroup && !isOwn && (
             <div className="text-xs font-medium text-cyan-400 mb-1 ml-3">
               {message.sender?.display_name || 'Unknown'}
             </div>
@@ -536,13 +548,15 @@ export function MessageItem({
                         edited
                       </span>
                     )}
-                    <span 
-                      className="text-[10px] opacity-70"
-                      style={{ color: getTextColor() }}
-                    >
-                      {formatTime(message.created_at)}
-                    </span>
-                    {readStatus && (
+                    {showTimestamps && (
+                      <span 
+                        className="text-[10px] opacity-70"
+                        style={{ color: getTextColor() }}
+                      >
+                        {formatTime(message.created_at)}
+                      </span>
+                    )}
+                    {readStatus && showMessageStatus && showReadReceipts && (
                       <motion.div 
                         className="flex items-center" 
                         title={readStatus.title}
@@ -716,79 +730,81 @@ export function MessageItem({
               >
                 <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl">
                   {/* Reactions Picker */}
-                  <DropdownButton
-                    placement={isOwn ? 'top-end' : 'top-start'}
-                    onToggle={(isOpen) => {
-                      if (isOpen) {
-                        openDropdownsCountRef.current++;
-                        setShowActions(true);
-                      } else {
-                        openDropdownsCountRef.current = Math.max(0, openDropdownsCountRef.current - 1);
-                        // Hide actions if all dropdowns are closed and mouse is not over
-                        if (openDropdownsCountRef.current === 0) {
-                          clearAllTimeouts();
-                          hideActionsTimeoutRef.current = setTimeout(() => {
-                            setShowActions(false);
-                          }, 150);
+                  {reactionsEnabled && (
+                    <DropdownButton
+                      placement={isOwn ? 'top-end' : 'top-start'}
+                      onToggle={(isOpen) => {
+                        if (isOpen) {
+                          openDropdownsCountRef.current++;
+                          setShowActions(true);
+                        } else {
+                          openDropdownsCountRef.current = Math.max(0, openDropdownsCountRef.current - 1);
+                          // Hide actions if all dropdowns are closed and mouse is not over
+                          if (openDropdownsCountRef.current === 0) {
+                            clearAllTimeouts();
+                            hideActionsTimeoutRef.current = setTimeout(() => {
+                              setShowActions(false);
+                            }, 150);
+                          }
                         }
+                      }}
+                      toggleContent={
+                        <button
+                          className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+                          title="Add reaction"
+                        >
+                          <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs" />
+                        </button>
                       }
-                    }}
-                    toggleContent={
-                      <button
-                        className="w-7 h-7 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-                        title="Add reaction"
-                      >
-                        <FontAwesomeIcon icon={faSmile} className="text-yellow-400 text-xs" />
-                      </button>
-                    }
-                  >
-                    {({ closeDropdown }: { closeDropdown: () => void }) => (
-                      <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl relative">
-                        <div className="flex gap-1">
-                          {QUICK_REACTIONS.map(emoji => (
+                    >
+                      {({ closeDropdown }: { closeDropdown: () => void }) => (
+                        <div className="p-2 rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl relative">
+                          <div className="flex gap-1">
+                            {QUICK_REACTIONS.map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => {
+                                  handleReaction(emoji);
+                                  closeDropdown();
+                                }}
+                                className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg hover:scale-110"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
                             <button
-                              key={emoji}
-                              onClick={() => {
-                                handleReaction(emoji);
-                                closeDropdown();
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowEmojiPicker(!showEmojiPicker);
                               }}
-                              className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-lg hover:scale-110"
+                              className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-sm hover:scale-110 border border-zinc-600/50"
+                              title="More emojis"
                             >
-                              {emoji}
+                              <FontAwesomeIcon icon={faPlus} className="text-gray-400" />
                             </button>
-                          ))}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowEmojiPicker(!showEmojiPicker);
-                            }}
-                            className="w-9 h-9 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors text-sm hover:scale-110 border border-zinc-600/50"
-                            title="More emojis"
-                          >
-                            <FontAwesomeIcon icon={faPlus} className="text-gray-400" />
-                          </button>
-                        </div>
-                        {showEmojiPicker && (
-                          <div
-                            ref={emojiPickerRef}
-                            className="absolute bottom-full left-0 mb-2 z-50"
-                            onMouseDown={(e) => e.stopPropagation()}
-                          >
-                            <Picker
-                              data={data}
-                              onEmojiSelect={(emoji: any) => {
-                                handleReaction(emoji.native);
-                                setShowEmojiPicker(false);
-                                closeDropdown();
-                              }}
-                              theme="dark"
-                              previewPosition="none"
-                            />
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </DropdownButton>
+                          {showEmojiPicker && (
+                            <div
+                              ref={emojiPickerRef}
+                              className="absolute bottom-full left-0 mb-2 z-50"
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <Picker
+                                data={data}
+                                onEmojiSelect={(emoji: any) => {
+                                  handleReaction(emoji.native);
+                                  setShowEmojiPicker(false);
+                                  closeDropdown();
+                                }}
+                                theme="dark"
+                                previewPosition="none"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </DropdownButton>
+                  )}
                   
                   {onReply && (
                     <button
@@ -843,7 +859,7 @@ export function MessageItem({
                           { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false },
                           onBookmark && { icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); closeDropdown(); }, danger: false },
                           onPin && { icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); closeDropdown(); }, danger: false },
-                          { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => closeDropdown(), danger: false },
+                          forwardingEnabled && { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => closeDropdown(), danger: false },
                           isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); closeDropdown(); }, danger: true },
                         ].filter(Boolean).map((action: any) => (
                           <button

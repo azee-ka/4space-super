@@ -23,6 +23,8 @@ interface RightSidebarProps {
   selectedRoom: any;
   selectedRoomId?: string;
   spaceId: string;
+  canManageRoomSettings?: boolean;
+  canModerateRoom?: boolean;
   getAccentFocusClass: (accentColor: string) => string;
 }
 
@@ -37,6 +39,8 @@ export function RightSidebar({
   selectedRoom,
   selectedRoomId,
   spaceId,
+  canManageRoomSettings = false,
+  canModerateRoom = false,
   getAccentFocusClass,
 }: RightSidebarProps) {
   const roomCategory = selectedRoom?.category || 'General';
@@ -85,7 +89,14 @@ export function RightSidebar({
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          {activeTab === 'settings' && <ChatSettingsTab roomId={selectedRoomId} getAccentFocusClass={getAccentFocusClass} />}
+          {activeTab === 'settings' && (
+            <ChatSettingsTab
+              roomId={selectedRoomId}
+              canManageRoomSettings={canManageRoomSettings}
+              canModerateRoom={canModerateRoom}
+              getAccentFocusClass={getAccentFocusClass}
+            />
+          )}
           {activeTab === 'metadata' && (
             <RoomMetadataTab
               room={selectedRoom}
@@ -94,6 +105,7 @@ export function RightSidebar({
               onUpdateRoom={(updates) => {
                 console.log('Update room:', updates);
               }}
+              canManageRoomSettings={canManageRoomSettings}
             />
           )}
           {activeTab === 'metrics' && (

@@ -23,6 +23,7 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
   disabled?: boolean;
   placeholder?: string;
+  allowFileUploads?: boolean;
 }
 
 interface AttachedFile {
@@ -42,6 +43,7 @@ export function MessageInput({
   onCancelEdit,
   disabled = false,
   placeholder = 'Type a message...',
+  allowFileUploads = true,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -194,6 +196,7 @@ export function MessageInput({
 
   // File handling
   const handleFileSelect = async (files: FileList | null, type?: 'image' | 'video' | 'document') => {
+    if (!allowFileUploads) return;
     if (!files) return;
     
     const newFiles: AttachedFile[] = [];
@@ -234,12 +237,14 @@ export function MessageInput({
 
   // Drag & drop
   const handleDragEnter = (e: React.DragEvent) => {
+    if (!allowFileUploads) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    if (!allowFileUploads) return;
     e.preventDefault();
     e.stopPropagation();
     if (e.currentTarget === containerRef.current) {
@@ -248,11 +253,13 @@ export function MessageInput({
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    if (!allowFileUploads) return;
     e.preventDefault();
     e.stopPropagation();
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    if (!allowFileUploads) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -474,12 +481,16 @@ export function MessageInput({
                   e.preventDefault();
                   e.stopPropagation();
                 }}
-                onClick={() => setShowFileMenu(!showFileMenu)}
+                onClick={() => {
+                  if (!allowFileUploads) return;
+                  setShowFileMenu(!showFileMenu);
+                }}
+                disabled={!allowFileUploads}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                   showFileMenu
                     ? 'bg-purple-500/20 border-2 border-purple-500/50'
                     : 'bg-purple-500/10 hover:bg-purple-500/20'
-                }`}
+                } ${!allowFileUploads ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Attach file"
               >
                 <FontAwesomeIcon 
@@ -490,7 +501,7 @@ export function MessageInput({
 
               {/* File Menu Dropdown */}
               <AnimatePresence>
-                {showFileMenu && (
+                {showFileMenu && allowFileUploads && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -26,6 +26,21 @@ interface MessagesListProps {
   theme?: ChatTheme;
   fontSize?: number;
   messageDensity?: 'compact' | 'comfortable' | 'spacious';
+  showAvatars?: boolean;
+  showUsernames?: boolean;
+  showTimestamps?: boolean;
+  showReadReceipts?: boolean;
+  showMessageStatus?: boolean;
+  enableMessageReactions?: boolean;
+  enableMessageReplies?: boolean;
+  enableMessageForwarding?: boolean;
+  allowMessageEditing?: boolean;
+  allowMessageDeletion?: boolean;
+  allowMessagePinning?: boolean;
+  groupMessages?: boolean;
+  autoScrollToBottom?: boolean;
+  messageAnimations?: boolean;
+  reduceAnimations?: boolean;
 }
 
 export function MessagesList({
@@ -47,6 +62,21 @@ export function MessagesList({
   theme,
   fontSize,
   messageDensity,
+  showAvatars = true,
+  showUsernames = true,
+  showTimestamps = true,
+  showReadReceipts = true,
+  showMessageStatus = true,
+  enableMessageReactions = true,
+  enableMessageReplies = true,
+  enableMessageForwarding = true,
+  allowMessageEditing = true,
+  allowMessageDeletion = true,
+  allowMessagePinning = true,
+  groupMessages = true,
+  autoScrollToBottom = true,
+  messageAnimations = true,
+  reduceAnimations = false,
 }: MessagesListProps) {
   const [scrollIndicator, setScrollIndicator] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -91,15 +121,15 @@ export function MessagesList({
     
     const totalCount = messages.length;
     const hasNew = totalCount > lastMessageCountRef.current;
-    
+
     // Only auto-scroll if user is near bottom and new message arrived
-    if (hasNew && isNearBottomRef.current) {
+    if (autoScrollToBottom && hasNew && isNearBottomRef.current) {
       // Use immediate scroll (not smooth) for instant feedback
       scrollToBottom(false);
     }
     
     lastMessageCountRef.current = totalCount;
-  }, [messages.length, isLoading, scrollToBottom]);
+  }, [messages.length, isLoading, scrollToBottom, autoScrollToBottom]);
 
 
   // Handle scroll - combined functionality
@@ -232,6 +262,19 @@ export function MessagesList({
   const getMessageGroups = () => {
     const allMessages = [...messages, ...optimisticMessages];
 
+    if (!groupMessages) {
+      return allMessages.map((message) => ({
+        messages: [
+          {
+            message,
+            isFirstInGroup: true,
+            isLastInGroup: true,
+            isOptimistic: !message.id || message.id.startsWith('optimistic-'),
+          },
+        ],
+      }));
+    }
+
     const groups: Array<{
       separator?: {
         type: 'time' | 'date';
@@ -359,13 +402,14 @@ export function MessagesList({
 
   const messageGroups = getMessageGroups();
   const typingUsersList = Array.from(typingUsers.values());
+  const shouldAnimate = messageAnimations && !reduceAnimations;
 
   // Scroll to bottom when typing indicator appears
   useEffect(() => {
-    if (typingUsersList.length > 0 && isNearBottomRef.current) {
+    if (autoScrollToBottom && typingUsersList.length > 0 && isNearBottomRef.current) {
       requestAnimationFrame(() => scrollToBottom(true));
     }
-  }, [typingUsersList.length, scrollToBottom]);
+  }, [typingUsersList.length, scrollToBottom, autoScrollToBottom]);
 
   if (isLoading) {
     return (
@@ -511,31 +555,31 @@ export function MessagesList({
                 return (
                   <motion.div
                     key={stableKey}
-                    layout
-                    initial={{ 
+                    layout={shouldAnimate}
+                    initial={shouldAnimate ? {
                       opacity: 0,
                       y: 6,
                       scale: 0.97,
-                    }}
-                    animate={{ 
+                    } : false}
+                    animate={shouldAnimate ? {
                       opacity: 1,
                       y: 0,
                       scale: 1,
-                    }}
-                    exit={{ 
+                    } : { opacity: 1, y: 0, scale: 1 }}
+                    exit={shouldAnimate ? {
                       opacity: 0,
                       y: -4,
                       scale: 0.98,
-                      transition: { duration: 0.15 } 
-                    }}
-                    transition={{ 
+                      transition: { duration: 0.15 }
+                    } : undefined}
+                    transition={shouldAnimate ? {
                       layout: {
                         type: 'spring',
                         stiffness: 500,
                         damping: 40,
                         mass: 0.5
                       },
-                      opacity: { 
+                      opacity: {
                         duration: 0.2,
                         ease: [0.22, 1, 0.36, 1]
                       },
@@ -547,7 +591,7 @@ export function MessagesList({
                         duration: 0.25,
                         ease: [0.22, 1, 0.36, 1]
                       }
-                    }}
+                    } : { duration: 0 }}
                     style={{
                       willChange: 'transform, opacity'
                     }}
@@ -555,21 +599,27 @@ export function MessagesList({
                     <MessageItem
                       message={message}
                       isOwn={isOwn}
-                      showAvatar={!isOwn}
+                      showAvatar={showAvatars && !isOwn}
+                      showUsername={showUsernames}
                       isFirstInGroup={isFirstInGroup}
                       isLastInGroup={isLastInGroup}
-                      onReply={onReply}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onPin={onPin}
+                      onReply={enableMessageReplies ? onReply : undefined}
+                      onEdit={allowMessageEditing ? onEdit : undefined}
+                      onDelete={allowMessageDeletion ? onDelete : undefined}
+                      onPin={allowMessagePinning ? onPin : undefined}
                       onBookmark={onBookmark}
-                      onReaction={onReaction}
-                      onRemoveReaction={onRemoveReaction}
+                      onReaction={enableMessageReactions ? onReaction : undefined}
+                      onRemoveReaction={enableMessageReactions ? onRemoveReaction : undefined}
                       onScrollToMessage={scrollToMessage}
                       currentUserId={currentUserId}
                       theme={theme}
                       fontSize={fontSize}
                       messageDensity={messageDensity}
+                      showTimestamps={showTimestamps}
+                      showReadReceipts={showReadReceipts}
+                      showMessageStatus={showMessageStatus}
+                      reactionsEnabled={enableMessageReactions}
+                      forwardingEnabled={enableMessageForwarding}
                     />
                   </motion.div>
                 );

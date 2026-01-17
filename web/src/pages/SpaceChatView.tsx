@@ -7,14 +7,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft, faHashtag, faRocket,
   faCog, faPhone, faVideo,
-  faUsers, faThumbtack, faSearch, faTimes, faExclamationTriangle
+  faUsers, faThumbtack, faSearch, faExclamationTriangle, faHouse,
+  faBookmark
 } from '@fortawesome/free-solid-svg-icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { getBackgroundStyle, getAmbientBackgroundStyle } from '../utils/themeUtils';
-import { useSpace } from '../hooks/useSpaces';
+import { useSpace, useSpaceMembers } from '../hooks/useSpaces';
 import {
   useSpaceRooms,
   useRoom,
@@ -32,23 +33,31 @@ import {
 import { useRealtimeChat } from '../hooks/useRealtime';
 import { MessagesList } from '../components/spaces/chat/centerPanel/MessagesList';
 import { MessageInput } from '../components/spaces/chat/centerPanel/MessageInput';
-import { SearchMessages } from '../components/spaces/chat/rightPanel/SearchMessages';
-import { PinnedMessages } from '../components/spaces/chat/rightPanel/PinnedMessages';
+import { RoomSearchPanel } from '../components/spaces/chat/rightPanel/RoomSearchPanel';
+import { PinnedMessagesPanel } from '../components/spaces/chat/rightPanel/PinnedMessagesPanel';
+import { BookmarkedMessagesPanel } from '../components/spaces/chat/rightPanel/BookmarkedMessagesPanel';
+import { RoomCallPanel } from '../components/spaces/chat/rightPanel/RoomCallPanel';
 import { CreateRoomModal } from '../components/spaces/chat/leftPanel/CreateRoomModal';
 import { LeftSidebar } from '../components/spaces/chat/leftPanel/LeftSidebar';
 import { RightSidebar } from '../components/spaces/chat/leftPanel/RightSidebar';
+import { RoomMembersPanel } from '../components/spaces/chat/rightPanel/RoomMembersPanel';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { useUpdateMessage } from '../hooks/useMessages';
 import { useShouldUseMirroredBackground, useBackgroundSizing } from '../hooks/useWindowSize';
+import { useChatSettingsSync } from '../hooks/useChatSettingsSync';
+import { useRoomSettings } from '../hooks/useSettings';
+import { DEFAULT_ROOM_SETTINGS } from '@4space/shared/src/types/chatSettings';
+import { hasPermission, type MemberRole } from '@4space/shared/src/types/permissions';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
 type RightSidebarTab = 'settings' | 'metadata' | 'metrics' | 'media' | 'links' | 'customization';
-type OverlayView = 'search' | 'pins' | 'call' | null;
+type RightPanelView = 'home' | 'members' | 'search' | 'keep' | 'saved' | 'call';
 
 export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  useChatSettingsSync();
 
   // Handle missing space ID
   if (!spaceId) {
@@ -75,6 +84,19 @@ export function SpaceChatView() {
   const chatSettings = useChatSettingsStore();
   const ambientLighting = useChatSettingsStore((state) => state.ambientLighting);
   const ambientIntensity = useChatSettingsStore((state) => state.ambientIntensity);
+  const {
+    showAvatars,
+    showUsernames,
+    showTimestamps,
+    showReadReceipts,
+    showMessageStatus,
+    autoScrollToBottom,
+    groupMessages,
+    messageAnimations,
+    reduceAnimations,
+    pinImportantMessages,
+    showTypingIndicator,
+  } = useChatSettingsStore();
 
   // Determine if we should use mirrored backgrounds for seamless stitching
   const shouldUseMirror = useShouldUseMirroredBackground();
@@ -137,8 +159,9 @@ export function SpaceChatView() {
   // Sidebar states
   const [leftSidebarTab, setLeftSidebarTab] = useState<LeftSidebarTab>('rooms');
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('settings');
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('home');
+  const [callMode, setCallMode] = useState<'voice' | 'video'>('voice');
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
-  const [overlayView, setOverlayView] = useState<OverlayView>(null);
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
 
   // Space categories state (shared between settings and room creation)
@@ -152,17 +175,27 @@ export function SpaceChatView() {
 
   // Fetch space data
   const { data: space, isLoading: loadingSpace } = useSpace(spaceId);
+  const { data: spaceMembers = [] } = useSpaceMembers(spaceId);
   
   // Fetch rooms for this space
   const { data: rooms = [], isLoading: loadingRooms } = useSpaceRooms(spaceId);
   
   // Fetch selected room data
   const { data: selectedRoom } = useRoom(selectedRoomId);
+  const { data: roomSettingsData } = useRoomSettings(selectedRoomId);
+  const roomSettingsDataResolved = roomSettingsData || DEFAULT_ROOM_SETTINGS;
 
   // Get settings for current room (after room data is available)
   const roomCategory = selectedRoom?.category || 'General';
   const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId, roomCategory);
   const { theme } = roomSettings;
+
+  const membershipRole = (spaceMembers.find((member) => member.user_id === user?.id)?.role || 'viewer') as MemberRole;
+  const isOwner = !!space?.owner_id && space.owner_id === user?.id;
+  const currentUserRole = (isOwner ? 'owner' : membershipRole) as MemberRole;
+  const canManageSpaceSettings = hasPermission(currentUserRole, 'canUpdateSpaceSettings');
+  const canManageRoomSettings = ['owner', 'admin', 'editor'].includes(currentUserRole);
+  const canModerateRoom = ['owner', 'admin'].includes(currentUserRole);
 
   // Fetch room members
   const { data: roomMembers = [] } = useRoomMembers(selectedRoomId);
@@ -469,6 +502,9 @@ const handleSendMessage = useCallback((
   }, [hasNextPage, isFetchingNextPage]);
 
   const onlineCount = Array.from(onlineUsers.values()).filter((u: any) => u.status === 'online').length;
+  const memberCount = roomMembers.length;
+  const inactiveCount = Math.max(memberCount - onlineCount, 0);
+
 
   if (loadingSpace) {
     return (
@@ -566,6 +602,7 @@ return (
           onOpenSettings={() => setShowGeneralSettings(!showGeneralSettings)}
           onOpenCreateRoomModal={() => setShowCreateRoomModal(true)}
           showGeneralSettings={showGeneralSettings}
+          canManageSpaceSettings={canManageSpaceSettings}
           categories={spaceCategories}
           onCategoriesChange={setSpaceCategoriesState}
           theme={theme}
@@ -643,6 +680,21 @@ return (
               fontSize={roomSettings.fontSize}
               messageDensity={roomSettings.messageDensity}
               typingUsers={typingUsers}
+              showAvatars={showAvatars}
+              showUsernames={showUsernames}
+              showTimestamps={showTimestamps}
+              showReadReceipts={showReadReceipts}
+              showMessageStatus={showMessageStatus}
+              enableMessageReactions={roomSettingsDataResolved.enableMessageReactions}
+              enableMessageReplies={roomSettingsDataResolved.enableMessageReplies}
+              enableMessageForwarding={roomSettingsDataResolved.enableMessageForwarding}
+              allowMessageEditing={roomSettingsDataResolved.allowMessageEditing}
+              allowMessageDeletion={roomSettingsDataResolved.allowMessageDeletion}
+              allowMessagePinning={pinImportantMessages}
+              groupMessages={groupMessages}
+              autoScrollToBottom={autoScrollToBottom}
+              messageAnimations={messageAnimations}
+              reduceAnimations={reduceAnimations}
             />
 
           </div>
@@ -651,13 +703,22 @@ return (
           <div className="flex-shrink-0">
             <MessageInput
               onSend={handleSendMessage}
-              onTyping={sendTypingIndicator}
-              onStopTyping={stopTyping}
+              onTyping={() => {
+                if (showTypingIndicator) {
+                  sendTypingIndicator();
+                }
+              }}
+              onStopTyping={() => {
+                if (showTypingIndicator) {
+                  stopTyping();
+                }
+              }}
               replyTo={replyTo}
               onCancelReply={() => setReplyTo(null)}
               editingMessage={editingMessage}
               onCancelEdit={() => setEditingMessage(null)}
               placeholder={`Message #${selectedRoom?.name || 'room'}...`}
+              allowFileUploads={roomSettingsDataResolved.allowFileUploads}
             />
           </div>
         </>
@@ -686,115 +747,142 @@ return (
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (
         <div className="flex-shrink-0 p-4 space-y-3">
-          {/* Action Islands - Your Original Beautiful UI */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
+              {
+                icon: faHouse,
+                label: 'Home',
+                glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25',
+                borderClass: 'border-cyan-500/30',
+                textClass: 'text-cyan-400',
+                action: 'home',
+              },
+              {
+                icon: faUsers,
+                label: 'Members',
+                glowClass: 'from-purple-500/25 via-purple-500/20 to-purple-500/25',
+                borderClass: 'border-purple-500/30',
+                textClass: 'text-purple-400',
+                count: onlineCount,
+                action: 'members',
+              },
               { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400', action: 'search' },
-              { icon: faUsers, label: 'Members', glowClass: 'from-purple-500/25 via-purple-500/20 to-purple-500/25', borderClass: 'border-purple-500/30', textClass: 'text-purple-400', count: onlineCount },
               { icon: faPhone, label: 'Call', glowClass: 'from-green-500/25 via-green-500/20 to-green-500/25', borderClass: 'border-green-500/30', textClass: 'text-green-400', action: 'call' },
-              { icon: faVideo, label: 'Video', glowClass: 'from-red-500/25 via-red-500/20 to-red-500/25', borderClass: 'border-red-500/30', textClass: 'text-red-400' },
-              { icon: faThumbtack, label: 'Pinned', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'pins' },
+              { icon: faVideo, label: 'Video', glowClass: 'from-red-500/25 via-red-500/20 to-red-500/25', borderClass: 'border-red-500/30', textClass: 'text-red-400', action: 'video' },
+              { icon: faThumbtack, label: 'Keep', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'keep' },
+              { icon: faBookmark, label: 'Saved', glowClass: 'from-amber-500/25 via-amber-500/20 to-amber-500/25', borderClass: 'border-amber-500/30', textClass: 'text-amber-400', action: 'saved' },
               { icon: faCog, label: 'Settings', glowClass: 'from-gray-500/25 via-gray-500/20 to-gray-500/25', borderClass: 'border-gray-500/30', textClass: 'text-gray-400', action: 'settings' },
-            ].map(({ icon, label, glowClass, borderClass, textClass, count, action }) => (
-              <motion.div
-                key={label}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative group/btn"
-              >
-                <div className={`absolute -inset-[1px] bg-gradient-to-r ${glowClass} rounded-xl blur-sm opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
-                <div className={`absolute inset-0 rounded-xl border ${borderClass} opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
-                <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover/btn:opacity-100 blur-2xl transition-all duration-500" />
-                
-                <button
-                  onClick={() => {
-                    if (action === 'search') setOverlayView('search');
-                    else if (action === 'pins') setOverlayView('pins');
-                    else if (action === 'call') setOverlayView('call');
-                    else if (action === 'settings') setRightSidebarTab('settings');
-                  }}
-                  className={`relative w-10 h-10 rounded-xl backdrop-blur-xl bg-black/80 hover:bg-black/90 flex items-center justify-center transition-all shadow-lg shadow-black/30 ${textClass}`}
-                  title={label}
+            ].map(({ icon, label, glowClass, borderClass, textClass, count, action }) => {
+              const isActive = (action === 'home' && rightPanelView === 'home') || (action === 'members' && rightPanelView === 'members');
+              return (
+                <motion.div
+                  key={label}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative group/btn"
                 >
-                  <FontAwesomeIcon icon={icon} className="text-sm" />
-                  {count !== undefined && count > 0 && (
-                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-cyan-500 text-white text-[10px] font-bold">
-                      {count}
-                    </span>
+                  <div className={`absolute -inset-[1px] bg-gradient-to-r ${glowClass} rounded-xl blur-sm opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
+                  <div className={`absolute inset-0 rounded-xl border ${borderClass} opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
+                  <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover/btn:opacity-100 blur-2xl transition-all duration-500" />
+                  {isActive && (
+                    <div className={`absolute -inset-[1px] rounded-xl border ${borderClass}`} />
                   )}
-                </button>
-              </motion.div>
-            ))}
+                  <button
+                    onClick={() => {
+                      if (action === 'home') setRightPanelView('home');
+                      else if (action === 'members') setRightPanelView('members');
+                      else if (action === 'search') setRightPanelView('search');
+                      else if (action === 'keep') setRightPanelView('keep');
+                      else if (action === 'saved') setRightPanelView('saved');
+                      else if (action === 'call') {
+                        setCallMode('voice');
+                        setRightPanelView('call');
+                      } else if (action === 'video') {
+                        setCallMode('video');
+                        setRightPanelView('call');
+                      }
+                      else if (action === 'settings') {
+                        setRightPanelView('home');
+                        setRightSidebarTab('settings');
+                      }
+                    }}
+                    className={`relative w-10 h-10 rounded-xl backdrop-blur-xl bg-black/80 hover:bg-black/90 flex items-center justify-center transition-all shadow-lg shadow-black/30 ${textClass}`}
+                    title={label}
+                  >
+                    <FontAwesomeIcon icon={icon} className="text-sm" />
+                    {count !== undefined && count > 0 && (
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-cyan-500 text-white text-[10px] font-bold">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                </motion.div>
+              );
+            })}
           </div>
-
         </div>
       )}
 
       {/* Right Sidebar Below */}
       <div className="flex-1 overflow-hidden">
-        <RightSidebar
-          activeTab={rightSidebarTab}
-          onTabChange={setRightSidebarTab}
-          theme={theme}
-          onThemeChange={(newTheme, roomId, category) => useChatSettingsStore.getState().setTheme(newTheme, roomId, category)}
-          messages={messages}
-          roomMembers={roomMembers}
-          onlineUsers={onlineUsers}
-          selectedRoom={selectedRoom}
-          selectedRoomId={selectedRoomId}
-          spaceId={spaceId}
-          getAccentFocusClass={getAccentFocusClass}
-        />
+        {rightPanelView === 'members' ? (
+          <RoomMembersPanel
+            roomMembers={roomMembers}
+            onlineUsers={onlineUsers}
+            onlineCount={onlineCount}
+            inactiveCount={inactiveCount}
+          />
+        ) : rightPanelView === 'search' ? (
+          <RoomSearchPanel
+            roomId={selectedRoomId}
+            onScrollToMessage={(messageId) => {
+              const element = document.getElementById(`message-${messageId}`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          />
+        ) : rightPanelView === 'keep' ? (
+          <PinnedMessagesPanel
+            pinnedMessages={messages.filter(m => m.is_pinned)}
+            onUnpin={(messageId) => handlePinMessage(messageId, false)}
+            onScrollToMessage={(messageId) => {
+              const element = document.getElementById(`message-${messageId}`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          />
+        ) : rightPanelView === 'saved' ? (
+          <BookmarkedMessagesPanel
+            spaceId={spaceId}
+            roomId={selectedRoomId}
+            onScrollToMessage={(messageId) => {
+              const element = document.getElementById(`message-${messageId}`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          />
+        ) : rightPanelView === 'call' ? (
+          <RoomCallPanel
+            roomName={selectedRoom?.name}
+            mode={callMode}
+            onModeChange={setCallMode}
+          />
+        ) : (
+          <RightSidebar
+            activeTab={rightSidebarTab}
+            onTabChange={setRightSidebarTab}
+            theme={theme}
+            onThemeChange={(newTheme, roomId, category) => useChatSettingsStore.getState().setTheme(newTheme, roomId, category)}
+            messages={messages}
+            roomMembers={roomMembers}
+            onlineUsers={onlineUsers}
+            selectedRoom={selectedRoom}
+            selectedRoomId={selectedRoomId}
+            spaceId={spaceId}
+            canManageRoomSettings={canManageRoomSettings}
+            canModerateRoom={canModerateRoom}
+            getAccentFocusClass={getAccentFocusClass}
+          />
+        )}
       </div>
     </motion.div>
-
-    {/* Overlay Views */}
-    <AnimatePresence>
-      {overlayView === 'search' && (
-        <SearchMessages
-          roomId={selectedRoomId}
-          onClose={() => setOverlayView(null)}
-        />
-      )}
-      
-      {overlayView === 'pins' && (
-        <PinnedMessages
-          pinnedMessages={messages.filter(m => m.is_pinned)}
-          onClose={() => setOverlayView(null)}
-          onUnpin={(messageId) => handlePinMessage(messageId, false)}
-          onScrollToMessage={(messageId) => {
-            const element = document.getElementById(`message-${messageId}`);
-            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setOverlayView(null);
-          }}
-        />
-      )}
-      
-      {overlayView === 'call' && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="absolute inset-0 bg-zinc-950/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center"
-        >
-          <button
-            onClick={() => setOverlayView(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 flex items-center justify-center transition-colors"
-          >
-            <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
-          </button>
-          <FontAwesomeIcon icon={faPhone} className="text-6xl text-green-400 mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Voice Call</h2>
-          <p className="text-gray-400 mb-6">Call feature coming soon</p>
-          <button
-            onClick={() => setOverlayView(null)}
-            className="px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl text-white font-medium transition-colors"
-          >
-            Start Call (Coming Soon)
-          </button>
-        </motion.div>
-      )}
-    </AnimatePresence>
 
     <CreateRoomModal
       isOpen={showCreateRoomModal}
@@ -805,6 +893,3 @@ return (
   </div>
 );
 }
-
-
-

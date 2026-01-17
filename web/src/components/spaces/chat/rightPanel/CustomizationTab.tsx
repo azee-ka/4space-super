@@ -1,7 +1,7 @@
 // Comprehensive Customization Tab Component - FIXED VERSION
 // web/src/components/spaces/chat/CustomizationTab.tsx
 
-import { useRef, useCallback, memo, useState, useEffect } from 'react';
+import { useRef, useCallback, memo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -78,18 +78,17 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
     setApplyToAllRooms,
     applyToCategory,
     setApplyToCategory,
+    aiThemeSuggestions,
+    dynamicTimeTheme,
+    themeSync,
+    advancedAnimations,
+    accessibilityMode,
+    performanceMode,
+    soundThemes,
+    bubbleEffects,
+    themeSharing,
+    updateSettings,
   } = useChatSettingsStore();
-
-  // Revolutionary new settings
-  const [aiThemeSuggestions, setAiThemeSuggestions] = useState(false);
-  const [dynamicTimeTheme, setDynamicTimeTheme] = useState(false);
-  const [themeSync, setThemeSync] = useState(false);
-  const [advancedAnimations, setAdvancedAnimations] = useState(true);
-  const [accessibilityMode, setAccessibilityMode] = useState(false);
-  const [performanceMode, setPerformanceMode] = useState(false);
-  const [soundThemes, setSoundThemes] = useState(false);
-  const [bubbleEffects, setBubbleEffects] = useState(true);
-  const [themeSharing, setThemeSharing] = useState(false);
 
   // UI state for which category tab is selected (for display only, doesn't change theme)
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<BackgroundType>(theme.backgroundType);
@@ -938,7 +937,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={aiThemeSuggestions}
-                  onToggle={setAiThemeSuggestions}
+                  onToggle={(value) => updateSettings({ aiThemeSuggestions: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -969,7 +968,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={dynamicTimeTheme}
-                  onToggle={setDynamicTimeTheme}
+                  onToggle={(value) => updateSettings({ dynamicTimeTheme: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1006,7 +1005,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               </div>
               <ToggleSwitch
                 enabled={themeSync}
-                onToggle={setThemeSync}
+                onToggle={(value) => updateSettings({ themeSync: value })}
                 accentColor={theme.accentColor}
               />
             </div>
@@ -1034,7 +1033,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={advancedAnimations}
-                  onToggle={setAdvancedAnimations}
+                  onToggle={(value) => updateSettings({ advancedAnimations: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1069,7 +1068,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={accessibilityMode}
-                  onToggle={setAccessibilityMode}
+                  onToggle={(value) => updateSettings({ accessibilityMode: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1098,7 +1097,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={performanceMode}
-                  onToggle={setPerformanceMode}
+                  onToggle={(value) => updateSettings({ performanceMode: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1127,7 +1126,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={soundThemes}
-                  onToggle={setSoundThemes}
+                  onToggle={(value) => updateSettings({ soundThemes: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1169,7 +1168,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={bubbleEffects}
-                  onToggle={setBubbleEffects}
+                  onToggle={(value) => updateSettings({ bubbleEffects: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
@@ -1216,7 +1215,7 @@ export function CustomizationTab({ theme, onThemeChange, roomId, roomCategory }:
               <div className="flex-shrink-0">
                 <ToggleSwitch
                   enabled={themeSharing}
-                  onToggle={setThemeSharing}
+                  onToggle={(value) => updateSettings({ themeSharing: value })}
                   accentColor={theme.accentColor}
                 />
               </div>
