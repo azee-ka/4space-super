@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 // Re-export the working realtime chat hook
 export { useRealtimeChat } from '@4space/shared/src/hooks/useRealtimeChat';
+export { useRealtimeConversation } from '@4space/shared/src/hooks/useRealtimeConversation';
 
 // Helper to use with web supabase client
 export const createRealtimeHook = () => supabase;
