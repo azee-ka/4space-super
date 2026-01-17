@@ -77,3 +77,74 @@ export function isSingleEmoji(text: string): boolean {
   const emojiRegex = /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u;
   return emojiRegex.test(trimmed) && trimmed.length <= 3;
 }
+
+export function calculateAverageResponseTime(messages: any[]): number {
+  if (messages.length < 2) return 0;
+
+  let totalResponseTime = 0;
+  let responseCount = 0;
+
+  // Group messages by user
+  const messagesByUser: { [key: string]: any[] } = {};
+  messages.forEach(msg => {
+    if (!messagesByUser[msg.user_id]) {
+      messagesByUser[msg.user_id] = [];
+    }
+    messagesByUser[msg.user_id].push(msg);
+  });
+
+  // Calculate response times between different users
+  Object.values(messagesByUser).forEach(userMessages => {
+    userMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    for (let i = 1; i < userMessages.length; i++) {
+      const prevMsg = userMessages[i - 1];
+      const currMsg = userMessages[i];
+      const timeDiff = new Date(currMsg.created_at).getTime() - new Date(prevMsg.created_at).getTime();
+
+      // Only count responses within reasonable time (under 24 hours)
+      if (timeDiff < 24 * 60 * 60 * 1000) {
+        totalResponseTime += timeDiff / (1000 * 60); // Convert to minutes
+        responseCount++;
+      }
+    }
+  });
+
+  return responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
+}
+
+export function calculateConversationAge(conversation?: any): number {
+  if (!conversation?.created_at) return 0;
+  const created = new Date(conversation.created_at).getTime();
+  const now = Date.now();
+  return Math.floor((now - created) / (1000 * 60 * 60 * 24));
+}
+
+export function calculateActivityScore(messages: any[], conversation?: any): string {
+  if (!conversation || messages.length === 0) return '0/10';
+
+  const age = calculateConversationAge(conversation);
+  const avgDaily = messages.length / Math.max(1, age);
+  const participants = conversation.participants?.length || 1;
+
+  // Simple scoring algorithm
+  let score = 0;
+  if (avgDaily >= 5) score += 3;
+  else if (avgDaily >= 2) score += 2;
+  else if (avgDaily >= 0.5) score += 1;
+
+  if (participants >= 3) score += 2;
+  else if (participants >= 2) score += 1;
+
+  if (messages.length >= 50) score += 2;
+  else if (messages.length >= 20) score += 1;
+
+  // Recent activity bonus
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage) {
+    const daysSinceLast = (Date.now() - new Date(lastMessage.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceLast <= 1) score += 2;
+    else if (daysSinceLast <= 7) score += 1;
+  }
+
+  return `${Math.min(score, 10)}/10`;
+}

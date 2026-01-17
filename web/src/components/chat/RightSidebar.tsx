@@ -1,6 +1,7 @@
 // RightSidebar Component - Extracted from GeneralChat.tsx
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useChatSettingsStore } from '../../store/chatSettingsStore';
 import {
   faChartLine, faImages, faLink, faPalette, faSlidersH,
   faEye, faClock, faUser, faHashtag, faCheckCircle,
@@ -9,13 +10,16 @@ import {
   faBolt, faRocket, faDownload,
   faRobot, faBrain, faCalendar, faFire,
   faHashtag as faHashtagAlt, faUsers as faUsersAlt, faSmile, faFileAlt, faHeart, faReply,
-  faHistory, faExternalLinkAlt
+  faHistory, faExternalLinkAlt, faTimes, faBookmark, faThumbtack
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { CustomizationTab } from '../spaces/chat/rightPanel/CustomizationTab';
 import { formatRelativeTime } from './utils/formatDate';
+import { calculateAverageResponseTime, calculateConversationAge, calculateActivityScore } from './utils/chatUtils';
+import { SettingsService } from '@4space/shared/src/services/settings.service';
+import { supabase } from '../../lib/supabase';
 
-type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'customization';
+type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'saved' | 'kept' | 'customization';
 
 interface Message {
   id: string;
@@ -57,6 +61,8 @@ interface RightSidebarProps {
   onlineUsers: Map<string, any>;
   mediaItems: any[];
   linkItems: any[];
+  showTopButtons?: boolean;
+  onClose?: () => void;
 }
 
 export function RightSidebar({
@@ -69,17 +75,135 @@ export function RightSidebar({
   onlineUsers,
   mediaItems,
   linkItems,
+  showTopButtons = false,
+  onClose,
 }: RightSidebarProps) {
+  const {
+    showAvatars,
+    showTimestamps,
+    showReadReceipts,
+    showLinkPreviews,
+    formattingButtonsEnabled,
+    messageAnimations,
+    autoDeleteMessages,
+    messageHistory,
+  } = useChatSettingsStore();
+
+  const settingsService = new SettingsService(supabase);
+
+  const handleToggleShowAvatars = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ showAvatars: enabled });
+    } catch (error) {
+      console.error('Failed to update show avatars setting:', error);
+    }
+  };
+
+  const handleToggleShowTimestamps = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ showTimestamps: enabled });
+    } catch (error) {
+      console.error('Failed to update show timestamps setting:', error);
+    }
+  };
+
+  const handleToggleShowReadReceipts = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ showReadReceipts: enabled });
+    } catch (error) {
+      console.error('Failed to update show read receipts setting:', error);
+    }
+  };
+
+  const handleToggleFormattingButtons = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ formattingButtonsEnabled: enabled });
+    } catch (error) {
+      console.error('Failed to update formatting buttons setting:', error);
+    }
+  };
+
+  const handleToggleMessageAnimations = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ messageAnimations: enabled });
+    } catch (error) {
+      console.error('Failed to update message animations setting:', error);
+    }
+  };
+
+  const handleToggleShowLinkPreviews = async (enabled: boolean) => {
+    try {
+      await settingsService.updateUserChatSettings({ showLinkPreviews: enabled });
+    } catch (error) {
+      console.error('Failed to update show link previews setting:', error);
+    }
+  };
+
+  const handleAutoDeleteMessagesChange = async (value: string) => {
+    try {
+      await settingsService.updateUserChatSettings({ autoDeleteMessages: value as any });
+    } catch (error) {
+      console.error('Failed to update auto delete messages setting:', error);
+    }
+  };
+
+  const handleMessageHistoryChange = async (value: string) => {
+    try {
+      await settingsService.updateUserChatSettings({ messageHistory: value as any });
+    } catch (error) {
+      console.error('Failed to update message history setting:', error);
+    }
+  };
+
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'emerald' },
     { id: 'media', icon: faImages, label: 'Media', color: 'violet' },
     { id: 'links', icon: faLink, label: 'Links', color: 'rose' },
+    { id: 'saved', icon: faBookmark, label: 'Saved', color: 'amber' },
+    { id: 'kept', icon: faThumbtack, label: 'Kept', color: 'purple' },
     { id: 'customization', icon: faPalette, label: 'Theme', color: 'amber' },
     { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
   ];
 
   return (
     <div className="h-full flex flex-col w-80">
+      {/* Top Action Buttons */}
+      {showTopButtons && (
+        <div className="flex-shrink-0 px-4 py-3 border-b border-zinc-800/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {tabs.slice(0, 4).map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                    activeTab === tab.id
+                      ? `bg-${tab.color}-500/10 text-${tab.color}-400`
+                      : 'bg-zinc-900/50 text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                  }`}
+                  title={tab.label}
+                >
+                  <FontAwesomeIcon icon={tab.icon} className="text-sm" />
+                </motion.button>
+              ))}
+            </div>
+            {onClose && (
+              <motion.button
+                onClick={onClose}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-8 h-8 rounded-lg bg-zinc-900/50 hover:bg-zinc-800/50 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
+                title="Close Panel"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-sm" />
+              </motion.button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Horizontal Tabs - Fixed Overflow */}
       <div className="flex-shrink-0 pb-0 pt-0 pl-4 pr-4">
         <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 pl-1">
@@ -127,11 +251,11 @@ export function RightSidebar({
 
                 <div className="space-y-2">
                   {[
-                    { icon: faEye, label: 'Show avatars', sublabel: 'Display profile pictures', enabled: true, color: 'green' },
-                    { icon: faClock, label: 'Show timestamps', sublabel: 'Display message times', enabled: true, color: 'blue' },
-                    { icon: faUser, label: 'Show usernames', sublabel: 'Display sender names', enabled: true, color: 'purple' },
-                    { icon: faHashtag, label: 'Show message status', sublabel: 'Sent/read indicators', enabled: true, color: 'cyan' },
-                    { icon: faCheckCircle, label: 'Read receipts', sublabel: 'Show when messages are read', enabled: true, color: 'emerald' },
+                    { icon: faEye, label: 'Show avatars', sublabel: 'Display profile pictures', enabled: showAvatars, color: 'green', setter: handleToggleShowAvatars },
+                    { icon: faClock, label: 'Show timestamps', sublabel: 'Display message times', enabled: showTimestamps, color: 'blue', setter: handleToggleShowTimestamps },
+                    { icon: faUser, label: 'Show usernames', sublabel: 'Display sender names', enabled: formattingButtonsEnabled, color: 'purple', setter: handleToggleFormattingButtons },
+                    { icon: faHashtag, label: 'Show message status', sublabel: 'Sent/read indicators', enabled: showReadReceipts, color: 'cyan', setter: handleToggleShowReadReceipts },
+                    { icon: faCheckCircle, label: 'Read receipts', sublabel: 'Show when messages are read', enabled: showReadReceipts, color: 'emerald', setter: handleToggleShowReadReceipts },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="flex items-center gap-2.5">
@@ -143,7 +267,7 @@ export function RightSidebar({
                       </div>
                       <ToggleSwitch
                         enabled={item.enabled}
-                        onToggle={() => {}}
+                        onToggle={item.setter}
                         size="sm"
                         accentColor={theme.accentColor}
                       />
@@ -163,10 +287,10 @@ export function RightSidebar({
 
                 <div className="space-y-2">
                   {[
-                    { icon: faBell, label: 'Push notifications', sublabel: 'Browser notifications', enabled: true, color: 'orange' },
-                    { icon: faVolumeUp, label: 'Sound alerts', sublabel: 'Audio notifications', enabled: true, color: 'red' },
-                    { icon: faExclamationTriangle, label: 'Mention alerts', sublabel: '@ mentions highlight', enabled: true, color: 'yellow' },
-                    { icon: faMicrophone, label: 'Typing indicators', sublabel: 'Show typing status', enabled: true, color: 'pink' },
+                    { icon: faBell, label: 'Push notifications', sublabel: 'Browser notifications', enabled: showLinkPreviews, color: 'orange', setter: handleToggleShowLinkPreviews },
+                    { icon: faVolumeUp, label: 'Sound alerts', sublabel: 'Audio notifications', enabled: messageAnimations, color: 'red', setter: handleToggleMessageAnimations },
+                    { icon: faExclamationTriangle, label: 'Mention alerts', sublabel: '@ mentions highlight', enabled: showReadReceipts, color: 'yellow', setter: handleToggleShowReadReceipts },
+                    { icon: faMicrophone, label: 'Typing indicators', sublabel: 'Show typing status', enabled: showTimestamps, color: 'pink', setter: handleToggleShowTimestamps },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="flex items-center gap-2.5">
@@ -178,7 +302,7 @@ export function RightSidebar({
                       </div>
                       <ToggleSwitch
                         enabled={item.enabled}
-                        onToggle={() => {}}
+                        onToggle={item.setter}
                         size="sm"
                         accentColor={theme.accentColor}
                       />
@@ -206,8 +330,8 @@ export function RightSidebar({
                       </div>
                     </div>
                     <select
-                      value="off"
-                      onChange={() => {}}
+                      value={autoDeleteMessages}
+                      onChange={(e) => handleAutoDeleteMessagesChange(e.target.value)}
                       className="px-2 py-1 bg-zinc-700/50 border border-zinc-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value="off">Off</option>
@@ -226,8 +350,8 @@ export function RightSidebar({
                       </div>
                     </div>
                     <select
-                      value="forever"
-                      onChange={() => {}}
+                      value={messageHistory}
+                      onChange={(e) => handleMessageHistoryChange(e.target.value)}
                       className="px-2 py-1 bg-zinc-700/50 border border-zinc-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
                     >
                       <option value="forever">Forever</option>
@@ -352,25 +476,33 @@ export function RightSidebar({
 
               {/* Main Stats */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-4 bg-zinc-800/50 rounded-xl">
-                  <FontAwesomeIcon icon={faHashtagAlt} className="text-orange-400 text-xl mb-2" />
-                  <p className="text-2xl font-bold text-white">{messages.length}</p>
-                  <p className="text-xs text-gray-500">Total Messages</p>
+                <div className="p-3 bg-zinc-800/50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FontAwesomeIcon icon={faHashtagAlt} className="text-orange-400 text-sm" />
+                    <span className="text-xs text-gray-400">Messages</span>
+                  </div>
+                  <p className="text-lg font-bold text-white">{messages.length}</p>
                 </div>
-                <div className="p-4 bg-zinc-800/50 rounded-xl">
-                  <FontAwesomeIcon icon={faUsersAlt} className="text-blue-400 text-xl mb-2" />
-                  <p className="text-2xl font-bold text-white">{selectedConversation?.participants?.length || 0}</p>
-                  <p className="text-xs text-gray-500">Participants</p>
+                <div className="p-3 bg-zinc-800/50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FontAwesomeIcon icon={faUsersAlt} className="text-blue-400 text-sm" />
+                    <span className="text-xs text-gray-400">Participants</span>
+                  </div>
+                  <p className="text-lg font-bold text-white">{selectedConversation?.participants?.length || 0}</p>
                 </div>
-                <div className="p-4 bg-zinc-800/50 rounded-xl">
-                  <FontAwesomeIcon icon={faImages} className="text-green-400 text-xl mb-2" />
-                  <p className="text-2xl font-bold text-white">{mediaItems.length}</p>
-                  <p className="text-xs text-gray-500">Media Files</p>
+                <div className="p-3 bg-zinc-800/50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FontAwesomeIcon icon={faImages} className="text-green-400 text-sm" />
+                    <span className="text-xs text-gray-400">Media Files</span>
+                  </div>
+                  <p className="text-lg font-bold text-white">{mediaItems.length}</p>
                 </div>
-                <div className="p-4 bg-zinc-800/50 rounded-xl">
-                  <FontAwesomeIcon icon={faLink} className="text-purple-400 text-xl mb-2" />
-                  <p className="text-2xl font-bold text-white">{linkItems.length}</p>
-                  <p className="text-xs text-gray-500">Shared Links</p>
+                <div className="p-3 bg-zinc-800/50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FontAwesomeIcon icon={faLink} className="text-purple-400 text-sm" />
+                    <span className="text-xs text-gray-400">Shared Links</span>
+                  </div>
+                  <p className="text-lg font-bold text-white">{linkItems.length}</p>
                 </div>
               </div>
 
@@ -383,28 +515,28 @@ export function RightSidebar({
                       <FontAwesomeIcon icon={faChartLine} className="text-cyan-400 text-sm" />
                       <span className="text-xs text-gray-400">Avg/Day</span>
                     </div>
-                    <p className="text-lg font-bold text-white">{messages.length > 0 ? Math.round(messages.length / 7) : 0}</p>
+                    <p className="text-lg font-bold text-white">{messages.length > 0 ? Math.round(messages.length / Math.max(1, Math.ceil((Date.now() - (messages[0]?.created_at ? new Date(messages[0].created_at).getTime() : Date.now())) / (1000 * 60 * 60 * 24)))) : 0}</p>
                   </div>
                   <div className="p-3 bg-zinc-800/50 rounded-xl">
                     <div className="flex items-center gap-2 mb-1">
                       <FontAwesomeIcon icon={faClock} className="text-amber-400 text-sm" />
                       <span className="text-xs text-gray-400">Response Time</span>
                     </div>
-                    <p className="text-lg font-bold text-white">~2m</p>
+                    <p className="text-lg font-bold text-white">~{calculateAverageResponseTime(messages)}m</p>
                   </div>
                   <div className="p-3 bg-zinc-800/50 rounded-xl">
                     <div className="flex items-center gap-2 mb-1">
                       <FontAwesomeIcon icon={faFire} className="text-red-400 text-sm" />
-                      <span className="text-xs text-gray-400">Streak</span>
+                      <span className="text-xs text-gray-400">Conversation Age</span>
                     </div>
-                    <p className="text-lg font-bold text-white">12 days</p>
+                    <p className="text-lg font-bold text-white">{calculateConversationAge(selectedConversation)} days</p>
                   </div>
                   <div className="p-3 bg-zinc-800/50 rounded-xl">
                     <div className="flex items-center gap-2 mb-1">
                       <FontAwesomeIcon icon={faHashtag} className="text-yellow-400 text-sm" />
-                      <span className="text-xs text-gray-400">Engagement</span>
+                      <span className="text-xs text-gray-400">Activity Score</span>
                     </div>
-                    <p className="text-lg font-bold text-white">94%</p>
+                    <p className="text-lg font-bold text-white">{calculateActivityScore(messages, selectedConversation)}</p>
                   </div>
                 </div>
               </div>
@@ -516,6 +648,28 @@ export function RightSidebar({
                   <p className="text-sm text-gray-400">No links shared yet</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'saved' && (
+            <div className="p-4 space-y-4">
+              <h3 className="text-sm font-bold text-white mb-3">Saved Items</h3>
+              <div className="text-center py-8">
+                <FontAwesomeIcon icon={faBookmark} className="text-amber-400 text-3xl mb-3" />
+                <p className="text-zinc-400">No saved items yet</p>
+                <p className="text-sm text-zinc-500 mt-1">Items you save will appear here</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'kept' && (
+            <div className="p-4 space-y-4">
+              <h3 className="text-sm font-bold text-white mb-3">Kept Items</h3>
+              <div className="text-center py-8">
+                <FontAwesomeIcon icon={faThumbtack} className="text-purple-400 text-3xl mb-3" />
+                <p className="text-zinc-400">No kept items yet</p>
+                <p className="text-sm text-zinc-500 mt-1">Items you keep will appear here</p>
+              </div>
             </div>
           )}
 

@@ -6,10 +6,10 @@ import {
   faComments, faSearch, faHashtag, faUsers, faStar, faBellSlash,
   faChartLine, faBolt, faClock, faStickyNote, faPlus, faTasks,
   faCalendar, faFileLines, faChevronRight, faHistory, faCheck,
-  faLightbulb, faTag, faThumbtack, faBrain, faReply, faExclamationTriangle
+  faLightbulb, faTag, faThumbtack, faBrain, faReply, faUser
 } from '@fortawesome/free-solid-svg-icons';
 import { formatRelativeTime } from './utils/formatDate';
-import { stripHtml } from './utils/validation';
+import { getConversationTitle, getConversationSubtitle } from './utils/chatUtils';
 
 type LeftSidebarTab = 'conversations' | 'metrics' | 'productivity' | 'reminders' | 'notes';
 type FilterMode = 'all' | 'unread' | 'favorites' | 'muted';
@@ -105,7 +105,7 @@ export function LeftSidebar({
       if (filterMode === 'favorites' && !favorites.has(conversation.id)) return false;
       if (filterMode === 'muted' && !muted.has(conversation.id)) return false;
       if (!searchQuery.trim()) return true;
-      const title = conversation.is_group ? conversation.name : conversation.participants?.find(p => p.user_id !== user?.id)?.user?.display_name || conversation.participants?.find(p => p.user_id !== user?.id)?.user?.username || 'DM';
+      const title = getConversationTitle(conversation, user?.id);
       return title.toLowerCase().includes(searchQuery.toLowerCase());
     });
   }, [conversations, filterMode, searchQuery, favorites, muted]);
@@ -171,12 +171,10 @@ export function LeftSidebar({
             )}
             {filteredConversations.map((conversation) => {
               const isActive = conversation.id === selectedConversationId;
-              const title = conversation.is_group ? conversation.name : conversation.participants?.find(p => p.user_id !== user?.id)?.user?.display_name || conversation.participants?.find(p => p.user_id !== user?.id)?.user?.username || 'DM';
-              const subtitle = conversation.last_message?.content ? stripHtml(conversation.last_message.content) : 'No messages yet';
+              const title = getConversationTitle(conversation, user?.id);
+              const subtitle = getConversationSubtitle(conversation, user?.id);
               const lastTime = formatRelativeTime(conversation.last_message_at || conversation.updated_at || conversation.created_at);
               const unreadCount = conversation.unread_count || 0;
-              const primaryParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
-              const isOnline = primaryParticipant ? onlineUsers.has(primaryParticipant.user_id) : false;
               const isFavorite = favorites.has(conversation.id);
               const isMuted = muted.has(conversation.id);
 
@@ -184,112 +182,65 @@ export function LeftSidebar({
                 <motion.button
                   key={conversation.id}
                   onClick={() => onSelectConversation(conversation.id)}
-                  whileHover={{ scale: 1.01, x: 2 }}
+                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 relative ${
-                    isActive
-                      ? 'bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border-r-4 border-cyan-400 shadow-lg'
-                      : 'hover:bg-gradient-to-r hover:from-zinc-800/80 hover:to-zinc-700/40'
+                  className={`w-full p-4 rounded-xl bg-black/20 hover:bg-black/30 transition-colors ${
+                    isActive ? 'border border-cyan-500/30 bg-black/40' : ''
                   }`}
                 >
-                  <div className="relative flex-shrink-0">
-                    {/* Main Avatar */}
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg ${
-                      conversation.is_group
-                        ? 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600'
-                        : 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600'
-                    }`}>
-                      {conversation.is_group ? (
-                        <FontAwesomeIcon icon={faUsers} className="text-xl text-white" />
-                      ) : (
-                        <span className="text-xl font-black text-white">{(title[0] || 'U').toUpperCase()}</span>
-                      )}
-                    </div>
-
-                    {/* Online Status */}
-                    {isOnline && !conversation.is_group && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 border-3 border-zinc-900 shadow-lg flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        conversation.is_group
+                          ? 'bg-violet-500/10'
+                          : 'bg-emerald-500/10'
+                      }`}>
+                        <FontAwesomeIcon
+                          icon={conversation.is_group ? faUsers : faUser}
+                          className={`text-sm ${
+                            conversation.is_group ? 'text-violet-400' : 'text-emerald-400'
+                          }`}
+                        />
                       </div>
-                    )}
 
-                    {/* Typing Indicator */}
-                    {typingUsers.get(conversation.id)?.size > 0 && (
-                      <div className="absolute -bottom-1 -right-1 w-6 h-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 border-2 border-zinc-900 shadow-lg flex items-center justify-center">
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                          <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                          <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Status Badges */}
-                    <div className="absolute -top-1 -right-1 flex gap-1">
-                      {isFavorite && (
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 shadow-lg flex items-center justify-center">
-                          <FontAwesomeIcon icon={faStar} className="text-zinc-900 text-[8px]" />
-                        </div>
-                      )}
-                      {isMuted && (
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-r from-zinc-500 to-zinc-600 shadow-lg flex items-center justify-center">
-                          <FontAwesomeIcon icon={faBellSlash} className="text-zinc-200 text-[8px]" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <p className={`text-base font-bold truncate ${
-                          isActive ? 'text-cyan-200' : 'text-white'
-                        }`}>{title}</p>
-                        {typingUsers.get(conversation.id)?.size > 0 && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-blue-400 font-medium">
-                              {conversation.is_group ? `${Array.from(typingUsers.get(conversation.id) || []).slice(0, 2).join(', ')}${Array.from(typingUsers.get(conversation.id) || []).length > 2 ? '...' : ''} typing` : 'typing'}
-                            </span>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className={`text-sm font-medium truncate ${
+                            isActive ? 'text-cyan-300' : 'text-white'
+                          }`}>{title}</p>
+                          {isFavorite && (
+                            <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />
+                          )}
+                          {isMuted && (
+                            <FontAwesomeIcon icon={faBellSlash} className="text-zinc-500 text-xs" />
+                          )}
+                          {typingUsers.get(conversation.id)?.size > 0 && (
                             <div className="flex space-x-1">
                               <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
                               <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
                               <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${
-                          isActive ? 'text-cyan-300' : 'text-zinc-400'
-                        }`}>{lastTime}</span>
+                          )}
+                        </div>
+                        <p className={`text-xs truncate ${
+                          isActive ? 'text-zinc-300' : 'text-zinc-500'
+                        } ${typingUsers.get(conversation.id)?.size > 0 ? 'text-blue-300' : ''}`}>
+                          {typingUsers.get(conversation.id)?.size > 0 ? 'typing...' : subtitle}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate ${
-                        isActive ? 'text-zinc-300' : 'text-zinc-500'
-                      } ${typingUsers.get(conversation.id)?.size > 0 ? 'text-blue-300 font-medium' : ''}`}>
-                        {typingUsers.get(conversation.id)?.size > 0 ? 'typing...' : subtitle || ''}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {false && <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 text-xs" />}
-                        {unreadCount > 0 && (
-                          <div className={`px-2 py-1 ${
-                            isActive
-                              ? 'bg-cyan-400 text-cyan-900'
-                              : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
-                          } text-xs font-black rounded-full min-w-[22px] text-center shadow-lg`}>
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${
+                        isActive ? 'text-cyan-400' : 'text-zinc-400'
+                      }`}>{lastTime}</span>
+                      {unreadCount > 0 && (
+                        <div className={`px-2 py-1 bg-cyan-500 text-white text-xs font-bold rounded-full min-w-[22px] text-center`}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-cyan-400 to-blue-500 rounded-r-full"></div>
-                  )}
                 </motion.button>
               );
             })}

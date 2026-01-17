@@ -601,7 +601,7 @@ export function GeneralChat() {
         <RightSidebar
           activeTab={rightSidebarTab}
           onTabChange={setRightSidebarTab}
-                  theme={activeTheme}
+          theme={activeTheme}
           onThemeChange={setTheme}
           messages={normalizedMessages}
           selectedConversation={selectedConversation || undefined}
