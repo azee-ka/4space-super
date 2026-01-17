@@ -1,0 +1,247 @@
+/* Futuristic Call Window Styles */
+
+/* Neon glow effects */
+.call-window-neon {
+  box-shadow:
+    0 0 20px rgba(6, 182, 212, 0.1),
+    0 0 40px rgba(6, 182, 212, 0.05),
+    inset 0 0 60px rgba(6, 182, 212, 0.02);
+}
+
+.call-window-border {
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
+}
+
+/* Title bar with gradient */
+.call-title-bar {
+  background: linear-gradient(90deg, #0a0a0a 0%, #18181b 50%, #0a0a0a 100%);
+  border-bottom: 1px solid rgba(6, 182, 212, 0.15);
+  box-shadow: 0 2px 20px rgba(6, 182, 212, 0.05);
+}
+
+/* Active button glow */
+.btn-active-cyan {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  box-shadow:
+    0 0 20px rgba(6, 182, 212, 0.4),
+    0 0 40px rgba(6, 182, 212, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.btn-active-cyan:hover {
+  box-shadow:
+    0 0 30px rgba(6, 182, 212, 0.6),
+    0 0 60px rgba(6, 182, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-active-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+  box-shadow:
+    0 0 20px rgba(168, 85, 247, 0.4),
+    0 0 40px rgba(168, 85, 247, 0.2);
+}
+
+.btn-active-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow:
+    0 0 20px rgba(239, 68, 68, 0.4),
+    0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+.btn-active-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow:
+    0 0 20px rgba(16, 185, 129, 0.4),
+    0 0 40px rgba(16, 185, 129, 0.2);
+}
+
+/* Control buttons */
+.control-btn {
+  position: relative;
+  background: rgba(24, 24, 27, 0.8);
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+  background: rgba(39, 39, 42, 0.9);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+  transform: translateY(-1px);
+}
+
+.control-btn-active {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.2) 100%);
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow:
+    0 0 20px rgba(6, 182, 212, 0.3),
+    inset 0 0 20px rgba(6, 182, 212, 0.1);
+}
+
+/* Video containers */
+.video-container {
+  position: relative;
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.8) 0%, rgba(9, 9, 11, 0.8) 100%);
+  border: 1px solid rgba(63, 63, 70, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.video-container:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.15);
+}
+
+.video-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(6, 182, 212, 0.3) 50%, transparent 100%);
+}
+
+/* Speaking indicator pulse */
+@keyframes speaking-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+}
+
+.speaking-indicator {
+  animation: speaking-pulse 1.5s infinite;
+  border: 2px solid #10b981;
+}
+
+/* Recording pulse */
+@keyframes recording-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.recording-dot {
+  animation: recording-pulse 1.5s ease-in-out infinite;
+}
+
+/* Reaction float animation */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.reaction-float {
+  animation: float-up 3s ease-out forwards;
+}
+
+/* Hand raise bounce */
+@keyframes hand-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(-10deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(10deg);
+  }
+}
+
+.hand-raised {
+  animation: hand-bounce 0.6s ease-in-out infinite;
+}
+
+/* Sidebar */
+.call-sidebar {
+  background: linear-gradient(180deg, rgba(9, 9, 11, 0.98) 0%, rgba(0, 0, 0, 0.98) 100%);
+  border-left: 1px solid rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+/* Tab active state */
+.tab-active {
+  background: rgba(6, 182, 212, 0.1);
+  border-bottom: 2px solid #06b6d4;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
+/* Message bubble */
+.message-bubble {
+  background: rgba(24, 24, 27, 0.8);
+  border: 1px solid rgba(63, 63, 70, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Screen share presenter banner */
+.presenter-banner {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow:
+    0 4px 20px rgba(239, 68, 68, 0.4),
+    0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+/* Participant badge */
+.participant-badge {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.15) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Controls bar */
+.controls-bar {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.95) 0%, rgba(9, 9, 11, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%);
+  border-top: 1px solid rgba(6, 182, 212, 0.15);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+/* Layout mode toggle */
+.layout-toggle {
+  background: rgba(24, 24, 27, 0.6);
+  border-radius: 8px;
+  padding: 2px;
+  backdrop-filter: blur(10px);
+}
+
+/* Glow text */
+.glow-text-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+.glow-text-red {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+/* Minimized window */
+.minimized-window {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(6, 182, 212, 0.2);
+  backdrop-filter: blur(20px);
+}
+
+/* Smooth transitions */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

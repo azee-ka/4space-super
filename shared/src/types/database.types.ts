@@ -74,6 +74,202 @@ export type Database = {
           },
         ]
       }
+      call_history: {
+        Row: {
+          created_at: string
+          duration: number
+          ended_at: string
+          id: string
+          participants: Json
+          quality: string | null
+          room_id: string
+          room_name: string
+          session_id: string
+          started_at: string
+          type: string
+          user_id: string
+          was_host: boolean
+        }
+        Insert: {
+          created_at?: string
+          duration: number
+          ended_at: string
+          id: string
+          participants?: Json
+          quality?: string | null
+          room_id: string
+          room_name: string
+          session_id: string
+          started_at: string
+          type: string
+          user_id: string
+          was_host?: boolean
+        }
+        Update: {
+          created_at?: string
+          duration?: number
+          ended_at?: string
+          id?: string
+          participants?: Json
+          quality?: string | null
+          room_id?: string
+          room_name?: string
+          session_id?: string
+          started_at?: string
+          type?: string
+          user_id?: string
+          was_host?: boolean
+        }
+        Relationships: []
+      }
+      call_messages: {
+        Row: {
+          call_session_id: string | null
+          created_at: string
+          id: string
+          message: string
+          timestamp: string
+          type: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          call_session_id?: string | null
+          created_at?: string
+          id: string
+          message: string
+          timestamp?: string
+          type?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          call_session_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          timestamp?: string
+          type?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_messages_call_session_id_fkey"
+            columns: ["call_session_id"]
+            isOneToOne: false
+            referencedRelation: "call_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_reactions: {
+        Row: {
+          call_session_id: string | null
+          created_at: string
+          emoji: string
+          id: string
+          timestamp: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          call_session_id?: string | null
+          created_at?: string
+          emoji: string
+          id: string
+          timestamp?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          call_session_id?: string | null
+          created_at?: string
+          emoji?: string
+          id?: string
+          timestamp?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_reactions_call_session_id_fkey"
+            columns: ["call_session_id"]
+            isOneToOne: false
+            referencedRelation: "call_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_sessions: {
+        Row: {
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          guidelines: Json | null
+          host_id: string
+          host_name: string
+          id: string
+          is_active: boolean
+          is_recording: boolean
+          max_participants: number | null
+          participant_count: number
+          participants: Json
+          purpose: string | null
+          requires_approval: boolean
+          room_id: string
+          room_name: string
+          started_at: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          guidelines?: Json | null
+          host_id: string
+          host_name: string
+          id: string
+          is_active?: boolean
+          is_recording?: boolean
+          max_participants?: number | null
+          participant_count?: number
+          participants?: Json
+          purpose?: string | null
+          requires_approval?: boolean
+          room_id: string
+          room_name: string
+          started_at?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          guidelines?: Json | null
+          host_id?: string
+          host_name?: string
+          id?: string
+          is_active?: boolean
+          is_recording?: boolean
+          max_participants?: number | null
+          participant_count?: number
+          participants?: Json
+          purpose?: string | null
+          requires_approval?: boolean
+          room_id?: string
+          room_name?: string
+          started_at?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calls: {
         Row: {
           duration_seconds: number | null
@@ -969,6 +1165,56 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screen_share_sessions: {
+        Row: {
+          call_session_id: string | null
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          presenter_id: string
+          presenter_name: string
+          started_at: string
+          title: string
+          viewer_ids: Json | null
+        }
+        Insert: {
+          call_session_id?: string | null
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id: string
+          is_active?: boolean
+          presenter_id: string
+          presenter_name: string
+          started_at?: string
+          title: string
+          viewer_ids?: Json | null
+        }
+        Update: {
+          call_session_id?: string | null
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          presenter_id?: string
+          presenter_name?: string
+          started_at?: string
+          title?: string
+          viewer_ids?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screen_share_sessions_call_session_id_fkey"
+            columns: ["call_session_id"]
+            isOneToOne: false
+            referencedRelation: "call_sessions"
             referencedColumns: ["id"]
           },
         ]

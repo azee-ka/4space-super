@@ -980,6 +980,7 @@ return (
           />
         ) : rightPanelView === 'call' ? (
           <RoomCallPanel
+            roomId={selectedRoomId}
             roomName={selectedRoom?.name}
             mode={callMode}
             onModeChange={setCallMode}
