@@ -29,6 +29,44 @@ export class CallSessionService {
     this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   }
 
+  private static parseJsonArray<T>(value: unknown): T[] {
+    if (value == null) return [];
+    if (Array.isArray(value)) return value as T[];
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? (parsed as T[]) : [];
+      } catch (err) {
+        console.warn('[CallSession] Failed to parse JSON array field:', err);
+        return [];
+      }
+    }
+    return [];
+  }
+
+  static normalizeSessionRow(row: any): CallSession {
+    return {
+      id: row.id,
+      roomId: row.room_id,
+      roomName: row.room_name,
+      hostId: row.host_id,
+      hostName: row.host_name,
+      title: row.title,
+      description: row.description,
+      purpose: row.purpose,
+      guidelines: CallSessionService.parseJsonArray<string>(row.guidelines),
+      type: row.type,
+      startedAt: row.started_at ? new Date(row.started_at) : new Date(),
+      endedAt: row.ended_at ? new Date(row.ended_at) : undefined,
+      participantCount: row.participant_count,
+      participants: CallSessionService.parseJsonArray<string>(row.participants),
+      isRecording: row.is_recording,
+      isActive: row.is_active,
+      maxParticipants: row.max_participants,
+      requiresApproval: row.requires_approval,
+    };
+  }
+
   async createSession(data: {
     roomName: string;
     hostName: string;
@@ -88,11 +126,11 @@ export class CallSessionService {
         title: session.title,
         description: session.description,
         purpose: session.purpose,
-        guidelines: JSON.stringify(session.guidelines || []),
+        guidelines: session.guidelines || [],
         type: session.type,
         started_at: session.startedAt.toISOString(),
         participant_count: session.participantCount,
-        participants: JSON.stringify(session.participants),
+        participants: session.participants,
         is_recording: session.isRecording,
         is_active: session.isActive,
         max_participants: session.maxParticipants,
@@ -257,26 +295,7 @@ export class CallSessionService {
       }
 
       console.log('[CallSession] Found active sessions:', data?.length || 0, data);
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        roomId: row.room_id,
-        roomName: row.room_name,
-        hostId: row.host_id,
-        hostName: row.host_name,
-        title: row.title,
-        description: row.description,
-        purpose: row.purpose,
-        guidelines: JSON.parse(row.guidelines || '[]'),
-        type: row.type,
-        startedAt: new Date(row.started_at),
-        endedAt: row.ended_at ? new Date(row.ended_at) : undefined,
-        participantCount: row.participant_count,
-        participants: JSON.parse(row.participants || '[]'),
-        isRecording: row.is_recording,
-        isActive: row.is_active,
-        maxParticipants: row.max_participants,
-        requiresApproval: row.requires_approval,
-      }));
+      return (data || []).map(CallSessionService.normalizeSessionRow);
     } catch (err) {
       console.error('[CallSession] Error fetching active sessions:', err);
       return [];

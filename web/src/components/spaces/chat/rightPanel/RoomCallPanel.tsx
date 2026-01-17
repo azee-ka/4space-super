@@ -244,6 +244,8 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
     };
 
     // Subscribe to the room's call session channel
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
     const setupRealtimeSubscription = async () => {
       try {
         // Create a dedicated channel for call sessions
@@ -253,6 +255,7 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
             presence: { key: user?.id || 'anonymous' }
           },
         });
+        realtimeChannel = channel;
 
         channel
           .on('broadcast', { event: 'session-created' }, ({ payload }) => {
@@ -270,6 +273,39 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
           .on('broadcast', { event: 'session-updated' }, ({ payload }) => {
             console.log('[RoomCallPanel] Received session-updated broadcast:', payload);
             setActiveSessions(prev => prev.map(s => s.id === payload.id ? { ...s, ...payload } : s));
+          })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_sessions', filter: `room_id=eq.${roomId}` }, (payload) => {
+            if (!payload.new) return;
+            const session = CallSessionService.normalizeSessionRow(payload.new);
+            if (!session.isActive) return;
+            setActiveSessions(prev => {
+              const exists = prev.some(s => s.id === session.id);
+              if (exists) return prev;
+              return [...prev, session];
+            });
+          })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `room_id=eq.${roomId}` }, (payload) => {
+            if (!payload.new) return;
+            const session = CallSessionService.normalizeSessionRow(payload.new);
+            setActiveSessions(prev => {
+              if (!session.isActive) {
+                return prev.filter(s => s.id !== session.id);
+              }
+              const next = prev.slice();
+              const index = next.findIndex(s => s.id === session.id);
+              if (index === -1) {
+                next.push(session);
+                return next;
+              }
+              next[index] = { ...next[index], ...session };
+              return next;
+            });
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'call_sessions', filter: `room_id=eq.${roomId}` }, (payload) => {
+            if (!payload.old) return;
+            const sessionId = (payload.old as { id?: string }).id;
+            if (!sessionId) return;
+            setActiveSessions(prev => prev.filter(s => s.id !== sessionId));
           });
 
         // Also listen for localStorage events as fallback
@@ -381,6 +417,10 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
     // Cleanup on unmount
     return () => {
       clearInterval(pollInterval);
+      if (realtimeChannel) {
+        realtimeChannel.unsubscribe();
+        realtimeChannel = null;
+      }
       if (callSessionServiceRef.current) {
         callSessionServiceRef.current.cleanup();
         callSessionServiceRef.current = null;
