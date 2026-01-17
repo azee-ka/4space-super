@@ -1,42 +1,86 @@
 // Call History Service
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { CallHistoryEntry, CallSession } from '../types/callSession.types';
+import { SupabaseClient } from '@supabase/supabase-js';
+import type { CallHistoryEntry } from '../types/callSession.types';
 
 export class CallHistoryService {
-  private supabase: SupabaseClient;
+  private supabase: any;
   private userId: string;
 
-  constructor(supabaseUrl: string, supabaseKey: string, userId: string) {
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+  constructor(supabase: any, userId: string) {
+    this.supabase = supabase;
     this.userId = userId;
   }
 
   async saveCallHistory(entry: Omit<CallHistoryEntry, 'id'>): Promise<void> {
     try {
-      const { error } = await this.supabase
+      console.log('[CallHistory] Saving call history entry:', {
+        sessionId: entry.sessionId,
+        roomId: entry.roomId,
+        userId: this.userId,
+        type: entry.type,
+        duration: entry.duration,
+        participants: entry.participants.length
+      });
+
+      const { data, error } = await this.supabase
         .from('call_history')
         .insert({
-          ...entry,
+          id: `call_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          session_id: entry.sessionId,
+          room_id: entry.roomId,
+          room_name: entry.roomName,
           user_id: this.userId,
+          type: entry.type,
           started_at: entry.startedAt.toISOString(),
           ended_at: entry.endedAt.toISOString(),
+          duration: entry.duration,
           participants: JSON.stringify(entry.participants),
-        });
+          was_host: entry.wasHost,
+          quality: entry.quality || 'good',
+        })
+        .select();
 
       if (error) {
-        console.error('[CallHistory] Failed to save:', error);
+        console.error('[CallHistory] Failed to save call history:', error);
+        throw error;
       }
+
+      console.log('[CallHistory] Successfully saved call history:', data);
     } catch (err) {
-      console.error('[CallHistory] Error saving:', err);
+      console.error('[CallHistory] Error saving call history:', err);
+      // Fallback to localStorage
+      this.saveToLocalStorage({
+        id: `call_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        ...entry
+      });
+      throw err;
     }
   }
 
   async getCallHistory(limit: number = 50): Promise<CallHistoryEntry[]> {
     try {
+      // Get call history from all rooms the user is a member of
+      // First get the room IDs the user is a member of
+      const { data: roomData, error: roomError } = await this.supabase
+        .from('room_members')
+        .select('room_id')
+        .eq('user_id', this.userId);
+
+      if (roomError) {
+        console.error('[CallHistory] Failed to fetch user rooms:', roomError);
+        return [];
+      }
+
+      const roomIds = (roomData || []).map(r => r.room_id);
+
+      if (roomIds.length === 0) {
+        return [];
+      }
+
       const { data, error } = await this.supabase
         .from('call_history')
         .select('*')
-        .eq('user_id', this.userId)
+        .in('room_id', roomIds)
         .order('started_at', { ascending: false })
         .limit(limit);
 
@@ -70,7 +114,6 @@ export class CallHistoryService {
         .from('call_history')
         .select('*')
         .eq('room_id', roomId)
-        .eq('user_id', this.userId)
         .order('started_at', { ascending: false })
         .limit(limit);
 

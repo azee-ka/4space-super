@@ -1,9 +1,9 @@
 // Call Session Management Service
-import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { CallSession, ScreenShareSession, InCallMessage, Reaction, RaisedHand } from '../types/callSession.types';
 
 export class CallSessionService {
-  private supabase: SupabaseClient;
+  private supabase: any;
   private channel: RealtimeChannel | null = null;
   private roomId: string;
   private userId: string;
@@ -22,8 +22,8 @@ export class CallSessionService {
   public onScreenShareStarted?: (session: ScreenShareSession) => void;
   public onScreenShareEnded?: (sessionId: string) => void;
 
-  constructor(supabaseUrl: string, supabaseKey: string, roomId: string, userId: string) {
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+  constructor(supabase: any, roomId: string, userId: string) {
+    this.supabase = supabase;
     this.roomId = roomId;
     this.userId = userId;
     this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -243,6 +243,7 @@ export class CallSessionService {
 
   async getActiveSessions(): Promise<CallSession[]> {
     try {
+      console.log('[CallSession] Fetching active sessions for room:', this.roomId);
       const { data, error } = await this.supabase
         .from('call_sessions')
         .select('*')
@@ -251,10 +252,11 @@ export class CallSessionService {
         .order('started_at', { ascending: false });
 
       if (error) {
-        console.error('[CallSession] Failed to fetch active sessions:', error);
+        console.error('[CallSession] Failed to fetch active sessions:', error, 'for room:', this.roomId);
         return [];
       }
 
+      console.log('[CallSession] Found active sessions:', data?.length || 0, data);
       return (data || []).map((row: any) => ({
         id: row.id,
         roomId: row.room_id,

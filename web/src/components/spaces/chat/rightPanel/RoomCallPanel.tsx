@@ -61,8 +61,7 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
       // Initialize services if not already done
       if (!callSessionServiceRef.current) {
         callSessionServiceRef.current = new CallSessionService(
-          import.meta.env.VITE_SUPABASE_URL,
-          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          supabase,
           roomId,
           user.id
         );
@@ -178,7 +177,7 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
         });
 
         // Reload call history after saving
-        const updatedHistory = await callHistoryServiceRef.current!.getRecentCalls(roomId);
+        const updatedHistory = await callHistoryServiceRef.current!.getRecentCalls(roomId || '');
         setCallHistory(updatedHistory.slice(0, 10));
         console.log('[RoomCallPanel] Reloaded call history after saving');
       } catch (err) {
@@ -217,16 +216,15 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
     if (!roomId || !user?.id) return;
 
     // Initialize services
+    console.log('[RoomCallPanel] Initializing services for room:', roomId, 'user:', user.id);
     callSessionServiceRef.current = new CallSessionService(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      supabase,
       roomId,
       user.id
     );
 
     callHistoryServiceRef.current = new CallHistoryService(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      supabase,
       user.id
     );
 
@@ -258,7 +256,7 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
 
         channel
           .on('broadcast', { event: 'session-created' }, ({ payload }) => {
-            console.log('[RoomCallPanel] Received session-created broadcast:', payload);
+            console.log('[RoomCallPanel] Received session-created broadcast:', payload, 'for room:', roomId);
             setActiveSessions(prev => {
               const exists = prev.some(s => s.id === payload.id);
               if (exists) return prev;
@@ -308,6 +306,23 @@ export function RoomCallPanel({ roomId, roomName, mode, onModeChange }: RoomCall
     const loadData = async () => {
       try {
         console.log('[RoomCallPanel] Loading initial data for room:', roomId);
+
+        // Check room membership
+        const { data: membership, error: membershipError } = await supabase
+          .from('room_members')
+          .select('*')
+          .eq('room_id', roomId)
+          .eq('user_id', user.id)
+          .single();
+
+        console.log('[RoomCallPanel] Room membership check:', {
+          roomId,
+          userId: user.id,
+          membership,
+          membershipError,
+          isMember: !!membership
+        });
+
         // Load active sessions
         const sessions = await callSessionServiceRef.current!.getActiveSessions();
         console.log('[RoomCallPanel] Loaded active sessions:', sessions.length, sessions);
