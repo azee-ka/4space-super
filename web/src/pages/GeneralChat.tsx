@@ -36,7 +36,7 @@ import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { useChatSettingsSync } from '../hooks/useChatSettingsSync';
 import { getBackgroundStyle } from '../utils/themeUtils';
 import { useBackgroundSizing, useShouldUseMirroredBackground } from '../hooks/useWindowSize';
-import type { SearchUserResult } from '@4space/shared/src/services/conversations.service';
+import type { Conversation, SearchUserResult } from '@4space/shared/src/services/conversations.service';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import { buildLinkItems } from '../components/chat/utils/chatUtils';
 import { buildFileItems } from '../components/chat/utils/chatUtils';
@@ -67,6 +67,7 @@ export function GeneralChat() {
   const [activeCollection, setActiveCollection] = useState('Quick Notes');
   const [isMobile, setIsMobile] = useState(false);
   const [showThread, setShowThread] = useState(false);
+  const [userClosedChat, setUserClosedChat] = useState(false);
 
   const {
     showTimestamps,
@@ -237,10 +238,10 @@ export function GeneralChat() {
   }, []);
 
   useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0) {
+    if (!selectedConversationId && conversations.length > 0 && !userClosedChat) {
       setSelectedConversationId(conversations[0].id);
     }
-  }, [conversations, selectedConversationId]);
+  }, [conversations, selectedConversationId, userClosedChat]);
 
   useEffect(() => {
     if (!selectedConversationId) return;
@@ -270,10 +271,10 @@ export function GeneralChat() {
   }, []);
 
   useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0) {
+    if (!selectedConversationId && conversations.length > 0 && !userClosedChat) {
       setSelectedConversationId(conversations[0].id);
     }
-  }, [conversations, selectedConversationId]);
+  }, [conversations, selectedConversationId, userClosedChat]);
 
 
   const conversationAppearance = getSettingsForRoom(selectedConversationId || undefined);
@@ -304,6 +305,7 @@ export function GeneralChat() {
   const handleOpenConversation = useCallback(
     (conversationId: string) => {
       setSelectedConversationId(conversationId);
+      setUserClosedChat(false); // Reset the closed flag when user manually opens a conversation
       if (isMobile) {
         setShowThread(true);
       }
@@ -424,9 +426,9 @@ export function GeneralChat() {
     <div className="h-screen flex bg-black">
       {/* LEFT SIDEBAR - Space Chat Replica */}
       <LeftSidebar
-        conversations={conversations}
+        conversations={conversations as unknown as any[]}
         selectedConversationId={selectedConversationId || undefined}
-        onSelectConversation={setSelectedConversationId}
+        onSelectConversation={handleOpenConversation}
         activeTab={leftSidebarTab}
         onTabChange={setLeftSidebarTab}
         isLoading={loadingConversations}
@@ -444,7 +446,7 @@ export function GeneralChat() {
       />
 
       {/* CENTER PANEL - Messages */}
-      {selectedConversationId && (
+      {selectedConversationId ? (
         <div className="flex-1 flex flex-col" style={centerPanelBackgroundStyle}>
           {/* Background Tiles */}
           {activeTheme.backgroundType === 'featured' && activeTheme.backgroundImage && (
@@ -515,6 +517,15 @@ export function GeneralChat() {
               <button className="w-9 h-9 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors">
                 <FontAwesomeIcon icon={faSlidersH} className="text-cyan-400" />
               </button>
+              <button
+                onClick={() => {
+                  setSelectedConversationId(null);
+                  setUserClosedChat(true);
+                }}
+                className="w-9 h-9 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-red-400" />
+              </button>
             </div>
           </div>
 
@@ -572,7 +583,6 @@ export function GeneralChat() {
               </div>
 
               {/* Message Input */}
-          <div className="px-6 py-4 bg-zinc-950/90 backdrop-blur-md border-t border-zinc-800/50">
                 <MessageInput
                   onSend={handleSendMessage}
                   onTyping={() => {
@@ -592,7 +602,26 @@ export function GeneralChat() {
               placeholder={`Message ${selectedConversation ? getConversationTitle(selectedConversation, user?.id) : 'conversation'}...`}
                   allowFileUploads
                 />
-              </div>
+          </div>
+      ) : (
+        /* NO CHAT SELECTED - Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center bg-zinc-950/50 backdrop-blur-sm">
+          <div className="text-center max-w-md px-6">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
+              <FontAwesomeIcon icon={faUsers} className="text-3xl text-zinc-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Select a conversation</h2>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+              Choose a conversation from the sidebar to start chatting, or create a new one to connect with others.
+            </p>
+            <button
+              onClick={() => setShowNewChat(true)}
+              className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-xl transition-colors duration-200 flex items-center gap-2 mx-auto"
+            >
+              <FontAwesomeIcon icon={faUser} />
+              Start New Chat
+            </button>
+          </div>
         </div>
       )}
 
@@ -600,14 +629,14 @@ export function GeneralChat() {
       {selectedConversationId && (
         <RightSidebar
           activeTab={rightSidebarTab}
-          onTabChange={setRightSidebarTab}
+          onTabChange={setRightSidebarTab as (tab: string) => void}
           theme={activeTheme}
-          onThemeChange={setTheme}
-          messages={normalizedMessages}
-          selectedConversation={selectedConversation || undefined}
+          onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
+          messages={normalizedMessages as Message[]}
+          selectedConversation={selectedConversation as unknown as any | undefined}
           onlineUsers={onlineUsers}
-          mediaItems={mediaItems}
-          linkItems={linkItems}
+          mediaItems={mediaItems as any[]}
+          linkItems={linkItems as any[]}
         />
       )}
 
