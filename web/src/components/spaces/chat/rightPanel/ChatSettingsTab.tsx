@@ -18,8 +18,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../../../ui/ToggleSwitch';
 import { useChatSettingsStore } from '../../../../store/chatSettingsStore';
-import { useRoomMemberSettings, useRoomSettings, useUpdateRoomMemberSettings, useUpdateRoomSettings } from '../../../../hooks/useSettings';
+import { useRoomMemberSettings, useRoomSettings, useUpdateRoomMemberSettings, useUpdateRoomMessageRetention, useUpdateRoomSettings } from '../../../../hooks/useSettings';
 import { DEFAULT_ROOM_SETTINGS, type RoomMemberSettings } from '@4space/shared/src/types/chatSettings';
+import { useAuthStore } from '../../../../store/authStore';
 
 interface ChatSettingsTabProps {
   roomId?: string;
@@ -87,12 +88,16 @@ export function ChatSettingsTab({
     setMessageAnimations,
   } = useChatSettingsStore();
 
+  const { user } = useAuthStore();
   const { data: roomSettingsData } = useRoomSettings(roomId);
+  const updateRoomMessageRetention = useUpdateRoomMessageRetention();
   const updateRoomSettings = useUpdateRoomSettings();
   const { data: roomMemberSettings } = useRoomMemberSettings(roomId);
   const updateRoomMemberSettings = useUpdateRoomMemberSettings();
 
   const roomSettings = roomSettingsData || DEFAULT_ROOM_SETTINGS;
+  const retentionPermission = roomSettings.messageRetentionPermission || 'anyone';
+  const canChangeMessageRetention = !!roomId && (retentionPermission !== 'admins' || canModerateRoom);
   const showRoomControls = canManageRoomSettings && !!roomId;
   const showModerationControls = canModerateRoom && !!roomId;
   const notificationPreference = roomMemberSettings?.notificationPreference || notificationFrequency;
@@ -100,6 +105,14 @@ export function ChatSettingsTab({
   const updateRoomSetting = (updates: Partial<typeof roomSettings>) => {
     if (!roomId) return;
     updateRoomSettings.mutate({ roomId, updates });
+  };
+
+  const updateMessageRetention = (retention: typeof roomSettings.messageRetention) => {
+    if (!roomId || !user) {
+      console.warn('Cannot update message retention: not authenticated or no room ID');
+      return;
+    }
+    updateRoomMessageRetention.mutate({ roomId, retention });
   };
 
   const updateMemberSetting = (updates: { notificationPreference?: string; isMuted?: boolean }) => {
@@ -179,7 +192,7 @@ export function ChatSettingsTab({
         </div>
 
         <div className="space-y-2">
-          {showRoomControls && (
+          {canChangeMessageRetention && (
             <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
               <div className="flex items-center gap-2.5">
                 <FontAwesomeIcon icon={faHistory} className="text-indigo-400 text-sm" />
@@ -190,7 +203,7 @@ export function ChatSettingsTab({
               </div>
               <select
                 value={roomSettings.messageRetention}
-                onChange={(e) => updateRoomSetting({ messageRetention: e.target.value as any })}
+                onChange={(e) => updateMessageRetention(e.target.value as any)}
                 className={`px-1.5 py-0.5 bg-zinc-700/50 border border-zinc-600/50 rounded text-white text-xs focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
               >
                 <option value="forever">Off</option>
@@ -200,6 +213,26 @@ export function ChatSettingsTab({
                 <option value="1month">1mo</option>
                 <option value="6months">6mo</option>
                 <option value="1year">1y</option>
+              </select>
+            </div>
+          )}
+
+          {showModerationControls && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <FontAwesomeIcon icon={faGavel} className="text-amber-400 text-sm" />
+                <div>
+                  <p className="text-sm text-white font-medium">Who Can Change Disappearing</p>
+                  <p className="text-xs text-gray-500">Control who can update the timer</p>
+                </div>
+              </div>
+              <select
+                value={retentionPermission}
+                onChange={(e) => updateRoomSetting({ messageRetentionPermission: e.target.value as any })}
+                className={`px-1.5 py-0.5 bg-zinc-700/50 border border-zinc-600/50 rounded text-white text-xs focus:outline-none ${getAccentFocusClass ? getAccentFocusClass(theme.accentColor) : 'focus:border-purple-400/70 focus:ring-purple-400/30'}`}
+              >
+                <option value="anyone">Anyone</option>
+                <option value="admins">Admins only</option>
               </select>
             </div>
           )}

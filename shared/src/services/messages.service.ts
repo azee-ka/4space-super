@@ -37,6 +37,7 @@ export interface Message {
   is_pinned: boolean;
   pinned_at?: string;
   pinned_until?: string;
+  is_kept?: boolean;
   is_system: boolean;
   ttl?: number;
   expires_at?: string;
@@ -410,13 +411,14 @@ export class MessagesService {
     if (error) throw error;
   }
 
-  async pinMessage(messageId: string, pinnedUntil?: string | null): Promise<void> {
+  async pinMessage(messageId: string, pinnedUntil?: string | null, keep?: boolean): Promise<void> {
     const { error } = await this.supabase
       .from('messages')
       .update({
         is_pinned: true,
         pinned_at: new Date().toISOString(),
         pinned_until: pinnedUntil || null,
+        is_kept: keep || false,
       })
       .eq('id', messageId);
 

@@ -111,20 +111,13 @@ CREATE POLICY "room_settings_select_members"
     )
   );
 
-CREATE POLICY "room_settings_insert_admin"
+CREATE POLICY "room_settings_insert_member"
   ON public.room_settings FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.rooms r
-      JOIN public.space_members sm ON sm.space_id = r.space_id
-      WHERE r.id = room_settings.room_id
-      AND sm.user_id = auth.uid()
-      AND sm.role IN ('owner', 'admin')
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.rooms r
-      WHERE r.id = room_settings.room_id
-      AND r.created_by = auth.uid()
+      SELECT 1 FROM public.room_members rm
+      WHERE rm.room_id = room_settings.room_id
+      AND rm.user_id = auth.uid()
     )
   );
 

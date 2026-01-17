@@ -109,7 +109,7 @@ export class SettingsService {
 
     if (!room?.space_id) return;
 
-    await this.supabase.from('messages').insert({
+    const { error } = await this.supabase.from('messages').insert({
       room_id: roomId,
       space_id: room.space_id,
       sender_id: user.id,
@@ -123,6 +123,9 @@ export class SettingsService {
         next,
       },
     });
+    if (error) {
+      console.error('[SettingsService] Failed to log retention change:', error);
+    }
   }
 
   async getUserChatSettings(): Promise<UserChatSettings> {
@@ -239,6 +242,9 @@ export class SettingsService {
     roomId: string,
     retention: MessageRetention
   ): Promise<RoomSettings> {
+    // Ensure user is authenticated
+    const user = await this.requireUser();
+
     const current = await this.getRoomSettings(roomId);
     const { data, error } = await this.supabase.rpc('set_room_message_retention', {
       room_id_input: roomId,

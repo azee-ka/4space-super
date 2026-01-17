@@ -395,16 +395,54 @@ export function createMessageHooks(supabase: SupabaseClient) {
         messageId,
         pin,
         pinnedUntil,
+        keep,
       }: {
         messageId: string;
         pin: boolean;
         pinnedUntil?: string | null;
+        keep?: boolean;
       }) =>
         pin
-          ? messagesService.pinMessage(messageId, pinnedUntil)
+          ? messagesService.pinMessage(messageId, pinnedUntil, keep)
           : messagesService.unpinMessage(messageId),
+      onMutate: async ({ messageId, pin, pinnedUntil, keep }) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: messageKeys.all });
+
+        // Snapshot the previous value
+        const previousMessages = queryClient.getQueryData(messageKeys.roomMessages(messageId.split('-')[0]));
+
+        // Optimistically update
+        queryClient.setQueryData(messageKeys.roomMessages(messageId.split('-')[0]), (old: any) => {
+          if (!old?.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: any[]) =>
+              page.map((msg: any) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      is_pinned: pin,
+                      pinned_at: pin ? new Date().toISOString() : null,
+                      pinned_until: pinnedUntil,
+                      is_kept: keep || false,
+                    }
+                  : msg
+              )
+            )
+          };
+        });
+
+        return { previousMessages };
+      },
+      onError: (err, variables, context) => {
+        // If the mutation fails, use the context returned from onMutate to roll back
+        if (context?.previousMessages) {
+          queryClient.setQueryData(messageKeys.roomMessages(variables.messageId.split('-')[0]), context.previousMessages);
+        }
+      },
       onSuccess: (_, { messageId }) => {
-        // Invalidate to refetch pinned messages
+        // Invalidate to ensure we have the latest data
         queryClient.invalidateQueries({ queryKey: messageKeys.all });
       },
     });

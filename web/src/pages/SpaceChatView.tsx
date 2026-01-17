@@ -1,14 +1,14 @@
 // Advanced Chat Interface with Island-Based Sidebars
 // web/src/pages/SpaceChatView.tsx
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft, faHashtag, faRocket,
   faCog, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faExclamationTriangle, faHouse,
-  faBookmark
+  faBookmark, faStar
 } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -24,6 +24,7 @@ import {
   useSendMessage,
   useDeleteMessage,
   usePinMessage,
+  usePinnedMessages,
   useAddReaction,
   useRemoveReaction,
   useMarkRoomAsRead,
@@ -33,13 +34,15 @@ import {
 import { useRealtimeChat } from '../hooks/useRealtime';
 import { MessagesList } from '../components/spaces/chat/centerPanel/MessagesList';
 import { MessageInput } from '../components/spaces/chat/centerPanel/MessageInput';
+import { PinnedBanner } from '../components/spaces/chat/centerPanel/PinnedBanner';
 import { RoomSearchPanel } from '../components/spaces/chat/rightPanel/RoomSearchPanel';
 import { PinnedMessagesPanel } from '../components/spaces/chat/rightPanel/PinnedMessagesPanel';
+import { KeptMessagesPanel } from '../components/spaces/chat/rightPanel/KeptMessagesPanel';
 import { BookmarkedMessagesPanel } from '../components/spaces/chat/rightPanel/BookmarkedMessagesPanel';
 import { RoomCallPanel } from '../components/spaces/chat/rightPanel/RoomCallPanel';
 import { CreateRoomModal } from '../components/spaces/chat/leftPanel/CreateRoomModal';
 import { LeftSidebar } from '../components/spaces/chat/leftPanel/LeftSidebar';
-import { RightSidebar } from '../components/spaces/chat/leftPanel/RightSidebar';
+import { RightSidebar } from '../components/spaces/chat/rightPanel/RightSidebar';
 import { RoomMembersPanel } from '../components/spaces/chat/rightPanel/RoomMembersPanel';
 import type { Message as MessageType } from '@4space/shared/src/services/messages.service';
 import { useUpdateMessage } from '../hooks/useMessages';
@@ -48,10 +51,11 @@ import { useChatSettingsSync } from '../hooks/useChatSettingsSync';
 import { useRoomSettings } from '../hooks/useSettings';
 import { DEFAULT_ROOM_SETTINGS } from '@4space/shared/src/types/chatSettings';
 import { hasPermission, type MemberRole } from '@4space/shared/src/types/permissions';
+import { getMessageRetentionExpiresAt, getMessageRetentionMs } from '@4space/shared/src/utils/messageRetention';
 
 type LeftSidebarTab = 'rooms' | 'metrics' | 'productivity' | 'reminders' | 'notes';
 type RightSidebarTab = 'settings' | 'metadata' | 'metrics' | 'media' | 'links' | 'customization';
-type RightPanelView = 'home' | 'members' | 'search' | 'keep' | 'saved' | 'call';
+type RightPanelView = 'home' | 'members' | 'search' | 'pin' | 'keep' | 'saved' | 'call';
 
 export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
@@ -163,6 +167,7 @@ export function SpaceChatView() {
   const [callMode, setCallMode] = useState<'voice' | 'video'>('voice');
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
+  const [retentionNow, setRetentionNow] = useState(Date.now());
 
   // Space categories state (shared between settings and room creation)
   const [spaceCategories, setSpaceCategoriesState] = useState([
@@ -190,7 +195,7 @@ export function SpaceChatView() {
   const roomSettings = chatSettings.getSettingsForRoom(selectedRoomId, roomCategory);
   const { theme } = roomSettings;
 
-  const membershipRole = (spaceMembers.find((member) => member.user_id === user?.id)?.role || 'viewer') as MemberRole;
+  const membershipRole = (spaceMembers.find((member: any) => (member.user_id || member.user?.id) === user?.id)?.role || 'viewer') as MemberRole;
   const isOwner = !!space?.owner_id && space.owner_id === user?.id;
   const currentUserRole = (isOwner ? 'owner' : membershipRole) as MemberRole;
   const canManageSpaceSettings = hasPermission(currentUserRole, 'canUpdateSpaceSettings');
@@ -208,6 +213,8 @@ export function SpaceChatView() {
     hasNextPage,
     isFetchingNextPage,
   } = useRoomMessages(selectedRoomId);
+
+  const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoomId);
   
   // Flatten messages from infinite query
   // Each page has messages in ascending order (oldest to newest) after getRoomMessages reverses
@@ -215,6 +222,55 @@ export function SpaceChatView() {
   // We need: [oldest from page2, ..., newest from page2, oldest from page1, ..., newest from page1, oldest from page0, ..., newest from page0]
   // So we reverse pages, then flatten
   const messages = messagesData?.pages.slice().reverse().flat() || [];
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setRetentionNow(Date.now());
+    }, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const visibleMessages = useMemo(() => {
+    const nowMs = retentionNow;
+    return messages.filter((message) => {
+      if (!message.expires_at) return true;
+      const expiresAt = new Date(message.expires_at).getTime();
+      if (expiresAt > nowMs) return true;
+      if (message.is_pinned) {
+        if (!message.pinned_until) return true;
+        return new Date(message.pinned_until).getTime() > nowMs;
+      }
+      return false;
+    });
+  }, [messages, retentionNow]);
+
+  const activePinnedMessages = useMemo(() => {
+    const nowMs = retentionNow;
+    return [...pinnedMessages]
+      .filter((message) => {
+        if (!message.is_pinned) return false;
+        if (message.is_kept) return false; // Kept messages are separate
+        if (!message.pinned_until) return true;
+        return new Date(message.pinned_until).getTime() > nowMs;
+      })
+      .sort((a, b) => {
+        const aTime = new Date(a.pinned_at || a.created_at).getTime();
+        const bTime = new Date(b.pinned_at || b.created_at).getTime();
+        return bTime - aTime;
+      });
+  }, [pinnedMessages, retentionNow]);
+
+  const keptMessages = useMemo(() => {
+    return [...pinnedMessages]
+      .filter((message) => message.is_kept === true)
+      .sort((a, b) => {
+        const aTime = new Date(a.pinned_at || a.created_at).getTime();
+        const bTime = new Date(b.pinned_at || b.created_at).getTime();
+        return bTime - aTime;
+      });
+  }, [pinnedMessages]);
+
+  const bannerPinnedMessages = activePinnedMessages;
   
   // Mutations
   const sendMessage = useSendMessage();
@@ -438,6 +494,10 @@ const handleSendMessage = useCallback((
     return;
   }
 
+  const retentionMs = getMessageRetentionMs(roomSettingsDataResolved.messageRetention);
+  const expiresAt = getMessageRetentionExpiresAt(roomSettingsDataResolved.messageRetention);
+  const ttl = retentionMs ? Math.floor(retentionMs / 1000) : undefined;
+
   // Normal send - fire and forget, realtime will handle the update
   sendMessage.mutate({
     room_id: selectedRoomId,
@@ -446,12 +506,14 @@ const handleSendMessage = useCallback((
     message_type: type as any,
     attachments,
     reply_to_id: replyTo?.id,
+    ttl,
+    expires_at: expiresAt || undefined,
   }, {
     onSuccess: () => {
       setReplyTo(null);
     }
   });
-}, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage]);
+}, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage, roomSettingsDataResolved.messageRetention]);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return;
@@ -463,13 +525,21 @@ const handleSendMessage = useCallback((
     }
   }, [deleteMessage]);
 
-  const handlePinMessage = useCallback(async (messageId: string, pinned: boolean) => {
-    try {
-      await pinMessage.mutateAsync({ messageId, pin: pinned });
-    } catch (error) {
-      console.error('Failed to pin message:', error);
-    }
-  }, [pinMessage]);
+  const handlePinMessage = useCallback(
+    async (messageId: string, options: { pin: boolean; pinnedUntil?: string | null; keep?: boolean }) => {
+      try {
+        await pinMessage.mutateAsync({
+          messageId,
+          pin: options.pin,
+          pinnedUntil: options.pinnedUntil,
+          keep: options.keep,
+        });
+      } catch (error) {
+        console.error('Failed to pin/keep message:', error);
+      }
+    },
+    [pinMessage]
+  );
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     try {
@@ -500,6 +570,50 @@ const handleSendMessage = useCallback((
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage]);
+
+  const handleScrollToMessage = useCallback(async (messageId: string) => {
+    // First check if message is already loaded
+    let messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // If not loaded, keep fetching pages until we find it
+    let attempts = 0;
+    const maxAttempts = 20; // Allow more attempts for deep pagination
+
+    while (attempts < maxAttempts) {
+      if (!hasNextPage) {
+        console.warn(`Message ${messageId} not found - reached end of messages`);
+        break;
+      }
+
+      if (isFetchingNextPage) {
+        // Wait for current fetch to complete
+        await new Promise(resolve => setTimeout(resolve, 50));
+        continue;
+      }
+
+      attempts++;
+      console.log(`Fetching page ${attempts} to find message ${messageId}`);
+
+      await fetchNextPage();
+
+      // Wait for the DOM and state to update
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Check again
+      messageElement = document.getElementById(`message-${messageId}`);
+      if (messageElement) {
+        console.log(`Found message ${messageId} after ${attempts} page fetches`);
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
+    console.warn(`Message ${messageId} not found after fetching ${attempts} pages`);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const onlineCount = Array.from(onlineUsers.values()).filter((u: any) => u.status === 'online').length;
   const memberCount = roomMembers.length;
@@ -660,10 +774,15 @@ return (
       {selectedRoomId ? (
         <>
           {/* Messages Area - FULL HEIGHT */}
-          <div className="flex-1 min-h-0 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
+            <PinnedBanner
+              pinnedMessages={bannerPinnedMessages}
+              onScrollToMessage={handleScrollToMessage}
+            />
 
+            <div className="flex-1 min-h-0 overflow-hidden">
             <MessagesList
-              messages={messages}
+              messages={visibleMessages}
               currentUserId={user?.id}
               onLoadMore={handleLoadMore}
               hasMore={hasNextPage}
@@ -679,6 +798,7 @@ return (
               theme={theme}
               fontSize={roomSettings.fontSize}
               messageDensity={roomSettings.messageDensity}
+              messageRetention={roomSettingsDataResolved.messageRetention}
               typingUsers={typingUsers}
               showAvatars={showAvatars}
               showUsernames={showUsernames}
@@ -696,6 +816,7 @@ return (
               messageAnimations={messageAnimations}
               reduceAnimations={reduceAnimations}
             />
+            </div>
 
           </div>
 
@@ -769,8 +890,9 @@ return (
               { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400', action: 'search' },
               { icon: faPhone, label: 'Call', glowClass: 'from-green-500/25 via-green-500/20 to-green-500/25', borderClass: 'border-green-500/30', textClass: 'text-green-400', action: 'call' },
               { icon: faVideo, label: 'Video', glowClass: 'from-red-500/25 via-red-500/20 to-red-500/25', borderClass: 'border-red-500/30', textClass: 'text-red-400', action: 'video' },
-              { icon: faThumbtack, label: 'Keep', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'keep' },
-              { icon: faBookmark, label: 'Saved', glowClass: 'from-amber-500/25 via-amber-500/20 to-amber-500/25', borderClass: 'border-amber-500/30', textClass: 'text-amber-400', action: 'saved' },
+              { icon: faThumbtack, label: 'Pin', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'pin' },
+              { icon: faBookmark, label: 'Keep', glowClass: 'from-emerald-500/25 via-emerald-500/20 to-emerald-500/25', borderClass: 'border-emerald-500/30', textClass: 'text-emerald-400', action: 'keep' },
+              { icon: faStar, label: 'Saved', glowClass: 'from-amber-500/25 via-amber-500/20 to-amber-500/25', borderClass: 'border-amber-500/30', textClass: 'text-amber-400', action: 'saved' },
               { icon: faCog, label: 'Settings', glowClass: 'from-gray-500/25 via-gray-500/20 to-gray-500/25', borderClass: 'border-gray-500/30', textClass: 'text-gray-400', action: 'settings' },
             ].map(({ icon, label, glowClass, borderClass, textClass, count, action }) => {
               const isActive = (action === 'home' && rightPanelView === 'home') || (action === 'members' && rightPanelView === 'members');
@@ -792,6 +914,7 @@ return (
                       if (action === 'home') setRightPanelView('home');
                       else if (action === 'members') setRightPanelView('members');
                       else if (action === 'search') setRightPanelView('search');
+                      else if (action === 'pin') setRightPanelView('pin');
                       else if (action === 'keep') setRightPanelView('keep');
                       else if (action === 'saved') setRightPanelView('saved');
                       else if (action === 'call') {
@@ -835,28 +958,25 @@ return (
         ) : rightPanelView === 'search' ? (
           <RoomSearchPanel
             roomId={selectedRoomId}
-            onScrollToMessage={(messageId) => {
-              const element = document.getElementById(`message-${messageId}`);
-              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
+            onScrollToMessage={handleScrollToMessage}
+          />
+        ) : rightPanelView === 'pin' ? (
+          <PinnedMessagesPanel
+            pinnedMessages={activePinnedMessages}
+            onUnpin={(messageId) => handlePinMessage(messageId, { pin: false })}
+            onScrollToMessage={handleScrollToMessage}
           />
         ) : rightPanelView === 'keep' ? (
-          <PinnedMessagesPanel
-            pinnedMessages={messages.filter(m => m.is_pinned)}
-            onUnpin={(messageId) => handlePinMessage(messageId, false)}
-            onScrollToMessage={(messageId) => {
-              const element = document.getElementById(`message-${messageId}`);
-              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
+          <KeptMessagesPanel
+            keptMessages={keptMessages}
+            onUnkeep={(messageId) => handlePinMessage(messageId, { pin: false })}
+            onScrollToMessage={handleScrollToMessage}
           />
         ) : rightPanelView === 'saved' ? (
           <BookmarkedMessagesPanel
             spaceId={spaceId}
             roomId={selectedRoomId}
-            onScrollToMessage={(messageId) => {
-              const element = document.getElementById(`message-${messageId}`);
-              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
+            onScrollToMessage={handleScrollToMessage}
           />
         ) : rightPanelView === 'call' ? (
           <RoomCallPanel
@@ -870,7 +990,7 @@ return (
             onTabChange={setRightSidebarTab}
             theme={theme}
             onThemeChange={(newTheme, roomId, category) => useChatSettingsStore.getState().setTheme(newTheme, roomId, category)}
-            messages={messages}
+            messages={visibleMessages}
             roomMembers={roomMembers}
             onlineUsers={onlineUsers}
             selectedRoom={selectedRoom}

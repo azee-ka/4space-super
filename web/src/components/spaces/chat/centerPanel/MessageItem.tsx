@@ -7,9 +7,10 @@ import DropdownButton from '../../../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faReply, faEdit, faTrash, faThumbtack, faBookmark, faEllipsisV,
-  faCopy, faForward, faSmile, faTimes, faPlus,
+  faCopy, faForward, faSmile, faTimes, faPlus, faStar, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
+import type { MessageRetention } from '@4space/shared/src/types/chatSettings';
 import DOMPurify from 'dompurify';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -25,7 +26,7 @@ interface MessageItemProps {
   onReply?: (message: Message) => void;
   onEdit?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
-  onPin?: (messageId: string, pinned: boolean) => void;
+  onPin?: (messageId: string, options: { pin: boolean; pinnedUntil?: string | null; keep?: boolean }) => void;
   onBookmark?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
@@ -34,6 +35,7 @@ interface MessageItemProps {
   theme?: ChatTheme;
   fontSize?: number;
   messageDensity?: 'compact' | 'comfortable' | 'spacious';
+  messageRetention?: MessageRetention;
   showTimestamps?: boolean;
   showReadReceipts?: boolean;
   showMessageStatus?: boolean;
@@ -88,6 +90,7 @@ export function MessageItem({
   theme,
   fontSize = 14,
   messageDensity = 'comfortable',
+  messageRetention,
   showTimestamps = true,
   showReadReceipts = true,
   showMessageStatus = true,
@@ -108,11 +111,14 @@ export function MessageItem({
   const [showActions, setShowActions] = useState(false);
   const [optimisticReactions, setOptimisticReactions] = useState<typeof message.reactions | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [submenuOpen, setSubmenuOpen] = useState<string | null>(null);
   const openDropdownsCountRef = useRef(0);
   const actionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const reactionsContainerRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const pinVerb = messageRetention && messageRetention !== 'forever' ? 'Keep' : 'Pin';
+  const isPinActive = message.is_pinned && (!message.pinned_until || new Date(message.pinned_until).getTime() > Date.now());
 
   // Use timeout refs to manage hover delays
   const showActionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -450,6 +456,78 @@ export function MessageItem({
     }
     return isFirstInGroup ? 'mt-3' : 'mt-1.5'; // comfortable (default)
   };
+
+  const pinActions = onPin
+    ? isPinActive
+      ? [
+          {
+            icon: faThumbtack,
+            label: 'Unpin',
+            color: 'text-yellow-400',
+            onClick: () => onPin(message.id, { pin: false }),
+            danger: false,
+          },
+        ]
+      : [
+          {
+            icon: faThumbtack,
+            label: 'Pin Message',
+            color: 'text-yellow-400',
+            onClick: () => {
+              // Default to 24 hours if no submenu is used
+              onPin(message.id, { pin: true, pinnedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() });
+            },
+            danger: false,
+            hasSubmenu: true,
+            submenuItems: [
+              {
+                icon: faThumbtack,
+                label: '1 hour',
+                color: 'text-yellow-400',
+                onClick: () => onPin(message.id, { pin: true, pinnedUntil: new Date(Date.now() + 60 * 60 * 1000).toISOString() }),
+              },
+              {
+                icon: faThumbtack,
+                label: '4 hours',
+                color: 'text-yellow-400',
+                onClick: () => onPin(message.id, { pin: true, pinnedUntil: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString() }),
+              },
+              {
+                icon: faThumbtack,
+                label: '24 hours',
+                color: 'text-yellow-400',
+                onClick: () => onPin(message.id, { pin: true, pinnedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }),
+              },
+              {
+                icon: faThumbtack,
+                label: '7 days',
+                color: 'text-yellow-400',
+                onClick: () => onPin(message.id, { pin: true, pinnedUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }),
+              },
+              {
+                icon: faThumbtack,
+                label: 'Permanently',
+                color: 'text-yellow-400',
+                onClick: () => onPin(message.id, { pin: true, pinnedUntil: null }),
+              },
+            ]
+          },
+        ]
+    : [];
+
+  if (message.is_system) {
+    return (
+      <div
+        id={`message-${message.id}`}
+        data-message-id={message.id}
+        className="flex justify-center px-4 py-2"
+      >
+        <div className="px-3 py-1 rounded-full bg-white/5 text-xs text-gray-400">
+          {message.content}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -861,22 +939,59 @@ export function MessageItem({
                     {({ closeDropdown }: { closeDropdown: () => void }) => (
                       <div className="rounded-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 shadow-xl overflow-hidden min-w-[180px]">
                         {[
-                          { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false },
-                          onBookmark && { icon: faBookmark, label: 'Bookmark', color: 'text-blue-400', onClick: () => { onBookmark(message.id); closeDropdown(); }, danger: false },
-                          onPin && { icon: faThumbtack, label: message.is_pinned ? 'Unpin' : 'Pin', color: 'text-yellow-400', onClick: () => { onPin(message.id, !message.is_pinned); closeDropdown(); }, danger: false },
-                          forwardingEnabled && { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => closeDropdown(), danger: false },
-                          isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => { onDelete(message.id); closeDropdown(); }, danger: true },
+                          { icon: faCopy, label: 'Copy Text', color: 'text-cyan-400', onClick: handleCopy, danger: false, closeOnClick: false },
+                          onBookmark && { icon: faStar, label: 'Save Message', color: 'text-amber-400', onClick: () => onBookmark(message.id), danger: false, closeOnClick: true },
+                          onPin && !isPinActive && { icon: faThumbtack, label: 'Keep Message', color: 'text-emerald-400', onClick: () => onPin(message.id, { pin: true, pinnedUntil: null, keep: true }), danger: false, closeOnClick: true },
+                          ...pinActions.map((action) => ({ ...action, closeOnClick: true })),
+                          forwardingEnabled && { icon: faForward, label: 'Forward', color: 'text-purple-400', onClick: () => null, danger: false, closeOnClick: true },
+                          isOwn && onDelete && { icon: faTrash, label: 'Delete', color: 'text-red-400', onClick: () => onDelete(message.id), danger: true, closeOnClick: true },
                         ].filter(Boolean).map((action: any) => (
-                          <button
+                          <div
                             key={action.label}
-                            onClick={action.onClick}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
-                              action.danger ? 'hover:bg-red-500/10' : ''
-                            }`}
+                            className="relative"
+                            onMouseEnter={() => action.hasSubmenu && setSubmenuOpen(action.label)}
+                            onMouseLeave={() => action.hasSubmenu && setSubmenuOpen(null)}
                           >
-                            <FontAwesomeIcon icon={action.icon} className={`${action.color} text-sm`} />
-                            <span className={`text-sm font-medium ${action.danger ? 'text-red-400' : 'text-white'}`}>{action.label}</span>
-                          </button>
+                            <button
+                              onClick={() => {
+                                if (!action.hasSubmenu) {
+                                  action.onClick?.();
+                                  if (action.closeOnClick) {
+                                    closeDropdown();
+                                  }
+                                }
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
+                                action.danger ? 'hover:bg-red-500/10' : ''
+                              } ${action.hasSubmenu ? 'pr-8' : ''}`}
+                            >
+                              <FontAwesomeIcon icon={action.icon} className={`${action.color} text-sm`} />
+                              <span className={`text-sm font-medium ${action.danger ? 'text-red-400' : 'text-white'}`}>{action.label}</span>
+                              {action.hasSubmenu && (
+                                <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-xs ml-auto rotate-[-90deg]" />
+                              )}
+                            </button>
+
+                            {/* Submenu */}
+                            {action.hasSubmenu && submenuOpen === action.label && (
+                              <div className="absolute left-full top-0 ml-1 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 rounded-lg shadow-xl min-w-[120px] z-50">
+                                {action.submenuItems.map((submenuItem: any) => (
+                                  <button
+                                    key={submenuItem.label}
+                                    onClick={() => {
+                                      submenuItem.onClick?.();
+                                      closeDropdown();
+                                      setSubmenuOpen(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                                  >
+                                    <FontAwesomeIcon icon={submenuItem.icon} className={`${submenuItem.color} text-xs`} />
+                                    <span className="text-xs font-medium text-white">{submenuItem.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}

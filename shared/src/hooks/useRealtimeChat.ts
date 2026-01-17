@@ -201,6 +201,11 @@ export function useRealtimeChat(
               ),
             };
           });
+
+          queryClient.invalidateQueries({ queryKey: messageKeys.pinnedMessages(roomId) });
+          if (spaceId) {
+            queryClient.invalidateQueries({ queryKey: messageKeys.bookmarks(spaceId) });
+          }
         }
       )
 
@@ -223,6 +228,11 @@ export function useRealtimeChat(
               ),
             };
           });
+
+          queryClient.invalidateQueries({ queryKey: messageKeys.pinnedMessages(roomId) });
+          if (spaceId) {
+            queryClient.invalidateQueries({ queryKey: messageKeys.bookmarks(spaceId) });
+          }
         }
       )
 

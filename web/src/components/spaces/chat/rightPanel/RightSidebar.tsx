@@ -3,12 +3,12 @@ import {
   faSlidersH, faImages, faLink, faHashtag, faPalette, faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
-import { ChatSettingsTab } from '../rightPanel/ChatSettingsTab';
-import { RoomMetadataTab } from '../rightPanel/RoomMetadataTab';
-import { RoomMetrics } from '../rightPanel/RoomMetrics';
-import { MediaTab } from '../rightPanel/MediaTab';
-import { LinksTab } from '../rightPanel/LinksTab';
-import { CustomizationTab } from '../rightPanel/CustomizationTab';
+import { ChatSettingsTab } from './ChatSettingsTab';
+import { RoomMetadataTab } from './RoomMetadataTab';
+import { RoomMetrics } from './RoomMetrics';
+import { MediaTab } from './MediaTab';
+import { LinksTab } from './LinksTab';
+import { CustomizationTab } from './CustomizationTab';
 
 type RightSidebarTab = 'settings' | 'metadata' | 'metrics' | 'media' | 'links' | 'customization';
 

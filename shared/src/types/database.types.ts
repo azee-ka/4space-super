@@ -466,12 +466,13 @@ export type Database = {
           expires_at: string | null
           forward_from_id: string | null
           id: string
+          is_kept: boolean | null
           is_pinned: boolean | null
-          pinned_at: string | null
-          pinned_until: string | null
           is_system: boolean | null
           message_type: string | null
           metadata: Json | null
+          pinned_at: string | null
+          pinned_until: string | null
           reply_to_id: string | null
           room_id: string | null
           sender_id: string | null
@@ -492,12 +493,13 @@ export type Database = {
           expires_at?: string | null
           forward_from_id?: string | null
           id?: string
+          is_kept?: boolean | null
           is_pinned?: boolean | null
-          pinned_at?: string | null
-          pinned_until?: string | null
           is_system?: boolean | null
           message_type?: string | null
           metadata?: Json | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           reply_to_id?: string | null
           room_id?: string | null
           sender_id?: string | null
@@ -518,12 +520,13 @@ export type Database = {
           expires_at?: string | null
           forward_from_id?: string | null
           id?: string
+          is_kept?: boolean | null
           is_pinned?: boolean | null
-          pinned_at?: string | null
-          pinned_until?: string | null
           is_system?: boolean | null
           message_type?: string | null
           metadata?: Json | null
+          pinned_at?: string | null
+          pinned_until?: string | null
           reply_to_id?: string | null
           room_id?: string | null
           sender_id?: string | null
@@ -1306,6 +1309,10 @@ export type Database = {
           relevance_score: number
           username: string
         }[]
+      }
+      set_room_message_retention: {
+        Args: { retention_input: string; room_id_input: string }
+        Returns: Json
       }
       user_has_room_access: {
         Args: { room_id: string; user_id: string }

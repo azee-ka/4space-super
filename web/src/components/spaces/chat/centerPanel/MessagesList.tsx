@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { Message } from '@4space/shared/src/services/messages.service';
+import type { MessageRetention } from '@4space/shared/src/types/chatSettings';
 import type { ChatTheme } from '../../../../store/chatSettingsStore';
 import { getAccentColorHex } from '../../../../utils/themeUtils';
 import { MessageItem } from './MessageItem';
@@ -17,7 +18,7 @@ interface MessagesListProps {
   onReply: (message: Message) => void;
   onEdit: (message: Message) => void;
   onDelete: (messageId: string) => void;
-  onPin: (messageId: string, pinned: boolean) => void;
+  onPin: (messageId: string, options: { pin: boolean; pinnedUntil?: string | null; keep?: boolean }) => void;
   onBookmark: (messageId: string) => void;
   onReaction: (messageId: string, emoji: string) => void;
   onRemoveReaction: (messageId: string, emoji: string) => void;
@@ -26,6 +27,7 @@ interface MessagesListProps {
   theme?: ChatTheme;
   fontSize?: number;
   messageDensity?: 'compact' | 'comfortable' | 'spacious';
+  messageRetention?: MessageRetention;
   showAvatars?: boolean;
   showUsernames?: boolean;
   showTimestamps?: boolean;
@@ -62,6 +64,7 @@ export function MessagesList({
   theme,
   fontSize,
   messageDensity,
+  messageRetention,
   showAvatars = true,
   showUsernames = true,
   showTimestamps = true,
@@ -615,6 +618,7 @@ export function MessagesList({
                       theme={theme}
                       fontSize={fontSize}
                       messageDensity={messageDensity}
+                      messageRetention={messageRetention}
                       showTimestamps={showTimestamps}
                       showReadReceipts={showReadReceipts}
                       showMessageStatus={showMessageStatus}
