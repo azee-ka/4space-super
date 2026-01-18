@@ -10,6 +10,34 @@ export type MessageRetention = 'forever' | '1hour' | '24hours' | '1week' | '1mon
 export type MessageRetentionPermission = 'anyone' | 'admins';
 export type ModerationLevel = 'low' | 'medium' | 'high' | 'extreme';
 export type DefaultRoomPrivacy = 'public' | 'private' | 'hidden';
+export type ThemePreference = 'light' | 'dark' | 'auto';
+export type SidebarPosition = 'left' | 'right';
+export type MessageDensity = 'compact' | 'comfortable' | 'spacious';
+
+export interface UserPreferences {
+  notifications_enabled: boolean;
+  sound_enabled: boolean;
+  desktop_notifications: boolean;
+  privacy_mode: boolean;
+  show_online_status: boolean;
+  allow_message_previews: boolean;
+  theme_preference: ThemePreference;
+  sidebar_position: SidebarPosition;
+  message_density: MessageDensity;
+  auto_save_notes: boolean;
+  confirm_before_delete: boolean;
+  show_typing_indicators: boolean;
+  message_history_limit: number;
+  cache_enabled: boolean;
+  smooth_animations: boolean;
+  auto_load_media: boolean;
+  auto_save_files: boolean;
+  read_receipts: boolean;
+  ghost_mode: boolean;
+  end_to_end_encryption: boolean;
+  biometric_unlock: boolean;
+  block_strangers: boolean;
+}
 
 export interface ChatTheme {
   backgroundType: BackgroundType;
@@ -188,6 +216,31 @@ export const DEFAULT_CHAT_THEME: ChatTheme = {
   accentColor: 'purple',
   sentTextColor: '#ffffff',
   receivedTextColor: '#ffffff',
+};
+
+export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  notifications_enabled: true,
+  sound_enabled: true,
+  desktop_notifications: false,
+  privacy_mode: false,
+  show_online_status: true,
+  allow_message_previews: true,
+  theme_preference: 'auto',
+  sidebar_position: 'right',
+  message_density: 'comfortable',
+  auto_save_notes: true,
+  confirm_before_delete: true,
+  show_typing_indicators: true,
+  message_history_limit: 1000,
+  cache_enabled: true,
+  smooth_animations: true,
+  auto_load_media: true,
+  auto_save_files: false,
+  read_receipts: true,
+  ghost_mode: false,
+  end_to_end_encryption: true,
+  biometric_unlock: false,
+  block_strangers: false,
 };
 
 export const DEFAULT_USER_CHAT_SETTINGS: UserChatSettings = {

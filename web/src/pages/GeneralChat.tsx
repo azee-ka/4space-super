@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes,
-  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass, faChartLine,
+  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass, faChartLine, faCog
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
@@ -71,7 +71,7 @@ export function GeneralChat() {
     }
   }, [chatId, selectedConversationId]);
   const [rightSidebarTab, setRightSidebarTab] = useState<'home' | 'saved' | 'theme' | 'settings'>('home');
-  type HomeTab = 'metrics' | 'media' | 'links' | 'kept' | 'pinned' | 'customization';
+  type HomeTab = 'metrics' | 'media' | 'links' | 'kept' | 'pinned' | 'customization' | 'settings';
   const [homeActiveTab, setHomeActiveTab] = useState<HomeTab>('metrics');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'favorites' | 'muted'>('all');
@@ -812,7 +812,7 @@ export function GeneralChat() {
               <RightSidebar
                 activeTab={homeActiveTab}
                 onTabChange={(tab) => {
-                  if (['metrics', 'media', 'links', 'kept', 'pinned', 'customization'].includes(tab)) {
+                  if (['metrics', 'media', 'links', 'kept', 'pinned', 'customization', 'settings'].includes(tab)) {
                     setHomeActiveTab(tab as HomeTab);
                   }
                 }}

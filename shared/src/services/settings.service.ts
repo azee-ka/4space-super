@@ -5,11 +5,13 @@ import {
   DEFAULT_ROOM_SETTINGS,
   DEFAULT_SPACE_SETTINGS,
   DEFAULT_USER_CHAT_SETTINGS,
+  DEFAULT_USER_PREFERENCES,
   type MessageRetention,
   type RoomMemberSettings,
   type RoomSettings,
   type SpaceSettings,
   type UserChatSettings,
+  type UserPreferences,
 } from '../types/chatSettings';
 import { formatMessageRetention } from '../utils/messageRetention';
 
@@ -163,6 +165,48 @@ export class SettingsService {
     if (error) throw error;
 
     return mergeUserChatSettings(DEFAULT_USER_CHAT_SETTINGS, data.settings as Partial<UserChatSettings>);
+  }
+
+  async getUserPreferences(): Promise<UserPreferences> {
+    const user = await this.requireUser();
+
+    const { data, error } = await this.supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      // Insert default preferences
+      const { data: newData, error: insertError } = await this.supabase
+        .from('user_preferences')
+        .insert({ user_id: user.id, ...DEFAULT_USER_PREFERENCES })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return newData as UserPreferences;
+    }
+
+    return { ...DEFAULT_USER_PREFERENCES, ...data } as UserPreferences;
+  }
+
+  async updateUserPreferences(updates: Partial<UserPreferences>): Promise<UserPreferences> {
+    const user = await this.requireUser();
+    const current = await this.getUserPreferences();
+    const next = { ...current, ...updates };
+
+    const { data, error } = await this.supabase
+      .from('user_preferences')
+      .upsert({ user_id: user.id, ...next })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data as UserPreferences;
   }
 
   async getSpaceSettings(spaceId: string): Promise<SpaceSettings> {

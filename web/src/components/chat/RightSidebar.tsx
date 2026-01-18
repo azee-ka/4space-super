@@ -11,16 +11,14 @@ import {
   faRobot, faBrain, faCalendar, faFire,
   faHashtag as faHashtagAlt, faUsers as faUsersAlt, faSmile, faFileAlt, faHeart, faReply,
   faHistory, faExternalLinkAlt, faTimes, faBookmark, faThumbtack,
-  faSave
+  faSave, faCog
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { CustomizationTab } from '../spaces/chat/rightPanel/CustomizationTab';
 import { formatRelativeTime } from './utils/formatDate';
 import { calculateAverageResponseTime, calculateConversationAge, calculateActivityScore } from './utils/chatUtils';
-import { SettingsService } from '@4space/shared/src/services/settings.service';
-import { supabase } from '../../lib/supabase';
 import { useUserSavedMessages, useUnsaveMessage, useUserKeptMessages, useUnkeepMessage } from '../../hooks/useUserContent';
-import { useUpdateUserChatSettings } from '../../hooks/useSettings';
+import { useUserPreferences, useUpdateUserPreferences } from '../../hooks/useSettings';
 import type { ChatTheme } from '@4space/shared/src/types/chatSettings';
 
 type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'saved' | 'kept' | 'pinned' | 'customization';
@@ -85,6 +83,14 @@ export function RightSidebar({
     messageAnimations,
     autoDeleteMessages,
     messageHistory,
+    setShowAvatars,
+    setShowTimestamps,
+    setShowReadReceipts,
+    setShowLinkPreviews,
+    setFormattingButtonsEnabled,
+    setMessageAnimations,
+    setAutoDeleteMessages,
+    setMessageHistory,
   } = useChatSettingsStore();
 
   // User content hooks
@@ -93,41 +99,40 @@ export function RightSidebar({
   const unsaveMessage = useUnsaveMessage();
   const unkeepMessage = useUnkeepMessage();
 
-  // Settings hooks
-  const updateUserChatSettings = useUpdateUserChatSettings();
+  // Settings hooks (only for user preferences)
+  const { data: userPreferences } = useUserPreferences();
+  const updateUserPreferences = useUpdateUserPreferences();
 
-  const settingsService = new SettingsService(supabase);
-
-  const handleToggleShowAvatars = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ showAvatars: enabled });
+  const handleToggleShowAvatars = (enabled: boolean) => {
+    setShowAvatars(enabled);
   };
 
-  const handleToggleShowTimestamps = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ showTimestamps: enabled });
+  const handleToggleShowTimestamps = (enabled: boolean) => {
+    setShowTimestamps(enabled);
   };
 
-  const handleToggleShowReadReceipts = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ showReadReceipts: enabled });
+  const handleToggleShowReadReceipts = (enabled: boolean) => {
+    setShowReadReceipts(enabled);
   };
 
-  const handleToggleFormattingButtons = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ formattingButtonsEnabled: enabled });
+  const handleToggleFormattingButtons = (enabled: boolean) => {
+    setFormattingButtonsEnabled(enabled);
   };
 
-  const handleToggleMessageAnimations = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ messageAnimations: enabled });
+  const handleToggleMessageAnimations = (enabled: boolean) => {
+    setMessageAnimations(enabled);
   };
 
-  const handleToggleShowLinkPreviews = async (enabled: boolean) => {
-    updateUserChatSettings.mutate({ showLinkPreviews: enabled });
+  const handleToggleShowLinkPreviews = (enabled: boolean) => {
+    setShowLinkPreviews(enabled);
   };
 
-  const handleAutoDeleteMessagesChange = async (value: string) => {
-    updateUserChatSettings.mutate({ autoDeleteMessages: value as any });
+  const handleAutoDeleteMessagesChange = (value: string) => {
+    setAutoDeleteMessages(value as any);
   };
 
-  const handleMessageHistoryChange = async (value: string) => {
-    updateUserChatSettings.mutate({ messageHistory: value as any });
+  const handleMessageHistoryChange = (value: string) => {
+    setMessageHistory(value as any);
   };
 
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
@@ -136,6 +141,7 @@ export function RightSidebar({
     { id: 'links', icon: faLink, label: 'Links', color: 'rose' },
     { id: 'kept', icon: faBookmark, label: 'Kept', color: 'purple' },
     { id: 'pinned', icon: faThumbtack, label: 'Pinned', color: 'yellow' },
+    { id: 'settings', icon: faCog, label: 'Settings', color: 'cyan' },
   ];
 
   return (
@@ -347,11 +353,46 @@ export function RightSidebar({
 
                 <div className="space-y-2">
                   {[
-                    { icon: faEye, label: 'Read receipts', sublabel: 'Show when you read messages', enabled: true, color: 'green' },
-                    { icon: faUserSecret, label: 'Ghost mode', sublabel: 'Hide online status', enabled: false, color: 'purple' },
-                    { icon: faLock, label: 'End-to-end encryption', sublabel: 'Secure messaging', enabled: true, color: 'green' },
-                    { icon: faFingerprint, label: 'Biometric unlock', sublabel: 'Fingerprint/Face ID', enabled: false, color: 'blue' },
-                    { icon: faBan, label: 'Block strangers', sublabel: 'Only contacts can message', enabled: false, color: 'red' },
+                    {
+                      icon: faEye,
+                      label: 'Read receipts',
+                      sublabel: 'Show when you read messages',
+                      enabled: userPreferences?.read_receipts ?? true,
+                      color: 'green',
+                      key: 'read_receipts'
+                    },
+                    {
+                      icon: faUserSecret,
+                      label: 'Ghost mode',
+                      sublabel: 'Hide online status',
+                      enabled: userPreferences?.ghost_mode ?? false,
+                      color: 'purple',
+                      key: 'ghost_mode'
+                    },
+                    {
+                      icon: faLock,
+                      label: 'End-to-end encryption',
+                      sublabel: 'Secure messaging',
+                      enabled: userPreferences?.end_to_end_encryption ?? true,
+                      color: 'green',
+                      key: 'end_to_end_encryption'
+                    },
+                    {
+                      icon: faFingerprint,
+                      label: 'Biometric unlock',
+                      sublabel: 'Fingerprint/Face ID',
+                      enabled: userPreferences?.biometric_unlock ?? false,
+                      color: 'blue',
+                      key: 'biometric_unlock'
+                    },
+                    {
+                      icon: faBan,
+                      label: 'Block strangers',
+                      sublabel: 'Only contacts can message',
+                      enabled: userPreferences?.block_strangers ?? false,
+                      color: 'red',
+                      key: 'block_strangers'
+                    },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="flex items-center gap-2.5">
@@ -363,7 +404,7 @@ export function RightSidebar({
                       </div>
                       <ToggleSwitch
                         enabled={item.enabled}
-                        onToggle={() => {}}
+                        onToggle={(enabled) => updateUserPreferences.mutate({ [item.key]: enabled })}
                         size="sm"
                         accentColor={theme.accentColor}
                       />
@@ -383,9 +424,30 @@ export function RightSidebar({
 
                 <div className="space-y-2">
                   {[
-                    { icon: faRocket, label: 'Smooth animations', sublabel: 'Enhanced visual effects', enabled: true, color: 'cyan' },
-                    { icon: faImages, label: 'Auto-load media', sublabel: 'Load images/videos', enabled: true, color: 'blue' },
-                    { icon: faDownload, label: 'Auto-save files', sublabel: 'Download attachments', enabled: false, color: 'purple' },
+                    {
+                      icon: faRocket,
+                      label: 'Smooth animations',
+                      sublabel: 'Enhanced visual effects',
+                      enabled: userPreferences?.smooth_animations ?? true,
+                      color: 'cyan',
+                      key: 'smooth_animations'
+                    },
+                    {
+                      icon: faImages,
+                      label: 'Auto-load media',
+                      sublabel: 'Load images/videos',
+                      enabled: userPreferences?.auto_load_media ?? true,
+                      color: 'blue',
+                      key: 'auto_load_media'
+                    },
+                    {
+                      icon: faDownload,
+                      label: 'Auto-save files',
+                      sublabel: 'Download attachments',
+                      enabled: userPreferences?.auto_save_files ?? false,
+                      color: 'purple',
+                      key: 'auto_save_files'
+                    },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="flex items-center gap-2.5">
@@ -397,7 +459,7 @@ export function RightSidebar({
                       </div>
                       <ToggleSwitch
                         enabled={item.enabled}
-                        onToggle={() => {}}
+                        onToggle={(enabled) => updateUserPreferences.mutate({ [item.key]: enabled })}
                         size="sm"
                         accentColor={theme.accentColor}
                       />
@@ -575,7 +637,7 @@ export function RightSidebar({
               <h3 className="text-sm font-bold text-white mb-3">Shared Media</h3>
               {mediaItems.length > 0 ? (
                 <div className="space-y-3">
-                  {mediaItems.slice(0, 10).map((item, index) => (
+                  {mediaItems.slice(0, 10).map((_item, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center">
                         <FontAwesomeIcon icon={faImages} className="text-green-400 text-sm" />
@@ -602,7 +664,7 @@ export function RightSidebar({
               <h3 className="text-sm font-bold text-white mb-3">Shared Links</h3>
               {linkItems.length > 0 ? (
                 <div className="space-y-3">
-                  {linkItems.slice(0, 10).map((item, index) => (
+                  {linkItems.slice(0, 10).map((_item, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800/70 transition-colors">
                       <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center">
                         <FontAwesomeIcon icon={faLink} className="text-blue-400 text-sm" />

@@ -1,15 +1,23 @@
 // WelcomeSidebar Component - General app settings and metrics
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChartLine, faUser, faBell, faShieldHalved, faPalette,
   faTimes, faBolt, faCog, faStar, faClock, faMessage,
-  faUsers, faRocket, faTrophy, faCalendar
+  faUsers, faRocket, faCalendar, faStickyNote,
+  faExclamationTriangle, faCheckCircle, faPlus,
+  faBookmark, faSearch
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
+import { useAuthStore } from '../../store/authStore';
+import { useUserNotes } from '../../hooks/useUserContent';
+import { useUserReminders } from '../../hooks/useUserContent';
+import { useConversations } from '../../hooks/useConversations';
+import { useSpaces } from '../../hooks/useSpaces';
+import { useUserPreferences, useUpdateUserPreferences } from '../../hooks/useSettings';
 
-type WelcomeSidebarTab = 'overview' | 'profile' | 'activity' | 'settings';
+type WelcomeSidebarTab = 'overview' | 'profile' | 'activity' | 'notes' | 'reminders' | 'settings';
 
 interface WelcomeSidebarProps {
   activeTab: WelcomeSidebarTab;
@@ -18,14 +26,46 @@ interface WelcomeSidebarProps {
 }
 
 export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSidebarProps) {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [privacyMode, setPrivacyMode] = useState(false);
+  const { user } = useAuthStore();
+  const { data: userPreferences, isLoading: preferencesLoading } = useUserPreferences();
+  const updateUserPreferences = useUpdateUserPreferences();
+  const [showCompletedReminders, setShowCompletedReminders] = useState(false);
+  const [noteSearch, setNoteSearch] = useState('');
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
+
+  // Data fetching
+  const { data: userNotes = [] } = useUserNotes();
+  const { data: userReminders = [] } = useUserReminders();
+  const { data: conversations = [] } = useConversations();
+  const { data: spaces = [] } = useSpaces();
+
+  // Computed metrics
+  const metrics = useMemo(() => {
+    const activeChats = conversations.filter(c => c.last_message_at).length;
+    const totalSpaces = spaces.length;
+    const pinnedNotes = userNotes.filter(note => note.is_pinned).length;
+    const pendingReminders = userReminders.filter(r => !r.is_completed).length;
+
+    // Activity this week
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const recentSpaces = spaces.filter((s: any) => new Date(s.created_at) > weekAgo).length;
+
+    return {
+      activeChats,
+      totalSpaces,
+      pinnedNotes,
+      pendingReminders,
+      recentSpaces
+    };
+  }, [conversations, spaces, userNotes, userReminders]);
 
   const tabs: Array<{ id: WelcomeSidebarTab; icon: any; label: string; color: string }> = [
     { id: 'overview', icon: faChartLine, label: 'Overview', color: 'cyan' },
     { id: 'profile', icon: faUser, label: 'Profile', color: 'blue' },
     { id: 'activity', icon: faBolt, label: 'Activity', color: 'green' },
+    { id: 'notes', icon: faStickyNote, label: 'Notes', color: 'yellow' },
+    { id: 'reminders', icon: faExclamationTriangle, label: 'Reminders', color: 'orange' },
     { id: 'settings', icon: faCog, label: 'Settings', color: 'purple' },
   ];
 
@@ -62,30 +102,30 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.3 }}
-        className="flex-shrink-0 p-3"
+        className="flex-shrink-0 px-3 py-2"
       >
-        <div className="flex gap-1 justify-center">
+        <div className="grid grid-cols-3 gap-1">
           {tabs.map((tab) => (
             <motion.button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              className={`flex-1 p-2.5 rounded-lg flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`px-2 py-2 rounded-md flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
                 activeTab === tab.id
-                  ? `bg-${tab.color}-500/15 text-${tab.color}-400 border border-${tab.color}-500/30 shadow-md`
+                  ? `bg-${tab.color}-500/15 text-${tab.color}-400 shadow-[0_0_8px_rgba(var(--tw-shadow-color))] shadow-${tab.color}-500/40`
                   : 'bg-zinc-800/40 text-gray-400 hover:text-gray-200 hover:bg-zinc-700/50'
               }`}
             >
               <FontAwesomeIcon
                 icon={tab.icon}
-                className={`text-base ${
+                className={`text-sm ${
                   activeTab === tab.id
                     ? `text-${tab.color}-400`
                     : 'text-gray-500'
                 }`}
               />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
             </motion.button>
           ))}
         </div>
@@ -116,23 +156,23 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                   <FontAwesomeIcon icon={faMessage} className="text-cyan-400 text-xl mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">12</div>
+                  <div className="text-2xl font-bold text-white mb-1">{metrics.activeChats}</div>
                   <div className="text-xs text-zinc-400">Active Chats</div>
                 </div>
                 <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                   <FontAwesomeIcon icon={faUsers} className="text-green-400 text-xl mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">47</div>
-                  <div className="text-xs text-zinc-400">Online Friends</div>
+                  <div className="text-2xl font-bold text-white mb-1">{metrics.totalSpaces}</div>
+                  <div className="text-xs text-zinc-400">Spaces</div>
                 </div>
                 <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
-                  <FontAwesomeIcon icon={faTrophy} className="text-yellow-400 text-xl mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">5</div>
-                  <div className="text-xs text-zinc-400">Achievements</div>
+                  <FontAwesomeIcon icon={faStickyNote} className="text-yellow-400 text-xl mb-2" />
+                  <div className="text-2xl font-bold text-white mb-1">{metrics.pinnedNotes}</div>
+                  <div className="text-xs text-zinc-400">Pinned Notes</div>
                 </div>
                 <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
-                  <FontAwesomeIcon icon={faClock} className="text-purple-400 text-xl mb-2" />
-                  <div className="text-2xl font-bold text-white mb-1">2h</div>
-                  <div className="text-xs text-zinc-400">Today</div>
+                  <FontAwesomeIcon icon={faRocket} className="text-purple-400 text-xl mb-2" />
+                  <div className="text-2xl font-bold text-white mb-1">{metrics.recentSpaces}</div>
+                  <div className="text-xs text-zinc-400">Recent Spaces</div>
                 </div>
               </div>
 
@@ -192,15 +232,20 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
                 <div className="p-4 bg-zinc-800/50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-zinc-300">Member Since</span>
-                    <span className="text-sm text-white font-medium">Jan 2024</span>
+                    <span className="text-sm text-white font-medium">
+                      {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short'
+                      }) : 'Unknown'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-zinc-300">Total Messages</span>
-                    <span className="text-sm text-white font-medium">1,247</span>
+                    <span className="text-sm text-white font-medium">{metrics.activeChats}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-zinc-300">Spaces Joined</span>
-                    <span className="text-sm text-white font-medium">8</span>
+                    <span className="text-sm text-white font-medium">{metrics.totalSpaces}</span>
                   </div>
                 </div>
 
@@ -246,16 +291,16 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
                   </h4>
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div>
-                      <div className="text-lg font-bold text-cyan-400">24</div>
+                      <div className="text-lg font-bold text-cyan-400">{userNotes.length}</div>
                       <div className="text-xs text-zinc-400">Messages</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-green-400">3</div>
+                      <div className="text-lg font-bold text-green-400">{metrics.recentSpaces}</div>
                       <div className="text-xs text-zinc-400">Spaces</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-purple-400">12</div>
-                      <div className="text-xs text-zinc-400">Hours</div>
+                      <div className="text-lg font-bold text-purple-400">{userNotes.length}</div>
+                      <div className="text-xs text-zinc-400">Notes</div>
                     </div>
                   </div>
                 </div>
@@ -297,6 +342,192 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
             </motion.div>
           )}
 
+          {activeTab === 'notes' && (
+            <motion.div
+              key="notes"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="p-4 space-y-6"
+            >
+              {/* Notes Header */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-500/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faStickyNote} className="text-2xl text-yellow-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Your Notes</h3>
+                <p className="text-zinc-400 text-sm">Personal notes and reminders</p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 text-sm" />
+                <input
+                  type="text"
+                  placeholder="Search notes..."
+                  value={noteSearch}
+                  onChange={(e) => setNoteSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-zinc-800/60 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30"
+                />
+              </div>
+
+              {/* Notes List */}
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {userNotes
+                  .filter(note =>
+                    noteSearch === '' ||
+                    note.title?.toLowerCase().includes(noteSearch.toLowerCase()) ||
+                    note.content.toLowerCase().includes(noteSearch.toLowerCase())
+                  )
+                  .map((note) => (
+                    <div
+                      key={note.id}
+                      className={`p-3 bg-zinc-800/30 rounded-lg cursor-pointer transition-colors hover:bg-zinc-800/50 ${
+                        selectedNote === note.id ? 'ring-2 ring-yellow-500/50' : ''
+                      }`}
+                      onClick={() => setSelectedNote(selectedNote === note.id ? null : note.id)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="text-sm font-medium text-white truncate flex-1">
+                          {note.title || 'Untitled Note'}
+                        </h4>
+                        <div className="flex items-center gap-1 ml-2">
+                          {note.is_pinned && (
+                            <FontAwesomeIcon icon={faBookmark} className="text-yellow-400 text-xs" />
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-zinc-400 line-clamp-2">
+                        {note.content}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex flex-wrap gap-1">
+                          {note.tags?.slice(0, 2).map((tag: string, idx: number) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-300 text-xs rounded">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-xs text-zinc-500">
+                          {new Date(note.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                {userNotes.length === 0 && (
+                  <div className="text-center py-8">
+                    <FontAwesomeIcon icon={faStickyNote} className="text-zinc-500 text-2xl mb-2" />
+                    <p className="text-zinc-500 text-sm">No notes yet</p>
+                    <p className="text-zinc-600 text-xs">Create your first note to get started</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Note Button */}
+              <button className="w-full p-3 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-xl transition-colors flex items-center justify-center gap-2">
+                <FontAwesomeIcon icon={faPlus} className="text-yellow-400 text-sm" />
+                <span className="text-yellow-300 text-sm font-medium">New Note</span>
+              </button>
+            </motion.div>
+          )}
+
+          {activeTab === 'reminders' && (
+            <motion.div
+              key="reminders"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="p-4 space-y-6"
+            >
+              {/* Reminders Header */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-2xl text-orange-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Reminders</h3>
+                <p className="text-zinc-400 text-sm">Stay organized and on track</p>
+              </div>
+
+              {/* Filter Toggle */}
+              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl">
+                <span className="text-sm text-white">Show completed</span>
+                <ToggleSwitch
+                  enabled={showCompletedReminders}
+                  onToggle={setShowCompletedReminders}
+                />
+              </div>
+
+              {/* Reminders List */}
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {userReminders
+                  .filter(reminder => showCompletedReminders || !reminder.is_completed)
+                  .sort((a, b) => new Date(a.reminder_time).getTime() - new Date(b.reminder_time).getTime())
+                  .map((reminder) => {
+                    const isPast = new Date(reminder.reminder_time) < new Date();
+                    const isCompleted = reminder.is_completed;
+
+                    return (
+                      <div
+                        key={reminder.id}
+                        className={`p-3 rounded-lg transition-colors ${
+                          isCompleted
+                            ? 'bg-green-500/10 border border-green-500/20'
+                            : isPast
+                            ? 'bg-red-500/10 border border-red-500/20'
+                            : 'bg-zinc-800/30 hover:bg-zinc-800/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className={`text-sm font-medium truncate flex-1 ${
+                            isCompleted ? 'text-green-300' : isPast ? 'text-red-300' : 'text-white'
+                          }`}>
+                            {reminder.title}
+                          </h4>
+                          {isCompleted && (
+                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-400 text-sm ml-2" />
+                          )}
+                        </div>
+                        {reminder.description && (
+                          <p className="text-xs text-zinc-400 mb-2 line-clamp-2">
+                            {reminder.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs ${
+                            isCompleted ? 'text-green-400' : isPast ? 'text-red-400' : 'text-zinc-500'
+                          }`}>
+                            {new Date(reminder.reminder_time).toLocaleString()}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {reminder.repeat_type !== 'none' && (
+                              <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 text-xs rounded">
+                                {reminder.repeat_type}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {userReminders.length === 0 && (
+                  <div className="text-center py-8">
+                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-zinc-500 text-2xl mb-2" />
+                    <p className="text-zinc-500 text-sm">No reminders set</p>
+                    <p className="text-zinc-600 text-xs">Create reminders to stay organized</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Reminder Button */}
+              <button className="w-full p-3 bg-orange-500/20 hover:bg-orange-500/30 rounded-xl transition-colors flex items-center justify-center gap-2">
+                <FontAwesomeIcon icon={faPlus} className="text-orange-400 text-sm" />
+                <span className="text-orange-300 text-sm font-medium">New Reminder</span>
+              </button>
+            </motion.div>
+          )}
+
           {activeTab === 'settings' && (
             <motion.div
               key="settings"
@@ -327,8 +558,8 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
                       </div>
                     </div>
                     <ToggleSwitch
-                      enabled={notificationsEnabled}
-                      onToggle={setNotificationsEnabled}
+                      enabled={userPreferences?.notifications_enabled ?? true}
+                      onToggle={(enabled) => updateUserPreferences.mutate({ notifications_enabled: enabled })}
                     />
                   </div>
 
@@ -341,8 +572,8 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
                       </div>
                     </div>
                     <ToggleSwitch
-                      enabled={soundEnabled}
-                      onToggle={setSoundEnabled}
+                      enabled={userPreferences?.sound_enabled ?? true}
+                      onToggle={(enabled) => updateUserPreferences.mutate({ sound_enabled: enabled })}
                     />
                   </div>
                 </div>
@@ -357,8 +588,8 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
                       </div>
                     </div>
                     <ToggleSwitch
-                      enabled={privacyMode}
-                      onToggle={setPrivacyMode}
+                      enabled={userPreferences?.privacy_mode ?? false}
+                      onToggle={(enabled) => updateUserPreferences.mutate({ privacy_mode: enabled })}
                     />
                   </div>
                 </div>

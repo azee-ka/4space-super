@@ -6,12 +6,14 @@ import {
   type RoomSettings,
   type SpaceSettings,
   type UserChatSettings,
+  type UserPreferences,
 } from '../types/chatSettings';
 import { SettingsService } from '../services/settings.service';
 
 export const settingsKeys = {
   all: ['settings'] as const,
   user: () => [...settingsKeys.all, 'user'] as const,
+  userPrefs: () => [...settingsKeys.all, 'user-prefs'] as const,
   spaces: () => [...settingsKeys.all, 'spaces'] as const,
   space: (spaceId: string) => [...settingsKeys.spaces(), spaceId] as const,
   rooms: () => [...settingsKeys.all, 'rooms'] as const,
@@ -38,6 +40,26 @@ export function createSettingsHooks(supabase: SupabaseClient) {
         settingsService.updateUserChatSettings(updates),
       onSuccess: (settings) => {
         queryClient.setQueryData(settingsKeys.user(), settings);
+      },
+    });
+  }
+
+  function useUserPreferences() {
+    return useQuery({
+      queryKey: settingsKeys.userPrefs(),
+      queryFn: () => settingsService.getUserPreferences(),
+      staleTime: 1000 * 60 * 5,
+    });
+  }
+
+  function useUpdateUserPreferences() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: (updates: Partial<UserPreferences>) =>
+        settingsService.updateUserPreferences(updates),
+      onSuccess: (preferences) => {
+        queryClient.setQueryData(settingsKeys.userPrefs(), preferences);
       },
     });
   }
@@ -140,6 +162,8 @@ export function createSettingsHooks(supabase: SupabaseClient) {
   return {
     useUserChatSettings,
     useUpdateUserChatSettings,
+    useUserPreferences,
+    useUpdateUserPreferences,
     useSpaceSettings,
     useUpdateSpaceSettings,
     useRoomSettings,

@@ -1566,6 +1566,77 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          allow_message_previews: boolean | null
+          auto_save_notes: boolean | null
+          cache_enabled: boolean | null
+          confirm_before_delete: boolean | null
+          created_at: string | null
+          desktop_notifications: boolean | null
+          id: string
+          message_density: string | null
+          message_history_limit: number | null
+          notifications_enabled: boolean | null
+          privacy_mode: boolean | null
+          show_online_status: boolean | null
+          show_typing_indicators: boolean | null
+          sidebar_position: string | null
+          sound_enabled: boolean | null
+          theme_preference: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          allow_message_previews?: boolean | null
+          auto_save_notes?: boolean | null
+          cache_enabled?: boolean | null
+          confirm_before_delete?: boolean | null
+          created_at?: string | null
+          desktop_notifications?: boolean | null
+          id?: string
+          message_density?: string | null
+          message_history_limit?: number | null
+          notifications_enabled?: boolean | null
+          privacy_mode?: boolean | null
+          show_online_status?: boolean | null
+          show_typing_indicators?: boolean | null
+          sidebar_position?: string | null
+          sound_enabled?: boolean | null
+          theme_preference?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          allow_message_previews?: boolean | null
+          auto_save_notes?: boolean | null
+          cache_enabled?: boolean | null
+          confirm_before_delete?: boolean | null
+          created_at?: string | null
+          desktop_notifications?: boolean | null
+          id?: string
+          message_density?: string | null
+          message_history_limit?: number | null
+          notifications_enabled?: boolean | null
+          privacy_mode?: boolean | null
+          show_online_status?: boolean | null
+          show_typing_indicators?: boolean | null
+          sidebar_position?: string | null
+          sound_enabled?: boolean | null
+          theme_preference?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_reminders: {
         Row: {
           created_at: string | null
