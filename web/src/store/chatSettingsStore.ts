@@ -218,6 +218,26 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
     }),
     {
       name: 'chat-settings-storage',
+      version: 2, // Increment to trigger migration
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          // Migration: Reset display settings to true (proper defaults)
+          // This fixes old persisted states that had these disabled
+          return {
+            ...persistedState,
+            showAvatars: true,
+            showTimestamps: true,
+            showReadReceipts: true,
+            showMessageStatus: true,
+            showUsernames: true,
+            showTypingIndicator: true,
+            showOnlineStatus: true,
+            messageAnimations: true,
+            groupMessages: true,
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );

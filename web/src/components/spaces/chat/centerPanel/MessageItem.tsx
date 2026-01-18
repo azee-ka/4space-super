@@ -58,16 +58,25 @@ const SingleTick = ({ className }: { className?: string }) => (
 
 const DoubleTick = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 18 12" fill="none" className={className || "w-[18px] h-[12px]"} preserveAspectRatio="xMidYMid meet">
-    <path d="M2 6L5 9L13 1" 
-          stroke="currentColor" 
-          strokeWidth="1.8" 
-          strokeLinecap="round" 
+    <path d="M2 6L5 9L13 1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
           strokeLinejoin="round"/>
-    <path d="M6 6L9 9L17 1" 
-          stroke="currentColor" 
-          strokeWidth="1.8" 
-          strokeLinecap="round" 
+    <path d="M6 6L9 9L17 1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
           strokeLinejoin="round"/>
+  </svg>
+);
+
+// Error icon for failed messages
+const ErrorIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 16 16" fill="none" className={className || "w-4 h-4"} preserveAspectRatio="xMidYMid meet">
+    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    <path d="M8 4V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
   </svg>
 );
 
@@ -415,30 +424,46 @@ export function MessageItem({
 
   const getReadStatus = () => {
     if (!isOwn || message.deleted_at) return null;
-    
-    // Check if message is still sending (optimistic message)
-    const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
-    
-    if (isOptimistic) {
+
+    // Check if message failed to send
+    const isFailed = !!(message as any)._failed;
+    if (isFailed) {
+      return {
+        component: ErrorIcon,
+        color: 'text-red-500',
+        title: 'Failed to send - tap to retry',
+        isFailed: true
+      };
+    }
+
+    // Check if message is still sending (optimistic message without _realId means not yet confirmed)
+    const isOptimisticId = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
+    const hasRealId = !!(message as any)._realId;
+
+    // Still sending - no server confirmation yet
+    if (isOptimisticId && !hasRealId) {
       return {
         component: SingleTick,
         color: 'text-gray-500',
-        title: 'Sending...'
+        title: 'Sending...',
+        isFailed: false
       };
     }
-    
-    // Message is sent - show double tick
+
+    // Message delivered (has _realId or is a real ID) - show double tick
     const hasBeenRead = message.read_receipts && message.read_receipts.length > 0;
-    
+
     return {
       component: DoubleTick,
       color: hasBeenRead ? 'text-cyan-400' : 'text-gray-400',
-      title: hasBeenRead ? 'Read' : 'Delivered'
+      title: hasBeenRead ? 'Read' : 'Delivered',
+      isFailed: false
     };
   };
 
   const readStatus = getReadStatus();
-  const isOptimistic = message.id.startsWith('optimistic-') || message.id.startsWith('temp-');
+  const isOptimistic = (message.id.startsWith('optimistic-') || message.id.startsWith('temp-')) && !(message as any)._realId;
+  const isFailed = !!(message as any)._failed;
   const showMetaLine = !message.deleted_at && (
     !!message.edited_at || showTimestamps || (readStatus && showMessageStatus && showReadReceipts)
   );
@@ -639,10 +664,10 @@ export function MessageItem({
                         </span>
                       )}
                       {readStatus && showMessageStatus && showReadReceipts && (
-                        <motion.div 
-                          className="flex items-center" 
+                        <motion.div
+                          className="flex items-center"
                           title={readStatus.title}
-                          key={isOptimistic ? 'sending' : 'sent'}
+                          key={isFailed ? 'failed' : isOptimistic ? 'sending' : 'sent'}
                           initial={{ scale: 0.9, opacity: 0.8 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{
@@ -652,7 +677,44 @@ export function MessageItem({
                             mass: 0.5
                           }}
                         >
-                          <readStatus.component className={`${readStatus.color} w-3.5 h-2.5 transition-colors duration-300`} />
+                          {isFailed ? (
+                            <DropdownButton
+                              placement="top-end"
+                              toggleContent={
+                                <button className="flex items-center gap-1 text-red-500 hover:text-red-400 transition-colors">
+                                  <readStatus.component className="w-4 h-4" />
+                                </button>
+                              }
+                            >
+                              {({ closeDropdown }) => (
+                                <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[120px]">
+                                  <button
+                                    onClick={() => {
+                                      // TODO: Implement retry logic
+                                      console.log('Retry message:', message.id);
+                                      closeDropdown();
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                                  >
+                                    <FontAwesomeIcon icon={faReply} className="text-cyan-400 w-4" />
+                                    Retry
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      onDelete?.(message.id);
+                                      closeDropdown();
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} className="w-4" />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </DropdownButton>
+                          ) : (
+                            <readStatus.component className={`${readStatus.color} w-3.5 h-2.5 transition-colors duration-300`} />
+                          )}
                         </motion.div>
                       )}
                     </div>

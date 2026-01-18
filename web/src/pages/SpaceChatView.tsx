@@ -483,15 +483,21 @@ const handleSendMessage = useCallback((
 
   // If editing, use update mutation
   if (editingMessage) {
+    // Capture and clear immediately for smooth UX
+    const messageId = editingMessage.id;
+    setEditingMessage(null);
+
     updateMessage.mutate({
-      messageId: editingMessage.id,
+      messageId,
       content: content.trim(),
-    }, {
-      onSuccess: () => {
-        setEditingMessage(null);
-      }
     });
     return;
+  }
+
+  // Capture reply ID and clear immediately for smooth UX
+  const replyToId = replyTo?.id;
+  if (replyTo) {
+    setReplyTo(null);
   }
 
   const retentionMs = getMessageRetentionMs(roomSettingsDataResolved.messageRetention);
@@ -505,13 +511,9 @@ const handleSendMessage = useCallback((
     content,
     message_type: type as any,
     attachments,
-    reply_to_id: replyTo?.id,
+    reply_to_id: replyToId,
     ttl,
     expires_at: expiresAt || undefined,
-  }, {
-    onSuccess: () => {
-      setReplyTo(null);
-    }
   });
 }, [selectedRoomId, spaceId, replyTo, editingMessage, sendMessage, updateMessage, roomSettingsDataResolved.messageRetention]);
 

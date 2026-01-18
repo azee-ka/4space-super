@@ -118,19 +118,24 @@ export function MessagesList({
     });
   }, [isLoading, messages.length, scrollToBottom]);
 
-  // Handle new messages - simplified for speed
+  // Handle new messages - optimized for smooth scrolling
   useEffect(() => {
     if (!hasInitialScrolledRef.current || isLoading) return;
-    
+
     const totalCount = messages.length;
     const hasNew = totalCount > lastMessageCountRef.current;
 
     // Only auto-scroll if user is near bottom and new message arrived
     if (autoScrollToBottom && hasNew && isNearBottomRef.current) {
-      // Use immediate scroll (not smooth) for instant feedback
-      scrollToBottom(false);
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        // Delay to allow layout to settle after reply/edit container animations (200ms)
+        setTimeout(() => {
+          scrollToBottom(true);
+        }, 250);
+      });
     }
-    
+
     lastMessageCountRef.current = totalCount;
   }, [messages.length, isLoading, scrollToBottom, autoScrollToBottom]);
 
@@ -551,49 +556,33 @@ export function MessagesList({
               {group.messages.map(({ message, isFirstInGroup, isLastInGroup }) => {
                 const isOwn = message.sender_id === currentUserId;
                 
-                // Use message ID as key - each message (optimistic or real) has unique ID
-                // Smooth animation handles the transition when optimistic is replaced by real
+                // Use message ID as key - optimistic messages keep their ID even after server confirms
+                // This prevents flickering since React key stays the same
                 const stableKey = message.id;
 
                 return (
                   <motion.div
                     key={stableKey}
-                    layout={shouldAnimate}
+                    layout={false} // Disable layout animations to prevent jitter on data updates
                     initial={shouldAnimate ? {
                       opacity: 0,
-                      y: 6,
-                      scale: 0.97,
+                      y: 8,
+                      scale: 0.96,
                     } : false}
-                    animate={shouldAnimate ? {
+                    animate={{
                       opacity: 1,
                       y: 0,
                       scale: 1,
-                    } : { opacity: 1, y: 0, scale: 1 }}
+                    }}
                     exit={shouldAnimate ? {
                       opacity: 0,
-                      y: -4,
                       scale: 0.98,
-                      transition: { duration: 0.15 }
+                      transition: { duration: 0.1 }
                     } : undefined}
                     transition={shouldAnimate ? {
-                      layout: {
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 40,
-                        mass: 0.5
-                      },
-                      opacity: {
-                        duration: 0.2,
-                        ease: [0.22, 1, 0.36, 1]
-                      },
-                      y: {
-                        duration: 0.25,
-                        ease: [0.22, 1, 0.36, 1]
-                      },
-                      scale: {
-                        duration: 0.25,
-                        ease: [0.22, 1, 0.36, 1]
-                      }
+                      opacity: { duration: 0.2, ease: 'easeOut' },
+                      y: { type: 'spring', stiffness: 500, damping: 30 },
+                      scale: { duration: 0.2, ease: 'easeOut' }
                     } : { duration: 0 }}
                     style={{
                       willChange: 'transform, opacity'

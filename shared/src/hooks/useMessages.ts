@@ -307,26 +307,52 @@ export function createMessageHooks(supabase: SupabaseClient) {
         return { previousMessages };
       },
 
-      // On success: Real message will come via realtime and replace optimistic
-      onSuccess: () => {
-        // Real message will arrive via realtime and replace optimistic one
-        // No need to invalidate - realtime handles it
+      // On success: Real message will come via realtime and update optimistic
+      onSuccess: (realMessage, variables) => {
+        // Update optimistic message with real data but keep the ID to prevent flicker
+        queryClient.setQueryData(
+          messageKeys.roomMessages(variables.room_id),
+          (old: any) => {
+            if (!old?.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: Message[]) =>
+                page.map(msg =>
+                  msg.id.startsWith('optimistic-') &&
+                  msg.content === realMessage.content &&
+                  msg.sender_id === realMessage.sender_id
+                    ? { ...realMessage, id: msg.id, _realId: realMessage.id }
+                    : msg
+                )
+              ),
+            };
+          }
+        );
       },
 
-      // On error: Rollback optimistic update
-      onError: (error, variables, context) => {
+      // On error: Mark message as failed (don't rollback - let user retry)
+      onError: (error, variables) => {
         console.error('Send message error:', error);
-        
-        // Rollback optimistic update
-        if (context?.previousMessages) {
-          queryClient.setQueryData(
-            messageKeys.roomMessages(variables.room_id),
-            context.previousMessages
-          );
-        }
-        
-        // Show error
-        alert('Failed to send message. Please try again.');
+
+        // Mark the optimistic message as failed
+        queryClient.setQueryData(
+          messageKeys.roomMessages(variables.room_id),
+          (old: any) => {
+            if (!old?.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: Message[]) =>
+                page.map(msg =>
+                  msg.id.startsWith('optimistic-') &&
+                  msg.content === variables.content &&
+                  msg.sender_id === msg.sender_id
+                    ? { ...msg, _failed: true, _error: (error as Error).message }
+                    : msg
+                )
+              ),
+            };
+          }
+        );
       },
     });
   }

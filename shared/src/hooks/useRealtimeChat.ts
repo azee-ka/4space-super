@@ -114,24 +114,26 @@ export function useRealtimeChat(
               };
             }
 
-            // Check if this is an optimistic message that needs replacing
+            // Check if this is an optimistic message that needs updating
             // Match by content and sender (for rapid sends, multiple optimistic messages)
             const optimisticMatch = old.pages
               .flatMap((page: Message[]) => page)
-              .find((msg: Message) => 
-                (msg.id.startsWith('optimistic-') || msg.id.startsWith('temp-')) && 
+              .find((msg: Message) =>
+                (msg.id.startsWith('optimistic-') || msg.id.startsWith('temp-')) &&
                 msg.content === enrichedMessage.content &&
                 msg.sender_id === enrichedMessage.sender_id
               );
 
             if (optimisticMatch) {
-              console.log('[Realtime] Replacing optimistic message with real one');
+              console.log('[Realtime] Updating optimistic message with server data (keeping ID for smooth transition)');
+              // Keep the optimistic ID to prevent React key change and flickering
+              // Just update the message data (read_receipts, reactions, etc.)
               return {
                 ...old,
                 pages: old.pages.map((page: Message[]) =>
                   page.map(msg =>
                     msg.id === optimisticMatch.id
-                      ? enrichedMessage
+                      ? { ...enrichedMessage, id: optimisticMatch.id, _realId: enrichedMessage.id }
                       : msg
                   )
                 ),

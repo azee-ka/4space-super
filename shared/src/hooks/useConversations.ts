@@ -197,8 +197,10 @@ export function createConversationHooks(supabase: SupabaseClient) {
                 page.map((msg) =>
                   msg.id.startsWith('optimistic-') &&
                   msg.content === realMessage.content &&
-                  msg.sender_id === realMessage.sender_id
-                    ? realMessage
+                  msg.sender_id === realMessage.sender_id &&
+                  msg.conversation_id === realMessage.conversation_id
+                    // Keep optimistic ID to prevent flickering, store real ID for reference
+                    ? { ...realMessage, id: msg.id, _realId: realMessage.id }
                     : msg
                 )
               ),
@@ -220,13 +222,28 @@ export function createConversationHooks(supabase: SupabaseClient) {
             )
         );
       },
-      onError: (_error, variables, context) => {
-        if (context?.previousMessages) {
-          queryClient.setQueryData(
-            conversationKeys.messages(variables.conversation_id),
-            context.previousMessages
-          );
-        }
+      onError: (error, variables) => {
+        console.error('Send message error:', error);
+
+        // Mark the optimistic message as failed (don't rollback - let user retry)
+        queryClient.setQueryData(
+          conversationKeys.messages(variables.conversation_id),
+          (old: any) => {
+            if (!old?.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: ConversationMessage[]) =>
+                page.map((msg) =>
+                  msg.id.startsWith('optimistic-') &&
+                  msg.content === variables.content &&
+                  msg.sender_id === msg.sender_id
+                    ? { ...msg, _failed: true, _error: (error as Error).message }
+                    : msg
+                )
+              ),
+            };
+          }
+        );
       },
     });
   }

@@ -36,7 +36,7 @@ import {
 } from '../hooks/useConversations';
 import { useAuthStore } from '../store/authStore';
 import { useChatSettingsStore } from '../store/chatSettingsStore';
-import { useChatSettingsSync } from '../hooks/useChatSettingsSync';
+import { useGeneralChatSettingsStore } from '../store/generalChatSettingsStore';
 import { getBackgroundStyle } from '../utils/themeUtils';
 import { useBackgroundSizing, useShouldUseMirroredBackground } from '../hooks/useWindowSize';
 import type { SearchUserResult } from '@4space/shared/src/services/conversations.service';
@@ -55,8 +55,6 @@ import type { ChatTheme } from '@4space/shared/src/types/chatSettings';
 // ====================================
 
 export function GeneralChat() {
-  useChatSettingsSync();
-
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
 
@@ -91,6 +89,7 @@ export function GeneralChat() {
   const [showWelcomeMenu, setShowWelcomeMenu] = useState(false);
   const [welcomeSidebarTab, setWelcomeSidebarTab] = useState<'overview' | 'profile' | 'activity' | 'settings'>('overview');
 
+  // Use separate settings store for general chat (independent from space chat)
   const {
     showTimestamps,
     showReadReceipts,
@@ -99,19 +98,22 @@ export function GeneralChat() {
     showMessageStatus,
     showTypingIndicator,
     showOnlineStatus,
-    screenSecurity,
     messageDensity,
     fontSize,
     theme,
     messageAnimations,
     autoScrollToBottom,
-    reduceAnimations,
     groupMessages,
+    enableMessageReactions,
+    enableMessageReplies,
+    allowMessageEditing,
+    allowMessageDeletion,
     setTheme,
     updateSettings,
-  } = useChatSettingsStore();
+  } = useGeneralChatSettingsStore();
 
-  const getSettingsForRoom = useChatSettingsStore((state) => state.getSettingsForRoom);
+  // For animation preferences that come from shared store
+  const { reduceAnimations } = useChatSettingsStore();
 
   const { data: conversations = [], isLoading: loadingConversations } = useConversations();
   const { data: messagesData, isLoading: loadingMessages, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -213,11 +215,18 @@ export function GeneralChat() {
       if (!trimmed && attachments.length === 0) return;
 
       if (editingMessage) {
-        updateMessage.mutate(
-          { messageId: editingMessage.id, content: trimmed },
-          { onSuccess: () => setEditingMessage(null) }
-        );
+        // Capture and clear immediately for smooth UX
+        const messageId = editingMessage.id;
+        setEditingMessage(null);
+
+        updateMessage.mutate({ messageId, content: trimmed });
         return;
+      }
+
+      // Capture reply ID and clear immediately for smooth UX
+      const replyToId = replyTo?.id || null;
+      if (replyTo) {
+        setReplyTo(null);
       }
 
       const metadata: any = {
@@ -228,19 +237,14 @@ export function GeneralChat() {
         metadata.isSingleEmoji = true;
       }
 
-      sendMessage.mutate(
-        {
-          conversation_id: selectedConversationId,
-          content: trimmed,
-          message_type: type,
-          reply_to_id: replyTo?.id || null,
-          attachments,
-          metadata,
-        },
-        {
-          onSuccess: () => setReplyTo(null),
-        }
-      );
+      sendMessage.mutate({
+        conversation_id: selectedConversationId,
+        content: trimmed,
+        message_type: type,
+        reply_to_id: replyToId,
+        attachments,
+        metadata,
+      });
     },
     [selectedConversationId, editingMessage, replyTo, vaultConversation, activeCollection]
   );
@@ -291,8 +295,8 @@ export function GeneralChat() {
   // Removed auto-selection of first conversation
 
 
-  const conversationAppearance = getSettingsForRoom(selectedConversationId || undefined);
-  const activeTheme: ChatTheme = conversationAppearance.theme || theme;
+  // General chat uses its own settings directly (no per-room overrides needed)
+  const activeTheme: ChatTheme = theme;
   const centerPanelBackgroundStyle = getBackgroundStyle(activeTheme);
 
   const filteredConversations = useMemo(() => {
@@ -590,20 +594,20 @@ export function GeneralChat() {
               onBookmark={(messageId) => console.log('Bookmark:', messageId)}
                   onReaction={handleReaction}
                   onRemoveReaction={handleRemoveReaction}
-                  theme={conversationAppearance.theme || theme}
-                  fontSize={conversationAppearance.fontSize || fontSize}
-                  messageDensity={conversationAppearance.messageDensity || messageDensity}
+                  theme={theme}
+                  fontSize={fontSize}
+                  messageDensity={messageDensity}
                   typingUsers={typingUsers}
                   showAvatars={showAvatars}
                   showUsernames={showUsernames}
                   showTimestamps={showTimestamps}
                   showReadReceipts={showReadReceipts}
                   showMessageStatus={showMessageStatus}
-                  enableMessageReactions
-                  enableMessageReplies
+                  enableMessageReactions={enableMessageReactions}
+                  enableMessageReplies={enableMessageReplies}
                   enableMessageForwarding
-                  allowMessageEditing
-                  allowMessageDeletion
+                  allowMessageEditing={allowMessageEditing}
+                  allowMessageDeletion={allowMessageDeletion}
                   allowMessagePinning
                   groupMessages={groupMessages}
                   autoScrollToBottom={autoScrollToBottom}

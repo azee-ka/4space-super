@@ -94,10 +94,16 @@ export function useRealtimeConversation(
               );
 
             if (optimisticMatch) {
+              // Keep the optimistic ID to prevent React key change and flickering
+              // Just update the message data (read_receipts, reactions, etc.)
               return {
                 ...old,
                 pages: old.pages.map((page: ConversationMessage[]) =>
-                  page.map((msg) => (msg.id === optimisticMatch.id ? enrichedMessage : msg))
+                  page.map((msg) =>
+                    msg.id === optimisticMatch.id
+                      ? { ...enrichedMessage, id: optimisticMatch.id, _realId: enrichedMessage.id }
+                      : msg
+                  )
                 ),
               };
             }
