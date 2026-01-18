@@ -19,6 +19,8 @@ import { formatRelativeTime } from './utils/formatDate';
 import { calculateAverageResponseTime, calculateConversationAge, calculateActivityScore } from './utils/chatUtils';
 import { SettingsService } from '@4space/shared/src/services/settings.service';
 import { supabase } from '../../lib/supabase';
+import { useUserSavedMessages, useUnsaveMessage, useUserKeptMessages, useUnkeepMessage } from '../../hooks/useUserContent';
+import { useUpdateUserChatSettings } from '../../hooks/useSettings';
 import type { ChatTheme } from '@4space/shared/src/types/chatSettings';
 
 type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'saved' | 'kept' | 'pinned' | 'customization';
@@ -85,70 +87,47 @@ export function RightSidebar({
     messageHistory,
   } = useChatSettingsStore();
 
+  // User content hooks
+  const { data: savedMessages = [] } = useUserSavedMessages();
+  const { data: keptMessages = [] } = useUserKeptMessages();
+  const unsaveMessage = useUnsaveMessage();
+  const unkeepMessage = useUnkeepMessage();
+
+  // Settings hooks
+  const updateUserChatSettings = useUpdateUserChatSettings();
+
   const settingsService = new SettingsService(supabase);
 
   const handleToggleShowAvatars = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ showAvatars: enabled });
-    } catch (error) {
-      console.error('Failed to update show avatars setting:', error);
-    }
+    updateUserChatSettings.mutate({ showAvatars: enabled });
   };
 
   const handleToggleShowTimestamps = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ showTimestamps: enabled });
-    } catch (error) {
-      console.error('Failed to update show timestamps setting:', error);
-    }
+    updateUserChatSettings.mutate({ showTimestamps: enabled });
   };
 
   const handleToggleShowReadReceipts = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ showReadReceipts: enabled });
-    } catch (error) {
-      console.error('Failed to update show read receipts setting:', error);
-    }
+    updateUserChatSettings.mutate({ showReadReceipts: enabled });
   };
 
   const handleToggleFormattingButtons = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ formattingButtonsEnabled: enabled });
-    } catch (error) {
-      console.error('Failed to update formatting buttons setting:', error);
-    }
+    updateUserChatSettings.mutate({ formattingButtonsEnabled: enabled });
   };
 
   const handleToggleMessageAnimations = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ messageAnimations: enabled });
-    } catch (error) {
-      console.error('Failed to update message animations setting:', error);
-    }
+    updateUserChatSettings.mutate({ messageAnimations: enabled });
   };
 
   const handleToggleShowLinkPreviews = async (enabled: boolean) => {
-    try {
-      await settingsService.updateUserChatSettings({ showLinkPreviews: enabled });
-    } catch (error) {
-      console.error('Failed to update show link previews setting:', error);
-    }
+    updateUserChatSettings.mutate({ showLinkPreviews: enabled });
   };
 
   const handleAutoDeleteMessagesChange = async (value: string) => {
-    try {
-      await settingsService.updateUserChatSettings({ autoDeleteMessages: value as any });
-    } catch (error) {
-      console.error('Failed to update auto delete messages setting:', error);
-    }
+    updateUserChatSettings.mutate({ autoDeleteMessages: value as any });
   };
 
   const handleMessageHistoryChange = async (value: string) => {
-    try {
-      await settingsService.updateUserChatSettings({ messageHistory: value as any });
-    } catch (error) {
-      console.error('Failed to update message history setting:', error);
-    }
+    updateUserChatSettings.mutate({ messageHistory: value as any });
   };
 
   const tabs: Array<{ id: RightSidebarTab; icon: any; label: string; color: string }> = [
@@ -647,23 +626,91 @@ export function RightSidebar({
 
           {activeTab === 'saved' && (
             <div className="p-4 space-y-4">
-              <h3 className="text-sm font-bold text-white mb-3">Saved Items</h3>
-              <div className="text-center py-8">
-                <FontAwesomeIcon icon={faSave} className="text-amber-400 text-3xl mb-3" />
-                <p className="text-zinc-400">No saved items yet</p>
-                <p className="text-sm text-zinc-500 mt-1">Items you save will appear here</p>
-              </div>
+              <h3 className="text-sm font-bold text-white mb-3">Saved Messages</h3>
+              {savedMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <FontAwesomeIcon icon={faSave} className="text-amber-400 text-3xl mb-3" />
+                  <p className="text-zinc-400">No saved messages yet</p>
+                  <p className="text-sm text-zinc-500 mt-1">Right-click messages to save them</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {savedMessages.map((item: any) => (
+                    <div key={item.id} className="p-3 bg-zinc-800/50 rounded-xl">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="text-sm text-white font-medium line-clamp-2">
+                            {item.message?.content || 'Message content'}
+                          </div>
+                          <div className="text-xs text-zinc-400 mt-1">
+                            {item.message?.conversation?.name || 'Unknown conversation'} • {formatRelativeTime(item.created_at)}
+                          </div>
+                          {item.note && (
+                            <div className="text-xs text-amber-300 mt-1 bg-amber-500/10 p-2 rounded">
+                              Note: {item.note}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm('Remove from saved messages?')) {
+                              unsaveMessage.mutate(item.message_id);
+                            }
+                          }}
+                          className="text-zinc-400 hover:text-red-400 p-1 ml-2"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'kept' && (
             <div className="p-4 space-y-4">
-              <h3 className="text-sm font-bold text-white mb-3">Kept Items</h3>
-              <div className="text-center py-8">
-                <FontAwesomeIcon icon={faBookmark} className="text-purple-400 text-3xl mb-3" />
-                <p className="text-zinc-400">No kept items yet</p>
-                <p className="text-sm text-zinc-500 mt-1">Items you keep will appear here</p>
-              </div>
+              <h3 className="text-sm font-bold text-white mb-3">Kept Messages</h3>
+              {keptMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <FontAwesomeIcon icon={faBookmark} className="text-purple-400 text-3xl mb-3" />
+                  <p className="text-zinc-400">No kept messages yet</p>
+                  <p className="text-sm text-zinc-500 mt-1">Right-click messages to keep them</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {keptMessages.map((item: any) => (
+                    <div key={item.id} className="p-3 bg-zinc-800/50 rounded-xl">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="text-sm text-white font-medium line-clamp-2">
+                            {item.message?.content || 'Message content'}
+                          </div>
+                          <div className="text-xs text-zinc-400 mt-1">
+                            {item.message?.conversation?.name || 'Unknown conversation'} • {formatRelativeTime(item.created_at)}
+                          </div>
+                          {item.note && (
+                            <div className="text-xs text-purple-300 mt-1 bg-purple-500/10 p-2 rounded">
+                              Note: {item.note}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm('Remove from kept messages?')) {
+                              unkeepMessage.mutate(item.message_id);
+                            }
+                          }}
+                          className="text-zinc-400 hover:text-red-400 p-1 ml-2"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
