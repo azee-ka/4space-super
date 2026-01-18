@@ -4,9 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faSlidersH, faPhone, faVideo,
-  faUsers, faSearch, faTimes, faMagnifyingGlass, faUser,
-  faChartLine, faPalette, faSave,
+  faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes, 
+  faMagnifyingGlass, faUser, faPalette, faSave, faHome,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
@@ -37,7 +36,7 @@ import { useChatSettingsStore } from '../store/chatSettingsStore';
 import { useChatSettingsSync } from '../hooks/useChatSettingsSync';
 import { getBackgroundStyle } from '../utils/themeUtils';
 import { useBackgroundSizing, useShouldUseMirroredBackground } from '../hooks/useWindowSize';
-import type { Conversation, SearchUserResult } from '@4space/shared/src/services/conversations.service';
+import type { SearchUserResult } from '@4space/shared/src/services/conversations.service';
 import type { Message } from '@4space/shared/src/services/messages.service';
 import { buildLinkItems } from '../components/chat/utils/chatUtils';
 import { buildFileItems } from '../components/chat/utils/chatUtils';
@@ -53,8 +52,9 @@ export function GeneralChat() {
   const { user } = useAuthStore();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [leftSidebarTab, setLeftSidebarTab] = useState<'conversations' | 'metrics' | 'productivity' | 'reminders' | 'notes'>('conversations');
-  const [rightSidebarTab, setRightSidebarTab] = useState<'home' | 'theme' | 'saved' | 'settings'>('home');
-  const [homeActiveTab, setHomeActiveTab] = useState<'metrics' | 'media' | 'links' | 'customization'>('metrics');
+  const [rightSidebarTab, setRightSidebarTab] = useState<'home' | 'saved' | 'theme' | 'settings'>('home');
+  type HomeTab = 'metrics' | 'media' | 'links' | 'kept' | 'pinned' | 'customization';
+  const [homeActiveTab, setHomeActiveTab] = useState<HomeTab>('metrics');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'favorites' | 'muted'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -634,10 +634,10 @@ export function GeneralChat() {
           <div className="flex-shrink-0 p-3">
             <div className="flex gap-1 justify-center">
               {[
-                { id: 'home', icon: faChartLine, label: 'Home', color: 'orange' },
-                { id: 'theme', icon: faPalette, label: 'Theme', color: 'purple' },
+                { id: 'home', icon: faHome, label: 'Home', color: 'cyan' },
                 { id: 'saved', icon: faSave, label: 'Saved', color: 'green' },
-                { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
+                { id: 'theme', icon: faPalette, label: 'Theme', color: 'purple' },
+                { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'red' },
               ].map((tab) => (
                 <motion.button
                   key={tab.id}
@@ -669,7 +669,11 @@ export function GeneralChat() {
             {rightSidebarTab === 'home' && (
               <RightSidebar
                 activeTab={homeActiveTab}
-                onTabChange={(tab: RightSidebarTab) => setHomeActiveTab(tab as 'metrics' | 'media' | 'links' | 'customization')}
+                onTabChange={(tab) => {
+                  if (['metrics', 'media', 'links', 'kept', 'pinned', 'customization'].includes(tab)) {
+                    setHomeActiveTab(tab as HomeTab);
+                  }
+                }}
                 theme={activeTheme}
                 onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
                 messages={normalizedMessages as Message[]}

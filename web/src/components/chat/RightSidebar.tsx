@@ -10,7 +10,8 @@ import {
   faBolt, faRocket, faDownload,
   faRobot, faBrain, faCalendar, faFire,
   faHashtag as faHashtagAlt, faUsers as faUsersAlt, faSmile, faFileAlt, faHeart, faReply,
-  faHistory, faExternalLinkAlt, faTimes, faBookmark, faThumbtack
+  faHistory, faExternalLinkAlt, faTimes, faBookmark, faThumbtack,
+  faSave
 } from '@fortawesome/free-solid-svg-icons';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { CustomizationTab } from '../spaces/chat/rightPanel/CustomizationTab';
@@ -18,8 +19,9 @@ import { formatRelativeTime } from './utils/formatDate';
 import { calculateAverageResponseTime, calculateConversationAge, calculateActivityScore } from './utils/chatUtils';
 import { SettingsService } from '@4space/shared/src/services/settings.service';
 import { supabase } from '../../lib/supabase';
+import type { ChatTheme } from '@4space/shared/src/types/chatSettings';
 
-type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'saved' | 'kept' | 'customization';
+type RightSidebarTab = 'settings' | 'metrics' | 'media' | 'links' | 'saved' | 'kept' | 'pinned' | 'customization';
 
 interface Message {
   id: string;
@@ -43,12 +45,6 @@ interface Conversation {
   last_message_at?: string;
   updated_at?: string;
   created_at?: string;
-}
-
-interface ChatTheme extends ChatThemeTypeSettings {
-  accentColor: string;
-  backgroundType: string;
-  [key: string]: any;
 }
 
 interface RightSidebarProps {
@@ -159,7 +155,8 @@ export function RightSidebar({
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'emerald' },
     { id: 'media', icon: faImages, label: 'Media', color: 'violet' },
     { id: 'links', icon: faLink, label: 'Links', color: 'rose' },
-    { id: 'kept', icon: faThumbtack, label: 'Kept', color: 'purple' },
+    { id: 'kept', icon: faBookmark, label: 'Kept', color: 'purple' },
+    { id: 'pinned', icon: faThumbtack, label: 'Pinned', color: 'yellow' },
   ];
 
   return (
@@ -652,7 +649,7 @@ export function RightSidebar({
             <div className="p-4 space-y-4">
               <h3 className="text-sm font-bold text-white mb-3">Saved Items</h3>
               <div className="text-center py-8">
-                <FontAwesomeIcon icon={faBookmark} className="text-amber-400 text-3xl mb-3" />
+                <FontAwesomeIcon icon={faSave} className="text-amber-400 text-3xl mb-3" />
                 <p className="text-zinc-400">No saved items yet</p>
                 <p className="text-sm text-zinc-500 mt-1">Items you save will appear here</p>
               </div>
@@ -663,9 +660,20 @@ export function RightSidebar({
             <div className="p-4 space-y-4">
               <h3 className="text-sm font-bold text-white mb-3">Kept Items</h3>
               <div className="text-center py-8">
-                <FontAwesomeIcon icon={faThumbtack} className="text-purple-400 text-3xl mb-3" />
+                <FontAwesomeIcon icon={faBookmark} className="text-purple-400 text-3xl mb-3" />
                 <p className="text-zinc-400">No kept items yet</p>
                 <p className="text-sm text-zinc-500 mt-1">Items you keep will appear here</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'pinned' && (
+            <div className="p-4 space-y-4">
+              <h3 className="text-sm font-bold text-white mb-3">Pinned Messages</h3>
+              <div className="text-center py-8">
+                <FontAwesomeIcon icon={faThumbtack} className="text-yellow-400 text-3xl mb-3" />
+                <p className="text-zinc-400">No pinned messages yet</p>
+                <p className="text-sm text-zinc-500 mt-1">Important messages you pin will appear here</p>
               </div>
             </div>
           )}
