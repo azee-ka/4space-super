@@ -139,7 +139,13 @@ export function LeftSidebar({
   }, []);
 
   const handleUtilityClick = (tabId: Exclude<LeftSidebarTab, 'conversations'>) => {
-    setOpenUtility(openUtility === tabId ? null : tabId);
+    if (openUtility === tabId) {
+      setOpenUtility(null);
+    } else {
+      setOpenUtility(tabId);
+      // Close Quick Note form when opening a utility menu
+      setShowQuickNoteForm(false);
+    }
   };
 
   const filteredConversations = useMemo(() => {
@@ -156,7 +162,7 @@ export function LeftSidebar({
   }, [conversations, filterMode, searchQuery, favorites, muted]);
 
   return (
-    <div className="h-full flex flex-col w-[23vw]" ref={dropdownRef}>
+    <div className="h-full flex flex-col w-[23vw] relative" ref={dropdownRef}>
       {/* Header */}
       <div className="px-5 py-4 border-b border-zinc-800/50">
         <div className="flex items-center justify-between">
@@ -199,8 +205,8 @@ export function LeftSidebar({
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+      {/* Main Content Area - Scrollable with bottom padding for buttons */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
         {activeTab === 'conversations' ? (
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
             {isLoading && (
@@ -575,8 +581,8 @@ export function LeftSidebar({
       </div>
 
 
-      {/* Utility Tabs - Fixed Position at Bottom */}
-      <div className="relative">
+      {/* Utility Tabs - Absolutely Positioned at Bottom */}
+      <div className="absolute bottom-0 left-0 right-0 bg-black">
         {/* Quick Action Bar - Fixed Position */}
         <div className="p-3 border-t border-zinc-800/50">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -596,7 +602,13 @@ export function LeftSidebar({
                 icon: faPen,
                 label: 'Quick Note',
                 color: 'blue',
-                action: () => setShowQuickNoteForm(!showQuickNoteForm)
+                action: () => {
+                  setShowQuickNoteForm(!showQuickNoteForm);
+                  // Close any open utility menu when toggling Quick Note form
+                  if (!showQuickNoteForm) {
+                    setOpenUtility(null);
+                  }
+                }
               },
               {
                 id: 'new_task',
@@ -758,9 +770,9 @@ export function LeftSidebar({
                       <div className="grid grid-cols-1 gap-2">
                         <button
                           onClick={() => {
-                            // TODO: Open new conversation modal
+                            // Navigate to spaces page to create new conversation
+                            window.location.href = '/spaces';
                             setOpenUtility(null);
-                            console.log('New conversation');
                           }}
                           className="p-3 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-xl text-left transition-all"
                         >
@@ -779,7 +791,7 @@ export function LeftSidebar({
                               createReminder.mutate({
                                 title: title.trim(),
                                 description: '',
-                                reminder_time: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                                reminder_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                                 repeat_type: 'none',
                                 is_completed: false,
                               });
@@ -798,7 +810,7 @@ export function LeftSidebar({
                         </button>
                         <button
                           onClick={() => {
-                            setShowReminderModal(true);
+                            setShowTaskModal(true);
                             setOpenUtility(null);
                           }}
                           className="p-3 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-xl text-left transition-all"
@@ -849,26 +861,8 @@ export function LeftSidebar({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
-                              const title = prompt('Reminder title:');
-                              if (title?.trim()) {
-                                const timeInput = prompt('When? (e.g., "2024-01-20 15:30" or leave empty for tomorrow)');
-                                let reminderTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // Tomorrow default
-
-                                if (timeInput?.trim()) {
-                                  const parsedTime = new Date(timeInput);
-                                  if (!isNaN(parsedTime.getTime())) {
-                                    reminderTime = parsedTime;
-                                  }
-                                }
-
-                                createReminder.mutate({
-                                  title: title.trim(),
-                                  description: '',
-                                  reminder_time: reminderTime,
-                                  repeat_type: 'none',
-                                  is_completed: false,
-                                });
-                              }
+                              setShowReminderModal(true);
+                              setOpenUtility(null);
                             }}
                             className="px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg text-xs text-zinc-400 hover:text-zinc-300 transition-colors flex items-center gap-1"
                           >
@@ -966,15 +960,8 @@ export function LeftSidebar({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
-                              const content = prompt('Enter your note:');
-                              if (content?.trim()) {
-                                createNote.mutate({
-                                  title: 'Quick Note',
-                                  content: content.trim(),
-                                  tags: [],
-                                  is_pinned: false,
-                                });
-                              }
+                              setShowQuickNoteForm(true);
+                              setOpenUtility(null);
                             }}
                             className="px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg text-xs text-zinc-400 hover:text-zinc-300 transition-colors flex items-center gap-1"
                           >
@@ -1126,7 +1113,7 @@ export function LeftSidebar({
         </div>
       </div>
 
-    {/* Task Modal */}
+      {/* Task Modal */}
       <AnimatePresence>
         {showTaskModal && (
           <motion.div
@@ -1205,7 +1192,7 @@ export function LeftSidebar({
                         createReminder.mutate({
                           title: reminderTitle.trim(),
                           description: reminderDescription.trim(),
-                          reminder_time: reminderTime ? new Date(reminderTime) : new Date(Date.now() + 24 * 60 * 60 * 1000),
+                          reminder_time: reminderTime ? new Date(reminderTime).toISOString() : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                           repeat_type: 'none',
                           is_completed: false,
                         });
@@ -1324,7 +1311,7 @@ export function LeftSidebar({
                         createReminder.mutate({
                           title: reminderTitle.trim(),
                           description: '',
-                          reminder_time: reminderDate,
+                          reminder_time: reminderDate.toISOString(),
                           repeat_type: reminderRepeat as any,
                           is_completed: false,
                         });
