@@ -159,10 +159,7 @@ export function RightSidebar({
     { id: 'metrics', icon: faChartLine, label: 'Metrics', color: 'emerald' },
     { id: 'media', icon: faImages, label: 'Media', color: 'violet' },
     { id: 'links', icon: faLink, label: 'Links', color: 'rose' },
-    { id: 'saved', icon: faBookmark, label: 'Saved', color: 'amber' },
     { id: 'kept', icon: faThumbtack, label: 'Kept', color: 'purple' },
-    { id: 'customization', icon: faPalette, label: 'Theme', color: 'amber' },
-    { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
   ];
 
   return (

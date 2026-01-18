@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSlidersH, faPhone, faVideo,
   faUsers, faSearch, faTimes, faMagnifyingGlass, faUser,
+  faChartLine, faPalette, faSave,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
@@ -52,7 +53,8 @@ export function GeneralChat() {
   const { user } = useAuthStore();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [leftSidebarTab, setLeftSidebarTab] = useState<'conversations' | 'metrics' | 'productivity' | 'reminders' | 'notes'>('conversations');
-  const [rightSidebarTab, setRightSidebarTab] = useState<'settings' | 'metrics' | 'media' | 'links' | 'customization'>('metrics');
+  const [rightSidebarTab, setRightSidebarTab] = useState<'home' | 'theme' | 'saved' | 'settings'>('home');
+  const [homeActiveTab, setHomeActiveTab] = useState<'metrics' | 'media' | 'links' | 'customization'>('metrics');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'favorites' | 'muted'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -627,17 +629,98 @@ export function GeneralChat() {
 
       {/* RIGHT SIDEBAR - Space Chat Replica */}
       {selectedConversationId && (
-        <RightSidebar
-          activeTab={rightSidebarTab}
-          onTabChange={setRightSidebarTab as (tab: string) => void}
-          theme={activeTheme}
-          onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
-          messages={normalizedMessages as Message[]}
-          selectedConversation={selectedConversation as unknown as any | undefined}
-          onlineUsers={onlineUsers}
-          mediaItems={mediaItems as any[]}
-          linkItems={linkItems as any[]}
-        />
+        <div className="w-80 flex flex-col border-l border-zinc-800/50">
+          {/* Main Tabs */}
+          <div className="flex-shrink-0 p-3">
+            <div className="flex gap-1 justify-center">
+              {[
+                { id: 'home', icon: faChartLine, label: 'Home', color: 'orange' },
+                { id: 'theme', icon: faPalette, label: 'Theme', color: 'purple' },
+                { id: 'saved', icon: faSave, label: 'Saved', color: 'green' },
+                { id: 'settings', icon: faSlidersH, label: 'Settings', color: 'cyan' },
+              ].map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setRightSidebarTab(tab.id as 'home' | 'theme' | 'saved' | 'settings')}
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex-1 p-2.5 rounded-lg flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${
+                    rightSidebarTab === tab.id
+                      ? `bg-${tab.color}-500/15 text-${tab.color}-400 border border-${tab.color}-500/30 shadow-md`
+                      : 'bg-zinc-800/40 text-gray-400 hover:text-gray-200 hover:bg-zinc-700/50'
+                  }`}
+                >
+                  <FontAwesomeIcon
+                    icon={tab.icon}
+                    className={`text-base ${
+                      rightSidebarTab === tab.id
+                        ? `text-${tab.color}-400`
+                        : 'text-gray-500'
+                    }`}
+                  />
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">
+            {rightSidebarTab === 'home' && (
+              <RightSidebar
+                activeTab={homeActiveTab}
+                onTabChange={(tab: RightSidebarTab) => setHomeActiveTab(tab as 'metrics' | 'media' | 'links' | 'customization')}
+                theme={activeTheme}
+                onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
+                messages={normalizedMessages as Message[]}
+                selectedConversation={selectedConversation as unknown as any | undefined}
+                onlineUsers={onlineUsers}
+                mediaItems={mediaItems as any[]}
+                linkItems={linkItems as any[]}
+              />
+            )}
+            {rightSidebarTab === 'theme' && (
+              <RightSidebar
+                activeTab={'customization'}
+                onTabChange={() => {}}
+                theme={activeTheme}
+                onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
+                messages={normalizedMessages as Message[]}
+                selectedConversation={selectedConversation as unknown as any | undefined}
+                onlineUsers={onlineUsers}
+                mediaItems={mediaItems as any[]}
+                linkItems={linkItems as any[]}
+              />
+            )}
+            {rightSidebarTab === 'saved' && (
+              <div className="h-full overflow-y-auto p-4 space-y-4">
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faSave} className="text-2xl text-green-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Saved Messages</h3>
+                  <p className="text-zinc-400 text-sm mb-4">Your personal saved messages</p>
+                  <div className="text-sm text-zinc-500">
+                    Feature coming soon - save messages privately for yourself
+                  </div>
+                </div>
+              </div>
+            )}
+            {rightSidebarTab === 'settings' && (
+              <RightSidebar
+                activeTab={'settings'}
+                onTabChange={() => {}}
+                theme={activeTheme}
+                onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}
+                messages={normalizedMessages as Message[]}
+                selectedConversation={selectedConversation as unknown as any | undefined}
+                onlineUsers={onlineUsers}
+                mediaItems={mediaItems as any[]}
+                linkItems={linkItems as any[]}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {/* New Chat Modal */}
