@@ -62,6 +62,11 @@ export const protectedRoutes: RouteConfig[] = [
     isProtected: true,
   },
   {
+    path: '/messages/:chatId',
+    element: GeneralChat,
+    isProtected: true,
+  },
+  {
     path: '/spaces/:id',
     element: SpaceView,
     isProtected: true,

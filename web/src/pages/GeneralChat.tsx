@@ -2,14 +2,17 @@
 // web/src/pages/GeneralChat.tsx
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes,
-  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass,
+  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass, faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
 import { RightSidebar } from '../components/chat/RightSidebar';
+import { WelcomeSidebar } from '../components/chat/WelcomeSidebar';
+
 import { MessageInput } from '../components/spaces/chat/centerPanel/MessageInput';
 import { MessagesList } from '../components/spaces/chat/centerPanel/MessagesList';
 import { PinnedBanner } from '../components/spaces/chat/centerPanel/PinnedBanner';
@@ -43,15 +46,30 @@ import { buildFileItems } from '../components/chat/utils/chatUtils';
 import { isSingleEmoji } from '../components/chat/utils/chatUtils';
 import type { ChatTheme } from '@4space/shared/src/types/chatSettings';
 // ====================================
+// WELCOME SIDEBAR COMPONENT
+// ====================================
+
+
+// ====================================
 // MAIN COMPONENT - Space Chat Replica for DMs
 // ====================================
 
 export function GeneralChat() {
   useChatSettingsSync();
 
+  const navigate = useNavigate();
+  const { chatId } = useParams<{ chatId?: string }>();
+
   const { user } = useAuthStore();
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(chatId || null);
   const [leftSidebarTab, setLeftSidebarTab] = useState<'conversations' | 'metrics' | 'productivity' | 'reminders' | 'notes'>('conversations');
+
+  // Update selected conversation when URL changes
+  useEffect(() => {
+    if (chatId !== selectedConversationId) {
+      setSelectedConversationId(chatId || null);
+    }
+  }, [chatId, selectedConversationId]);
   const [rightSidebarTab, setRightSidebarTab] = useState<'home' | 'saved' | 'theme' | 'settings'>('home');
   type HomeTab = 'metrics' | 'media' | 'links' | 'kept' | 'pinned' | 'customization';
   const [homeActiveTab, setHomeActiveTab] = useState<HomeTab>('metrics');
@@ -70,6 +88,8 @@ export function GeneralChat() {
   const [isMobile, setIsMobile] = useState(false);
   const [showThread, setShowThread] = useState(false);
   const [userClosedChat, setUserClosedChat] = useState(false);
+  const [showWelcomeMenu, setShowWelcomeMenu] = useState(false);
+  const [welcomeSidebarTab, setWelcomeSidebarTab] = useState<'overview' | 'profile' | 'activity' | 'settings'>('overview');
 
   const {
     showTimestamps,
@@ -300,12 +320,20 @@ export function GeneralChat() {
     (conversationId: string) => {
       setSelectedConversationId(conversationId);
       setUserClosedChat(false); // Reset the closed flag when user manually opens a conversation
+      // Navigate to the chat URL with smooth transition
+      navigate(`/messages/${conversationId}`, { replace: true });
       if (isMobile) {
         setShowThread(true);
       }
     },
-    [isMobile]
+    [isMobile, navigate]
   );
+
+  const handleCloseChat = useCallback(() => {
+    setSelectedConversationId(null);
+    setUserClosedChat(true);
+    navigate('/messages', { replace: true });
+  }, [navigate]);
 
   const handleOpenVault = async () => {
     if (vaultConversation) {
@@ -440,8 +468,17 @@ export function GeneralChat() {
       />
 
       {/* CENTER PANEL - Messages */}
-      {selectedConversationId ? (
-        <div className="flex-1 flex flex-col" style={centerPanelBackgroundStyle}>
+      <AnimatePresence mode="wait">
+        {selectedConversationId ? (
+          <motion.div
+            key="chat-view"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="flex-1 flex flex-col"
+            style={centerPanelBackgroundStyle}
+          >
           {/* Background Tiles */}
           {activeTheme.backgroundType === 'featured' && activeTheme.backgroundImage && (
             <div className="absolute inset-0 pointer-events-none -z-10 flex flex-nowrap overflow-hidden">
@@ -596,10 +633,24 @@ export function GeneralChat() {
               placeholder={`Message ${selectedConversation ? getConversationTitle(selectedConversation, user?.id) : 'conversation'}...`}
                   allowFileUploads
                 />
-          </div>
+          </motion.div>
       ) : (
-        /* NO CHAT SELECTED - Beautiful Empty State */
-        <div className="flex-1 flex flex-col items-center justify-center bg-black relative overflow-hidden">
+        <motion.div
+          key="no-chat-view"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="flex-1 flex flex-col items-center justify-center bg-black relative"
+        >
+          {/* Menu Button */}
+          <button
+            onClick={() => setShowWelcomeMenu(true)}
+            className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-zinc-800/60 hover:bg-zinc-700/70 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg z-50 cursor-pointer"
+            style={{ zIndex: 50 }}
+          >
+            <FontAwesomeIcon icon={faSlidersH} className="text-purple-400 text-lg" />
+          </button>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-cyan-500/30 blur-xl"></div>
@@ -695,16 +746,29 @@ export function GeneralChat() {
               </div>
             </motion.div>
           </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* RIGHT SIDEBAR - Space Chat Replica */}
+      {/* Welcome Menu Sidebar with smooth transitions */}
+      <AnimatePresence>
+        {showWelcomeMenu && (
+          <WelcomeSidebar
+            activeTab={welcomeSidebarTab}
+            onTabChange={(tab) => setWelcomeSidebarTab(tab as 'overview' | 'profile' | 'activity' | 'settings')}
+            onClose={() => setShowWelcomeMenu(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Regular Chat Sidebar */}
       {selectedConversationId && (
         <div className="w-80 flex flex-col border-l border-zinc-800/50">
-          {/* Main Tabs */}
-          <div className="flex-shrink-0 p-3">
-            <div className="flex gap-1 justify-center">
-              {[
+              {/* Main Tabs */}
+              <div className="flex-shrink-0 p-3">
+                <div className="flex gap-1 justify-center">
+                  {[
                 { id: 'home', icon: faHome, label: 'Home', color: 'cyan' },
                 { id: 'saved', icon: faSave, label: 'Saved', color: 'green' },
                 { id: 'theme', icon: faPalette, label: 'Theme', color: 'purple' },
@@ -794,7 +858,7 @@ export function GeneralChat() {
                 linkItems={linkItems as any[]}
               />
             )}
-          </div>
+        </div>
         </div>
       )}
 
