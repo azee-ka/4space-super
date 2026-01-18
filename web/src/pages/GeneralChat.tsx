@@ -4,8 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes, 
-  faMagnifyingGlass, faUser, faPalette, faSave, faHome,
+  faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes,
+  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass,
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
@@ -239,11 +239,7 @@ export function GeneralChat() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0 && !userClosedChat) {
-      setSelectedConversationId(conversations[0].id);
-    }
-  }, [conversations, selectedConversationId, userClosedChat]);
+  // Removed auto-selection of first conversation on page load
 
   useEffect(() => {
     if (!selectedConversationId) return;
@@ -272,11 +268,7 @@ export function GeneralChat() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0 && !userClosedChat) {
-      setSelectedConversationId(conversations[0].id);
-    }
-  }, [conversations, selectedConversationId, userClosedChat]);
+  // Removed auto-selection of first conversation
 
 
   const conversationAppearance = getSettingsForRoom(selectedConversationId || undefined);
@@ -606,23 +598,102 @@ export function GeneralChat() {
                 />
           </div>
       ) : (
-        /* NO CHAT SELECTED - Empty State */
-        <div className="flex-1 flex flex-col items-center justify-center bg-zinc-950/50 backdrop-blur-sm">
-          <div className="text-center max-w-md px-6">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
-              <FontAwesomeIcon icon={faUsers} className="text-3xl text-zinc-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-3">Select a conversation</h2>
-            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-              Choose a conversation from the sidebar to start chatting, or create a new one to connect with others.
-            </p>
-            <button
-              onClick={() => setShowNewChat(true)}
-              className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-xl transition-colors duration-200 flex items-center gap-2 mx-auto"
+        /* NO CHAT SELECTED - Beautiful Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center bg-black relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-cyan-500/30 blur-xl"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-40 h-40 rounded-full bg-purple-500/30 blur-xl"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-emerald-500/20 blur-2xl"></div>
+          </div>
+
+          <div className="text-center max-w-lg px-6 relative z-10">
+            {/* Animated Icon */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="w-32 h-32 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-emerald-500/20 backdrop-blur-sm border border-zinc-700/50 flex items-center justify-center relative overflow-hidden"
             >
-              <FontAwesomeIcon icon={faUser} />
-              Start New Chat
-            </button>
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-purple-400/10 animate-pulse"></div>
+              <FontAwesomeIcon icon={faUsers} className="text-4xl text-cyan-400 relative z-10" />
+
+              {/* Floating particles */}
+              <div className="absolute top-2 right-3 w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+              <div className="absolute bottom-3 left-2 w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+              <div className="absolute top-1/2 right-2 w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
+            </motion.div>
+
+            {/* Title */}
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+              className="text-3xl font-bold text-white mb-4 bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent"
+            >
+              Welcome to 4Space
+            </motion.h2>
+
+            {/* Description */}
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+              className="text-zinc-300 text-base leading-relaxed mb-8 max-w-sm mx-auto"
+            >
+              Connect with friends, join communities, and start meaningful conversations. Choose a chat from the sidebar or create a new one to get started.
+            </motion.p>
+
+            {/* Action Buttons */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              {/* Primary Action */}
+              <button
+                onClick={() => setShowNewChat(true)}
+                className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-emerald-500 hover:from-cyan-400 hover:via-purple-400 hover:to-emerald-400 text-white font-semibold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/25 flex items-center gap-3 overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <FontAwesomeIcon icon={faUser} className="text-lg relative z-10" />
+                <span className="relative z-10">Start New Chat</span>
+
+                {/* Shine effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000"></div>
+              </button>
+
+              {/* Secondary Action */}
+              <button
+                onClick={() => window.location.href = '/spaces'}
+                className="px-6 py-4 bg-zinc-800/60 hover:bg-zinc-700/60 backdrop-blur-sm text-zinc-300 hover:text-white font-medium rounded-xl transition-all duration-300 border border-zinc-700/50 hover:border-zinc-600/50 flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faCompass} className="text-sm" />
+                <span>Browse Spaces</span>
+              </button>
+            </motion.div>
+
+            {/* Quick Stats */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
+              className="mt-12 flex justify-center gap-8 text-center"
+            >
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-bold text-cyan-400 mb-1">{conversations.length}</div>
+                <div className="text-xs text-zinc-500 uppercase tracking-wider">Chats</div>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-bold text-purple-400 mb-1">{onlineUsers.size}</div>
+                <div className="text-xs text-zinc-500 uppercase tracking-wider">Online</div>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-bold text-emerald-400 mb-1">∞</div>
+                <div className="text-xs text-zinc-500 uppercase tracking-wider">Spaces</div>
+              </div>
+            </motion.div>
           </div>
         </div>
       )}

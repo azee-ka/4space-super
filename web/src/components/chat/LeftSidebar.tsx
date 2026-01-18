@@ -235,8 +235,8 @@ export function LeftSidebar({
                   onClick={() => onSelectConversation(conversation.id)}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className={`w-full p-4 rounded-xl bg-black/20 hover:bg-black/30 transition-colors ${
-                    isActive ? 'border border-cyan-500/30 bg-black/40' : ''
+                  className={`w-full p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/60 transition-all duration-200 ${
+                    isActive ? 'bg-zinc-900/80 ring-1 ring-zinc-600/40 shadow-lg' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
