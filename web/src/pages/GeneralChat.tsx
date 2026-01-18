@@ -320,6 +320,7 @@ export function GeneralChat() {
     (conversationId: string) => {
       setSelectedConversationId(conversationId);
       setUserClosedChat(false); // Reset the closed flag when user manually opens a conversation
+      setShowWelcomeMenu(false); // Close welcome sidebar when opening a chat
       // Navigate to the chat URL with smooth transition
       navigate(`/messages/${conversationId}`, { replace: true });
       if (isMobile) {
@@ -468,7 +469,8 @@ export function GeneralChat() {
       />
 
       {/* CENTER PANEL - Messages */}
-      <AnimatePresence mode="wait">
+      <div className="flex-1 overflow-hidden relative">
+        <AnimatePresence mode="wait">
         {selectedConversationId ? (
           <motion.div
             key="chat-view"
@@ -476,7 +478,7 @@ export function GeneralChat() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="flex-1 flex flex-col"
+            className="h-full flex flex-col"
             style={centerPanelBackgroundStyle}
           >
           {/* Background Tiles */}
@@ -549,10 +551,7 @@ export function GeneralChat() {
                 <FontAwesomeIcon icon={faSlidersH} className="text-cyan-400" />
               </button>
               <button
-                onClick={() => {
-                  setSelectedConversationId(null);
-                  setUserClosedChat(true);
-                }}
+                onClick={handleCloseChat}
                 className="w-9 h-9 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/70 flex items-center justify-center transition-colors"
               >
                 <FontAwesomeIcon icon={faTimes} className="text-red-400" />
@@ -641,7 +640,7 @@ export function GeneralChat() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="flex-1 flex flex-col items-center justify-center bg-black relative"
+          className="h-full flex flex-col items-center justify-center bg-black relative"
         >
           {/* Menu Button */}
           <button
@@ -749,16 +748,24 @@ export function GeneralChat() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
-      {/* RIGHT SIDEBAR - Space Chat Replica */}
-      {/* Welcome Menu Sidebar with smooth transitions */}
+      {/* Welcome Menu Sidebar */}
       <AnimatePresence>
         {showWelcomeMenu && (
-          <WelcomeSidebar
-            activeTab={welcomeSidebarTab}
-            onTabChange={(tab) => setWelcomeSidebarTab(tab as 'overview' | 'profile' | 'activity' | 'settings')}
-            onClose={() => setShowWelcomeMenu(false)}
-          />
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="overflow-hidden flex-shrink-0"
+          >
+            <WelcomeSidebar
+              activeTab={welcomeSidebarTab}
+              onTabChange={(tab) => setWelcomeSidebarTab(tab as 'overview' | 'profile' | 'activity' | 'settings')}
+              onClose={() => setShowWelcomeMenu(false)}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -35,7 +35,7 @@ export function WelcomeSidebar({ activeTab, onTabChange, onClose }: WelcomeSideb
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 320 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="h-full flex flex-col w-80  backdrop-blur-xl border-l border-zinc-700/50 bg-black"
+      className="h-full flex flex-col w-80 backdrop-blur-xl border-l border-zinc-700/50 bg-black"
     >
       {/* Header */}
       <motion.div
