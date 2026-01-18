@@ -5,6 +5,8 @@ import { publicRoutes, protectedRoutes, spaceWidgetRoutes, type RouteConfig } fr
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
+import { NavbarLayout } from './components/layout/NavbarLayout';
+import { BackgroundProvider } from './components/layout/BackgroundProvider';
 
 function LoadingScreen() {
   return (
@@ -147,24 +149,26 @@ function RootRedirect() {
 // Component to render a single route
 function RouteRenderer({ route }: { route: RouteConfig }) {
   const Element = route.element;
-  
+
   // Wrap in appropriate route guard
   if (route.isProtected) {
     return (
       <PrivateRoute>
-        {route.isLazy ? (
-          <ErrorBoundary>
-            <Suspense fallback={<ComponentLoader message={route.loadingMessage} />}>
-              <Element />
-            </Suspense>
-          </ErrorBoundary>
-        ) : (
-          <Element />
-        )}
+        <NavbarLayout>
+          {route.isLazy ? (
+            <ErrorBoundary>
+              <Suspense fallback={<ComponentLoader message={route.loadingMessage} />}>
+                <Element />
+              </Suspense>
+            </ErrorBoundary>
+          ) : (
+            <Element />
+          )}
+        </NavbarLayout>
       </PrivateRoute>
     );
   }
-  
+
   if (route.isPublicOnly) {
     return (
       <PublicRoute>
@@ -180,7 +184,7 @@ function RouteRenderer({ route }: { route: RouteConfig }) {
       </PublicRoute>
     );
   }
-  
+
   return <Element />;
 }
 
@@ -194,44 +198,46 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
-            {/* Root route - smart redirect based on auth status */}
-            <Route path="/" element={<RootRedirect />} />
+      <BackgroundProvider>
+        <BrowserRouter>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              {/* Root route - smart redirect based on auth status */}
+              <Route path="/" element={<RootRedirect />} />
 
-            {/* Render all public routes */}
-            {publicRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={<RouteRenderer route={route} />}
-              />
-            ))}
+              {/* Render all public routes */}
+              {publicRoutes.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<RouteRenderer route={route} />}
+                />
+              ))}
 
-            {/* Render all protected routes */}
-            {protectedRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={<RouteRenderer route={route} />}
-              />
-            ))}
+              {/* Render all protected routes */}
+              {protectedRoutes.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<RouteRenderer route={route} />}
+                />
+              ))}
 
-            {/* Render all space widget routes */}
-            {spaceWidgetRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={<RouteRenderer route={route} />}
-              />
-            ))}
+              {/* Render all space widget routes */}
+              {spaceWidgetRoutes.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<RouteRenderer route={route} />}
+                />
+              ))}
 
-            {/* Catch all - redirect based on auth status */}
-            <Route path="*" element={<RootRedirect />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+              {/* Catch all - redirect based on auth status */}
+              <Route path="*" element={<RootRedirect />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </BackgroundProvider>
       <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </ErrorBoundary>

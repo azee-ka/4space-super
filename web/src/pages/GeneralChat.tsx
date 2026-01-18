@@ -6,8 +6,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSlidersH, faPhone, faVideo, faUsers, faSearch, faTimes,
-  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass, faChartLine, faCog
+  faMagnifyingGlass, faUser, faPalette, faSave, faHome, faCompass,
+  faChevronUp, faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
+import { useNavbarStore } from '../store/navbarStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeftSidebar } from '../components/chat/LeftSidebar';
 import { RightSidebar } from '../components/chat/RightSidebar';
@@ -59,6 +61,7 @@ export function GeneralChat() {
   const { chatId } = useParams<{ chatId?: string }>();
 
   const { user } = useAuthStore();
+  const { showNavbar, toggleNavbar } = useNavbarStore();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(chatId || null);
   const [leftSidebarTab, setLeftSidebarTab] = useState<'conversations' | 'metrics' | 'productivity' | 'reminders' | 'notes'>('conversations');
 
@@ -450,7 +453,7 @@ export function GeneralChat() {
   // ====================================
 
   return (
-    <div className="h-screen flex bg-black">
+    <div className="h-full flex bg-black overflow-hidden">
       {/* LEFT SIDEBAR - Space Chat Replica */}
       <LeftSidebar
         conversations={conversations as unknown as any[]}
@@ -646,14 +649,27 @@ export function GeneralChat() {
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="h-full flex flex-col items-center justify-center bg-black relative"
         >
-          {/* Menu Button */}
-          <button
-            onClick={() => setShowWelcomeMenu(true)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-zinc-800/60 hover:bg-zinc-700/70 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg z-50 cursor-pointer"
-            style={{ zIndex: 50 }}
-          >
-            <FontAwesomeIcon icon={faSlidersH} className="text-purple-400 text-lg" />
-          </button>
+          {/* Top Right Buttons */}
+          <div className="absolute top-6 right-6 flex items-center gap-2" style={{ zIndex: 50 }}>
+            {/* Navbar Toggle Button */}
+            <button
+              onClick={toggleNavbar}
+              className="w-10 h-10 rounded-xl bg-zinc-800/60 hover:bg-zinc-700/70 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg cursor-pointer"
+              title={showNavbar ? 'Hide navbar' : 'Show navbar'}
+            >
+              <FontAwesomeIcon
+                icon={showNavbar ? faChevronUp : faChevronDown}
+                className="text-cyan-400 text-lg"
+              />
+            </button>
+            {/* Menu Button */}
+            <button
+              onClick={() => setShowWelcomeMenu(true)}
+              className="w-10 h-10 rounded-xl bg-zinc-800/60 hover:bg-zinc-700/70 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg cursor-pointer"
+            >
+              <FontAwesomeIcon icon={faSlidersH} className="text-purple-400 text-lg" />
+            </button>
+          </div>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-cyan-500/30 blur-xl"></div>

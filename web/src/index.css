@@ -10,8 +10,9 @@
   }
 
   body {
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased;
+    @apply text-slate-900 dark:text-slate-50 antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Background is controlled by DisplaySettings store */
   }
 
   html {

@@ -8,9 +8,10 @@ import {
   faArrowLeft, faHashtag, faRocket,
   faCog, faPhone, faVideo,
   faUsers, faThumbtack, faSearch, faExclamationTriangle, faHouse,
-  faBookmark, faStar
+  faBookmark, faStar, faChevronUp, faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavbarStore } from '../store/navbarStore';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useChatSettingsStore } from '../store/chatSettingsStore';
@@ -61,6 +62,7 @@ export function SpaceChatView() {
   const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { showNavbar, toggleNavbar } = useNavbarStore();
   useChatSettingsSync();
 
   // Handle missing space ID
@@ -651,14 +653,16 @@ const handleSendMessage = useCallback((
   const ambientBackgroundStyle = getAmbientBackgroundStyle(theme, ambientLighting, ambientIntensity);
 
 return (
-  <div className="h-screen flex bg-transparent overflow-hidden relative">
+  <div className="h-full flex bg-transparent overflow-hidden relative">
+    {/* Main content area */}
+    <div className="flex-1 flex overflow-hidden relative">
     {/* Ambient Background Overlay for Side Panels */}
-    <div 
+    <div
       key={`ambient-${ambientIntensity}-${ambientLighting}-${theme.backgroundType}`}
       className="absolute inset-0 pointer-events-none z-0 transition-all duration-300"
       style={ambientBackgroundStyle}
     />
-    
+
     {/* LEFT PANEL - Space Info + Rooms Sidebar */}
     <motion.div
       initial={{ x: -200, opacity: 0 }}
@@ -867,9 +871,10 @@ return (
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="w-80 flex-shrink-0 bg-black/98 backdrop-blur-sm flex flex-col relative z-10"
     >
+
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (
-        <div className="flex-shrink-0 p-4 space-y-3">
+        <div className="flex-shrink-0 px-4 pb-4 space-y-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
               {
@@ -892,6 +897,7 @@ return (
               { icon: faSearch, label: 'Search', glowClass: 'from-cyan-500/25 via-cyan-500/20 to-cyan-500/25', borderClass: 'border-cyan-500/30', textClass: 'text-cyan-400', action: 'search' },
               { icon: faPhone, label: 'Call', glowClass: 'from-green-500/25 via-green-500/20 to-green-500/25', borderClass: 'border-green-500/30', textClass: 'text-green-400', action: 'call' },
               { icon: faVideo, label: 'Video', glowClass: 'from-red-500/25 via-red-500/20 to-red-500/25', borderClass: 'border-red-500/30', textClass: 'text-red-400', action: 'video' },
+              { icon: showNavbar ? faChevronUp : faChevronDown, label: 'Toggle Navbar', glowClass: 'from-blue-500/25 via-blue-500/20 to-blue-500/25', borderClass: 'border-blue-500/30', textClass: 'text-blue-400', action: 'navbar' },
               { icon: faThumbtack, label: 'Pin', glowClass: 'from-yellow-500/25 via-yellow-500/20 to-yellow-500/25', borderClass: 'border-yellow-500/30', textClass: 'text-yellow-400', action: 'pin' },
               { icon: faBookmark, label: 'Keep', glowClass: 'from-emerald-500/25 via-emerald-500/20 to-emerald-500/25', borderClass: 'border-emerald-500/30', textClass: 'text-emerald-400', action: 'keep' },
               { icon: faStar, label: 'Saved', glowClass: 'from-amber-500/25 via-amber-500/20 to-amber-500/25', borderClass: 'border-amber-500/30', textClass: 'text-amber-400', action: 'saved' },
@@ -922,9 +928,11 @@ return (
                       else if (action === 'call') {
                         setCallMode('voice');
                         setRightPanelView('call');
-                      } else if (action === 'video') {
+                      }                       else if (action === 'video') {
                         setCallMode('video');
                         setRightPanelView('call');
+                      } else if (action === 'navbar') {
+                        toggleNavbar();
                       }
                       else if (action === 'settings') {
                         setRightPanelView('home');
@@ -1013,6 +1021,7 @@ return (
       spaceId={spaceId}
       categories={spaceCategories}
     />
+    </div>
   </div>
 );
 }

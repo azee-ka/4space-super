@@ -5,7 +5,6 @@ import { useSpaces, useCreateSpace } from '../hooks/useSpaces';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { CreateSpaceModal } from '../components/spaces/spaceModals/CreateSpaceModal';
-import { Navbar } from '../components/navbar/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPlus, faGlobe, faLock, faUsers, faHeart, faBriefcase, faRocket,
@@ -301,13 +300,10 @@ const acceptInvitation = async (invitationId: string) => {
   // Handle loading state
   if (isLoading) {
     return (
-      <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center pt-16">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm text-gray-400">Loading spaces...</p>
-          </div>
+      <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-400">Loading spaces...</p>
         </div>
       </div>
     );
@@ -316,29 +312,24 @@ const acceptInvitation = async (invitationId: string) => {
   // Handle error state
   if (error) {
     return (
-      <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center pt-16">
-          <div className="text-center max-w-md">
-            <p className="text-red-400 mb-4">Failed to load spaces</p>
-            <p className="text-sm text-gray-500 mb-6">{(error as Error)?.message}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold"
-            >
-              Retry
-            </button>
-          </div>
+      <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+        <div className="text-center max-w-md">
+          <p className="text-red-400 mb-4">Failed to load spaces</p>
+          <p className="text-sm text-gray-500 mb-6">{(error as Error)?.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`h-screen flex flex-col ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
-      <Navbar />
-
-      <div className="flex-1 flex overflow-hidden pt-16">
+    <div className={`h-full flex ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Floating Sidebar Islands */}
         <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
           

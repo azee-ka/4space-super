@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSpace, useSpaceStats, useSpaceMembers } from '../hooks/useSpaces';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { Navbar } from '../components/navbar/Navbar';
 import { InviteToSpaceModal } from '../components/spaces/spaceModals/InviteToSpaceModal';
 import { SpaceMembersModal } from '../components/spaces/spaceModals/SpaceMembersModal';
 import { WidgetLibraryModal } from '../components/spaces/spaceModals/WidgetLibraryModal';
@@ -190,7 +189,7 @@ export function SpaceView() {
   // Handle loading state
   if (loadingSpace) {
     return (
-      <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+      <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-gray-400">Loading space...</p>
@@ -202,7 +201,7 @@ export function SpaceView() {
   // Handle error state
   if (spaceError) {
     return (
-      <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+      <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center max-w-md">
           <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
             <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 text-3xl" />
@@ -225,7 +224,7 @@ export function SpaceView() {
   // Handle no space found
   if (!space) {
     return (
-      <div className={`h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
+      <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center">
           <p className="text-gray-400">Space not found</p>
         </div>
@@ -234,10 +233,8 @@ export function SpaceView() {
   }
 
   return (
-    <div className={`h-screen flex flex-col ${isDark ? 'bg-black' : 'bg-slate-50'}`}>
-      <Navbar />
-
-      <div className="flex-1 flex overflow-hidden pt-16">
+    <div className={`h-full flex ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Insights with Glowing Cards */}
         <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
           
