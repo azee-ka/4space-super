@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { NotificationsModal } from '../notifications/NotificationsModal';
+import { NotificationsMenuPanel } from '../notifications/NotificationsMenu';
 import { DisplayMenuPanel } from './DisplayMenu';
 import DropdownButton from '../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -223,22 +224,34 @@ export function Navbar() {
                 </DropdownButton>
 
                 {/* Notifications */}
-                <button
-                  onClick={() => setNotificationsOpen(true)}
-                  className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-zinc-800/50 transition-colors"
+                <DropdownButton
+                  placement="bottom-end"
+                  toggleContent={
+                    <button
+                      className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-zinc-800/50 transition-colors"
+                      title="Notifications"
+                    >
+                      <FontAwesomeIcon
+                        icon={faBell}
+                        className={`text-sm ${unreadCount > 0 ? 'text-cyan-300' : 'text-gray-400'}`}
+                      />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-white">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        </span>
+                      )}
+                    </button>
+                  }
                 >
-                  <FontAwesomeIcon
-                    icon={faBell}
-                    className={`text-sm ${unreadCount > 0 ? 'text-cyan-300' : 'text-gray-400'}`}
-                  />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-white">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    </span>
+                  {({ closeDropdown }) => (
+                    <NotificationsMenuPanel
+                      onClose={closeDropdown}
+                      onExpandToModal={() => setNotificationsOpen(true)}
+                    />
                   )}
-                </button>
+                </DropdownButton>
 
                 {/* Theme Toggle */}
                 <button
