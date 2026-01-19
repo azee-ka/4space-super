@@ -199,24 +199,56 @@ export function NotificationsMenuPanel({ onClose, onExpandToModal }: Notificatio
       </div>
 
       {/* Quick Stats */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
           <FontAwesomeIcon icon={faInbox} className="text-emerald-400 text-xs" />
         </div>
         <span className="text-xs font-semibold text-white">Overview</span>
       </div>
-      <div className="grid grid-cols-3 gap-1.5 mb-3">
-        <div className="px-2.5 py-2 bg-zinc-800/50 rounded-lg text-center">
-          <span className="text-sm font-bold text-white block">{notifications.length}</span>
-          <span className="text-[9px] text-zinc-500">Total</span>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="px-3 py-2.5 bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+              <FontAwesomeIcon icon={faCircle} className="text-cyan-400 text-xs" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-cyan-400 block leading-tight">{unreadCount}</span>
+              <span className="text-xs text-zinc-500">Unread</span>
+            </div>
+          </div>
         </div>
-        <div className="px-2.5 py-2 bg-zinc-800/50 rounded-lg text-center">
-          <span className="text-sm font-bold text-cyan-400 block">{unreadCount}</span>
-          <span className="text-[9px] text-zinc-500">Unread</span>
+        <div className="px-3 py-2.5 bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+              <FontAwesomeIcon icon={faExclamationCircle} className="text-orange-400 text-xs" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-orange-400 block leading-tight">{actionCount}</span>
+              <span className="text-xs text-zinc-500">Actions</span>
+            </div>
+          </div>
         </div>
-        <div className="px-2.5 py-2 bg-zinc-800/50 rounded-lg text-center">
-          <span className="text-sm font-bold text-orange-400 block">{actionCount}</span>
-          <span className="text-[9px] text-zinc-500">Action</span>
+        <div className="px-3 py-2.5 bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <FontAwesomeIcon icon={faInbox} className="text-violet-400 text-xs" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-white block leading-tight">{notifications.length}</span>
+              <span className="text-xs text-zinc-500">Total</span>
+            </div>
+          </div>
+        </div>
+        <div className="px-3 py-2.5 bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <FontAwesomeIcon icon={faCheck} className="text-emerald-400 text-xs" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-emerald-400 block leading-tight">{notifications.length - unreadCount}</span>
+              <span className="text-xs text-zinc-500">Read</span>
+            </div>
+          </div>
         </div>
       </div>
 
