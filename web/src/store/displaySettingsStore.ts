@@ -230,21 +230,22 @@ const computeGradient = (settings: DisplaySettings): string => {
   const c3 = colors[3] || 'rgba(0, 0, 0, 0)';
 
   if (backgroundType === 'linear') {
-    return `linear-gradient(${linearAngle}deg, ${c0} 0%, ${c1} 35%, ${c2} 65%, ${c3} 100%)`;
+    // Linear gradient - fades to transparent, black background is set separately by BackgroundProvider
+    return `linear-gradient(${linearAngle}deg, ${c0} 0%, ${c0} 10%, ${c1} 20%, ${c2} 35%, ${c3} 55%)`;
   }
 
-  // Radial gradient
+  // Radial gradient - fades to transparent, black background is set separately by BackgroundProvider
   const [px, py] = radialPosition.split(/\s+/);
   const pos = `${px || '50%'} ${py || '0%'}`;
-  const sx = `${Math.max(30, Math.min(120, radialSizeX))}%`;
-  const sy = `${Math.max(30, Math.min(120, radialSizeY))}%`;
+  const sx = `${Math.max(30, Math.min(200, radialSizeX))}%`;
+  const sy = `${Math.max(30, Math.min(200, radialSizeY))}%`;
 
   return `radial-gradient(${sx} ${sy} at ${pos},
     ${c0} 0%,
-    ${c0} 18%,
-    ${c1} 28%,
-    ${c2} 48%,
-    ${c3} 68%)`;
+    ${c0} 10%,
+    ${c1} 20%,
+    ${c2} 35%,
+    ${c3} 55%)`;
 };
 
 export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
