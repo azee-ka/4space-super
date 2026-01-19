@@ -5,6 +5,7 @@ import { Landing } from '../pages/Landing';
 import { Login } from '../pages/Login';
 import { Signup } from '../pages/Signup';
 import { Spaces } from '../pages/Spaces';
+import { Dashboard } from '../pages/Dashboard';
 import { SpaceView } from '../pages/SpaceView';
 import { GeneralChat } from '../pages/GeneralChat';
 
@@ -52,8 +53,13 @@ export const protectedRoutes: RouteConfig[] = [
     isProtected: true,
   },
   {
-    path: '/dashboard',
+    path: '/spaces',
     element: Spaces,
+    isProtected: true,
+  },
+  {
+    path: '/dashboard',
+    element: Dashboard,
     isProtected: true,
   },
   {

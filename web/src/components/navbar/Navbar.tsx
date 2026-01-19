@@ -94,13 +94,14 @@ export function Navbar() {
 
   const isDark = theme === 'dark';
   const isOnMessagesPage = location.pathname.startsWith('/messages');
-  const isOnSpacesPage = location.pathname === '/spaces' || location.pathname === '/dashboard';
+  const isOnSpacesPage = location.pathname === '/spaces';
+  const isOnDashboardPage = location.pathname === '/dashboard';
 
   // Navigation items
   const navItems = [
-    { path: '/dashboard', icon: faHome, label: 'Home', isActive: isOnSpacesPage },
+    { path: '/dashboard', icon: faHome, label: 'Home', isActive: isOnDashboardPage },
     { path: '/messages', icon: faComments, label: 'Messages', isActive: isOnMessagesPage, badge: 3 },
-    { path: '/spaces', icon: faLayerGroup, label: 'Spaces', isActive: false },
+    { path: '/spaces', icon: faLayerGroup, label: 'Spaces', isActive: isOnSpacesPage },
   ];
 
   return (
@@ -183,7 +184,7 @@ export function Navbar() {
                   placeholder="Search anything..."
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  className="w-full bg-transparent text-sm outline-none placeholder-gray-500 text-white"
+                  className="w-full bg-transparent text-sm outline-none focus:outline-none focus:border-none focus:ring-0 focus:ring-offset-0 placeholder-gray-500 text-white"
                 />
                 <kbd className={`px-2 py-1 rounded-lg text-[10px] font-mono transition-opacity duration-200 ${
                   searchFocused ? 'opacity-0' : 'opacity-100'
@@ -289,7 +290,7 @@ export function Navbar() {
               {/* Advanced Compact Profile Menu */}
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-2 w-72 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="rounded-2xl bg-gradient-to-br from-slate-900/98 via-slate-800/95 to-slate-900/98 backdrop-blur-2xl overflow-hidden shadow-2xl border border-slate-700/50 shadow-slate-900/20">
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-900/98 via-slate-800/95 to-slate-900/98 backdrop-blur-2xl overflow-hidden shadow-2xl border border-slate-700/50 shadow-slate-900/20 bg-black/70">
                     {/* Compact User Header */}
                     <div className="px-4 py-3 border-b border-slate-700/30">
                       <div className="flex items-center gap-3">

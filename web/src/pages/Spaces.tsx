@@ -12,7 +12,8 @@ import {
   faArrowTrendUp, faChartLine, faSearch, 
   faBell, faHistory, faLayerGroup, faWandMagicSparkles,
   faCode, faImage, faMicrophone, faInbox, faPaperPlane,
-  faEnvelope, faCheck, faXmark, faSpinner, faChevronDown, faStar
+  faEnvelope, faCheck, faXmark, faSpinner, faChevronDown, faStar, faBrain,
+  faMessage, faCalendar, faTasks, faFile
 } from '@fortawesome/free-solid-svg-icons';
 import type { Space } from '@4space/shared';
 import { supabase } from '../lib/supabase';
@@ -330,144 +331,92 @@ const acceptInvitation = async (invitationId: string) => {
   return (
     <div className={`h-full flex ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
       <div className="flex-1 flex overflow-hidden">
-        {/* Floating Sidebar Islands */}
-        <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
-          
-          {/* Stats Island */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-purple-500/20 to-cyan-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-cyan-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <h3 className="text-sm font-bold text-white mb-4">Overview</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'Total', value: stats.total, icon: faLayerGroup, color: 'from-cyan-400 to-blue-500' },
-                  { label: 'Active', value: stats.activeToday, icon: faBolt, color: 'from-yellow-400 to-orange-500' },
-                  { label: 'Unread', value: stats.unreadTotal, icon: faBell, color: 'from-pink-400 to-rose-500' },
-                  { label: 'Invites', value: stats.pending, icon: faEnvelope, color: 'from-purple-400 to-fuchsia-500' },
-                ].map((stat, i) => (
-                  <div key={i} className="relative group/stat">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover/stat:opacity-10 rounded-lg transition-opacity duration-300`} />
-                    <div className="relative p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-300">
-                      <div className="flex items-center gap-2 mb-1">
-                        <FontAwesomeIcon icon={stat.icon} className={`text-xs bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
-                        <span className="text-xs text-gray-400">{stat.label}</span>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{stat.value}</p>
-                    </div>
+        {/* Compact Left Sidebar - Navigation & Stats */}
+        <div className="w-64 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
+
+          {/* Navigation Section */}
+          <div className="space-y-2">
+            <div className="px-3 py-2">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Navigation</h3>
+            </div>
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 hover:translate-x-1"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center">
+                <FontAwesomeIcon icon={faBrain} className="text-white text-sm" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-white">Dashboard</p>
+                <p className="text-xs text-gray-400">AI insights & overview</p>
+              </div>
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setActiveTab(activeTab === 'my-spaces' ? 'my-spaces' : 'my-spaces')}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-cyan-500/20 border border-cyan-500/30 transition-all duration-200"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-white text-sm" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-white">My Spaces</p>
+                  <p className="text-xs text-cyan-300">Manage your workspaces</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Stats Section */}
+          <div className="space-y-2">
+            <div className="px-3 py-2">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overview</h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Total', value: stats.total, icon: faLayerGroup, color: 'from-cyan-400 to-blue-500' },
+                { label: 'Active', value: stats.activeToday, icon: faBolt, color: 'from-yellow-400 to-orange-500' },
+                { label: 'Unread', value: stats.unreadTotal, icon: faBell, color: 'from-pink-400 to-rose-500' },
+                { label: 'Invites', value: stats.pending, icon: faEnvelope, color: 'from-purple-400 to-fuchsia-500' },
+              ].map((stat, i) => (
+                <div key={i} className="p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-300">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FontAwesomeIcon icon={stat.icon} className={`text-xs bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
+                    <span className="text-xs text-gray-400">{stat.label}</span>
                   </div>
-                ))}
-              </div>
+                  <p className="text-lg font-bold text-white">{stat.value}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Quick Templates Island */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-purple-500/25 via-pink-500/20 to-purple-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-purple-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-purple-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Quick Create</h3>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {SPACE_TEMPLATES.map((template) => (
-                  <button
-                    key={template.id}
-                    onClick={() => setModalOpen(true)}
-                    className="group/temp p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300"
-                  >
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center mb-1 mx-auto group-hover/temp:scale-110 transition-transform duration-300`}>
-                      <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
-                    </div>
-                    <p className="text-xs text-gray-400 group-hover/temp:text-cyan-300 transition-colors duration-300 truncate">
-                      {template.name}
-                    </p>
-                  </button>
-                ))}
-              </div>
+          {/* Quick Actions */}
+          <div className="space-y-2">
+            <div className="px-3 py-2">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</h3>
             </div>
-          </div>
 
-          {/* Activity Island */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-blue-500/20 to-cyan-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-blue-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faHistory} className="text-cyan-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Recent</h3>
-              </div>
-              <div className="space-y-2">
-                {recentActivity.map((activity, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      const space = spaces.find(s => s.id === activity.spaceId);
-                      if (space) handleSpaceClick(space);
-                    }}
-                    className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 group/item"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-white/10 to-white/20 flex items-center justify-center flex-shrink-0">
-                        <FontAwesomeIcon icon={getActivityIcon(activity.type)} className="text-xs text-gray-400 group-hover/item:text-cyan-300 transition-colors" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-semibold text-white truncate group-hover/item:text-cyan-100 transition-colors">
-                            {activity.spaceName}
-                          </p>
-                          {activity.unreadCount > 0 && (
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-bold text-white">{activity.unreadCount}</span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 truncate">{activity.preview}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Insights Island */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-green-500/25 via-emerald-500/20 to-green-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-green-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faChartLine} className="text-green-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Insights</h3>
-              </div>
-              <div className="space-y-2">
-                {collaborationInsights.map((insight, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-300">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-white">{insight.spaceName}</span>
-                      {insight.trend === 'up' && (
-                        <FontAwesomeIcon icon={faArrowTrendUp} className="text-green-400 text-xs" />
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">{insight.members} members</span>
-                      <span className="text-cyan-400 font-semibold">{insight.messagesLast24h}</span>
-                    </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SPACE_TEMPLATES.slice(0, 4).map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => setModalOpen(true)}
+                  className="group p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 hover:scale-105"
+                >
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition-transform`}>
+                    <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
                   </div>
-                ))}
-              </div>
+                  <p className="text-xs text-gray-400 group-hover:text-white transition-colors text-center truncate">
+                    {template.name}
+                  </p>
+                </button>
+              ))}
             </div>
           </div>
+
         </div>
 
         {/* Main Content Area */}
@@ -814,6 +763,110 @@ const acceptInvitation = async (invitationId: string) => {
                 </div>
               )
             )}
+          </div>
+        </div>
+
+        {/* Right Sidebar - Activity & Quick Access */}
+        <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
+          {/* Activity Feed */}
+          <div className="relative group">
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-blue-500/20 to-cyan-500/25 rounded-2xl blur-sm" />
+            <div className="absolute inset-0 rounded-2xl border border-cyan-500/30" />
+
+            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-sm" />
+                <h3 className="text-sm font-bold text-white">Recent Activity</h3>
+              </div>
+
+              <div className="space-y-3">
+                {recentActivity.slice(0, 6).map((activity, index) => (
+                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      activity.type === 'message' ? 'bg-blue-500/20 text-blue-400' :
+                      activity.type === 'file' ? 'bg-green-500/20 text-green-400' :
+                      activity.type === 'task' ? 'bg-purple-500/20 text-purple-400' :
+                      'bg-orange-500/20 text-orange-400'
+                    }`}>
+                      <FontAwesomeIcon icon={getActivityIcon(activity.type)} className="text-xs" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{activity.spaceName}</p>
+                      <p className="text-xs text-gray-400">{activity.preview || 'Recent activity'}</p>
+                      <p className="text-xs text-gray-500 mt-1">{activity.unreadCount} unread</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Navigation */}
+          <div className="relative group">
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-purple-500/25 via-pink-500/20 to-purple-500/25 rounded-2xl blur-sm" />
+            <div className="absolute inset-0 rounded-2xl border border-purple-500/30" />
+
+            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <FontAwesomeIcon icon={faRocket} className="text-purple-400 text-sm" />
+                <h3 className="text-sm font-bold text-white">Quick Access</h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { icon: faMessage, label: 'Messages', action: () => navigate('/messages'), color: 'from-blue-500 to-cyan-600' },
+                  { icon: faCalendar, label: 'Calendar', action: () => {}, color: 'from-purple-500 to-pink-600' },
+                  { icon: faTasks, label: 'Tasks', action: () => {}, color: 'from-green-500 to-emerald-600' },
+                  { icon: faUsers, label: 'Team', action: () => {}, color: 'from-orange-500 to-red-600' },
+                  { icon: faFile, label: 'Files', action: () => {}, color: 'from-indigo-500 to-violet-600' },
+                  { icon: faBrain, label: 'AI', action: () => {}, color: 'from-teal-500 to-cyan-600' }
+                ].map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={item.action}
+                    className="group/nav p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 hover:scale-105"
+                  >
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-2 mx-auto group-hover/nav:scale-110 transition-transform`}>
+                      <FontAwesomeIcon icon={item.icon} className="text-white text-sm" />
+                    </div>
+                    <p className="text-xs text-gray-400 group-hover/nav:text-white transition-colors text-center">
+                      {item.label}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Space Templates */}
+          <div className="relative group">
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 rounded-2xl blur-sm" />
+            <div className="absolute inset-0 rounded-2xl border border-emerald-500/30" />
+
+            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-emerald-400 text-sm" />
+                <h3 className="text-sm font-bold text-white">Space Templates</h3>
+              </div>
+
+              <div className="space-y-2">
+                {SPACE_TEMPLATES.slice(0, 4).map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setModalOpen(true)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 hover:translate-x-1"
+                  >
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center`}>
+                      <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium text-white">{template.name}</p>
+                      <p className="text-xs text-gray-400">Quick setup</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

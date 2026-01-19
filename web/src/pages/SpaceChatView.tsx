@@ -874,7 +874,7 @@ return (
 
       {/* Beautiful Action Buttons at Top of Right Panel */}
       {selectedRoom && (
-        <div className="flex-shrink-0 px-4 pb-4 space-y-3">
+        <div className="flex-shrink-0 px-4 py-3 space-y-3 box-border">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
               {
@@ -911,11 +911,11 @@ return (
                   whileTap={{ scale: 0.95 }}
                   className="relative group/btn"
                 >
-                  <div className={`absolute -inset-[1px] bg-gradient-to-r ${glowClass} rounded-xl blur-sm opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
-                  <div className={`absolute inset-0 rounded-xl border ${borderClass} opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
-                  <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover/btn:opacity-100 blur-2xl transition-all duration-500" />
+                  <div className={`absolute -inset-[1px] box-border bg-gradient-to-r ${glowClass} rounded-xl blur-sm opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
+                  <div className={`absolute inset-0 box-border rounded-xl border ${borderClass} opacity-0 group-hover/btn:opacity-100 transition-opacity`} />
+                  <div className="absolute -inset-2 box-border bg-black/40 rounded-xl opacity-0 group-hover/btn:opacity-100 blur-2xl transition-all duration-500" />
                   {isActive && (
-                    <div className={`absolute -inset-[1px] rounded-xl border ${borderClass}`} />
+                    <div className={`absolute -inset-[1px] box-border rounded-xl border ${borderClass}`} />
                   )}
                   <button
                     onClick={() => {

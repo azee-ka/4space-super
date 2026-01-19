@@ -453,7 +453,7 @@ export function GeneralChat() {
   // ====================================
 
   return (
-    <div className="h-full flex bg-black overflow-hidden">
+    <div className="h-full flex bg-transparent overflow-hidden">
       {/* LEFT SIDEBAR - Space Chat Replica */}
       <LeftSidebar
         conversations={conversations as unknown as any[]}
@@ -647,7 +647,7 @@ export function GeneralChat() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="h-full flex flex-col items-center justify-center bg-black relative"
+          className="h-full flex flex-col items-center justify-center bg-transparent relative"
         >
           {/* Top Right Buttons */}
           <div className="absolute top-6 right-6 flex items-center gap-2" style={{ zIndex: 50 }}>
