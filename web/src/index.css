@@ -342,3 +342,118 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* Gradient Display Menu Slider Styles */
+.slider-thumb-purple::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-purple::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a855f7;
+  border: 2px solid rgba(168, 85, 247, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-cyan::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-cyan::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #06b6d4;
+  border: 2px solid rgba(6, 182, 212, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-yellow::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-yellow::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-orange::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-orange::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f97316;
+  border: 2px solid rgba(249, 115, 22, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-pink::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ec4899;
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-pink::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ec4899;
+  border: 2px solid rgba(236, 72, 153, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-blue::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  cursor: pointer;
+}
+
+.slider-thumb-blue::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  cursor: pointer;
+}
