@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { NotificationsModal } from '../notifications/NotificationsModal';
-import { DisplayMenu } from './DisplayMenu';
+import { DisplayMenuPanel } from './DisplayMenu';
+import DropdownButton from '../ui/DropdownButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch, faBell, faChevronDown, faPalette, faMoon, faSun,
@@ -27,7 +28,6 @@ export function Navbar() {
   const { theme, toggleTheme } = useThemeStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [displayMenuOpen, setDisplayMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeProfileTab, setActiveProfileTab] = useState<'account' | 'settings' | 'activity' | 'support'>('account');
@@ -206,23 +206,21 @@ export function Navbar() {
                 isDark ? 'bg-black/70' : 'bg-white/70'
               }`}>
                 {/* Display Settings */}
-                <div className="relative">
-                  <button
-                    onClick={() => setDisplayMenuOpen(!displayMenuOpen)}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                      displayMenuOpen
-                        ? 'bg-purple-500/20 text-purple-300'
-                        : 'hover:bg-zinc-800/50 text-gray-400 hover:text-purple-300'
-                    }`}
-                    title="Display Settings"
-                  >
-                    <FontAwesomeIcon icon={faPalette} className="text-sm" />
-                  </button>
-                  <DisplayMenu
-                    isOpen={displayMenuOpen}
-                    onClose={() => setDisplayMenuOpen(false)}
-                  />
-                </div>
+                <DropdownButton
+                  placement="bottom-end"
+                  toggleContent={
+                    <button
+                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-zinc-800/50 text-gray-400 hover:text-purple-300"
+                      title="Display Settings"
+                    >
+                      <FontAwesomeIcon icon={faPalette} className="text-sm" />
+                    </button>
+                  }
+                >
+                  {({ closeDropdown }) => (
+                    <DisplayMenuPanel onClose={closeDropdown} />
+                  )}
+                </DropdownButton>
 
                 {/* Notifications */}
                 <button
@@ -381,7 +379,7 @@ export function Navbar() {
                             {[
                               { icon: faSliders, label: 'Preferences', desc: 'App settings', color: 'violet', onClick: () => navigate('/settings') },
                               { icon: faShieldHalved, label: 'Security', desc: 'Privacy & security', color: 'orange', onClick: () => navigate('/settings/security') },
-                              { icon: faPalette, label: 'Appearance', desc: 'Themes & display', color: 'pink', onClick: () => setDisplayMenuOpen(true) },
+                              { icon: faPalette, label: 'Appearance', desc: 'Themes & display', color: 'pink', onClick: () => navigate('/settings/appearance') },
                               { icon: faBell, label: 'Notifications', desc: 'Alert preferences', color: 'blue', onClick: () => {} },
                               { icon: faCloud, label: 'Storage', desc: 'Cloud sync', color: 'cyan', onClick: () => {} },
                               { icon: faKey, label: 'API Keys', desc: 'Developer access', color: 'slate', onClick: () => {} }

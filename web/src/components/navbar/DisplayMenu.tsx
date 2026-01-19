@@ -37,11 +37,6 @@ const getNextTheme = (current: string) => {
   return themeOptions[(idx + 1) % themeOptions.length];
 };
 
-interface DisplayMenuProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
 function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
   const store = useDisplaySettingsStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -554,13 +549,7 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function DisplayMenu({ isOpen, onClose }: DisplayMenuProps) {
-  // For dropdown wrapper - render the panel when isOpen is true
-  if (!isOpen) return null;
-
-  return (
-    <div className="absolute right-0 top-full mt-2 z-50">
-      <GradientDisplayPanel onClose={onClose} />
-    </div>
-  );
+// Export the panel for use with DropdownButton
+export function DisplayMenuPanel({ onClose }: { onClose: () => void }) {
+  return <GradientDisplayPanel onClose={onClose} />;
 }
