@@ -528,7 +528,7 @@ export function SpaceView() {
                   </div>
                   <button
                     onClick={() => setShowWidgetLibrary(true)}
-                    className="px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all flex items-center gap-2 text-sm text-white"
+                    className="px-2 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all flex items-center gap-[4px] text-[11px] text-white"
                   >
                     <FontAwesomeIcon icon={faPlus} className="text-xs text-cyan-400" />
                     Add Widget
