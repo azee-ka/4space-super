@@ -162,9 +162,9 @@ export function LeftSidebar({
   }, [conversations, filterMode, searchQuery, favorites, muted]);
 
   return (
-    <div className="h-full flex flex-col w-[23vw] relative" ref={dropdownRef}>
+    <div className="h-full flex flex-col w-[23vw] relative bg-black" ref={dropdownRef}>
       {/* Header */}
-      <div className="px-5 py-4 border-b border-zinc-800/50">
+      <div className="px-5 py-4 border-b border-white/[0.04]">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faComments} className="text-cyan-400" />
@@ -175,28 +175,30 @@ export function LeftSidebar({
 
       {/* Search */}
       <div className="px-4 py-3">
-        <div className="relative">
-          <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-sm" />
+        <div className="relative group">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-white/[0.03] flex items-center justify-center">
+            <FontAwesomeIcon icon={faSearch} className="text-zinc-500 group-focus-within:text-cyan-400 text-sm transition-colors" />
+          </div>
           <input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-11 pr-4 py-3 bg-zinc-900/90 backdrop-blur-sm rounded-xl text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 border border-zinc-800/60 focus:border-cyan-500/50 transition-all duration-200 shadow-lg"
+            className="w-full pl-14 pr-4 py-3 bg-black/60 rounded-xl text-sm text-white placeholder:text-zinc-600 focus:outline-none border border-white/[0.06] focus:border-cyan-500/30 transition-all duration-200"
           />
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="px-4 pb-3">
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           {(['all', 'unread', 'favorites'] as FilterMode[]).map((filter) => (
             <button
               key={filter}
               onClick={() => onFilterChange(filter)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                 filterMode === filter
-                  ? 'bg-cyan-500/10 text-cyan-400'
-                  : 'bg-zinc-900/50 text-gray-400 hover:text-white hover:bg-zinc-800/50'
+                  ? 'bg-white/[0.04] text-white border-white/[0.08]'
+                  : 'bg-transparent text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-white/[0.02]'
               }`}
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -208,16 +210,22 @@ export function LeftSidebar({
       {/* Main Content Area - Scrollable with bottom padding for buttons */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
         {activeTab === 'conversations' ? (
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-1.5">
             {isLoading && (
-              <div className="p-4 text-center text-sm text-gray-400">Loading conversations...</div>
+              <div className="p-6 text-center">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3 animate-pulse">
+                  <FontAwesomeIcon icon={faComments} className="text-zinc-600 text-base" />
+                </div>
+                <p className="text-sm text-zinc-500">Loading conversations...</p>
+              </div>
             )}
             {!isLoading && filteredConversations.length === 0 && (
               <div className="p-8 text-center">
-                <div className="w-12 h-12 rounded-xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-3">
-                  <FontAwesomeIcon icon={faComments} className="text-gray-600 text-lg" />
+                <div className="w-12 h-12 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center mx-auto mb-3">
+                  <FontAwesomeIcon icon={faComments} className="text-zinc-600 text-lg" />
                 </div>
-                <p className="text-sm text-gray-400">No conversations found</p>
+                <p className="text-sm text-zinc-400 mb-1">No conversations found</p>
+                <p className="text-xs text-zinc-600">Start a new chat to begin messaging</p>
               </div>
             )}
             {filteredConversations.map((conversation) => {
@@ -235,23 +243,29 @@ export function LeftSidebar({
                   onClick={() => onSelectConversation(conversation.id)}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-since                   className={`w-full p-4 rounded-xl transition-all duration-200 ${
+                  className={`w-full p-3.5 rounded-xl transition-all duration-200 border ${
                     isActive
-                      ? 'bg-black ring-2 ring-cyan-500/50 shadow-2xl shadow-cyan-500/10 border border-cyan-500/20'
-                      : 'bg-zinc-800/60 hover:bg-zinc-700/70'
+                      ? 'bg-zinc-900/80 border-cyan-500/40 shadow-lg shadow-cyan-500/10'
+                      : 'bg-zinc-900/40 border-white/[0.03] hover:bg-zinc-900/70 hover:border-white/[0.06]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        conversation.is_group
-                          ? 'bg-violet-500/10'
-                          : 'bg-emerald-500/10'
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        isActive
+                          ? conversation.is_group
+                            ? 'bg-gradient-to-br from-violet-500/25 to-purple-500/15'
+                            : 'bg-gradient-to-br from-cyan-500/25 to-emerald-500/15'
+                          : conversation.is_group
+                            ? 'bg-zinc-800/60'
+                            : 'bg-zinc-800/60'
                       }`}>
                         <FontAwesomeIcon
                           icon={conversation.is_group ? faUsers : faUser}
                           className={`text-sm ${
-                            conversation.is_group ? 'text-violet-400' : 'text-emerald-400'
+                            isActive
+                              ? conversation.is_group ? 'text-violet-400' : 'text-cyan-400'
+                              : conversation.is_group ? 'text-violet-400/70' : 'text-zinc-400'
                           }`}
                         />
                       </div>
@@ -259,36 +273,36 @@ since                   className={`w-full p-4 rounded-xl transition-all duratio
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-2 mb-1">
                           <p className={`text-sm font-medium truncate ${
-                            isActive ? 'text-cyan-300' : 'text-white'
+                            isActive ? 'text-white' : 'text-zinc-200'
                           }`}>{title}</p>
                           {isFavorite && (
                             <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />
                           )}
                           {isMuted && (
-                            <FontAwesomeIcon icon={faBellSlash} className="text-zinc-500 text-xs" />
+                            <FontAwesomeIcon icon={faBellSlash} className="text-zinc-600 text-xs" />
                           )}
                           {typingUsers.get(conversation.id)?.size > 0 && (
                             <div className="flex space-x-1">
-                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                             </div>
                           )}
                         </div>
                         <p className={`text-xs truncate ${
-                          isActive ? 'text-zinc-300' : 'text-zinc-500'
-                        } ${typingUsers.get(conversation.id)?.size > 0 ? 'text-blue-300' : ''}`}>
+                          isActive ? 'text-zinc-400' : 'text-zinc-500'
+                        } ${typingUsers.get(conversation.id)?.size > 0 ? 'text-cyan-300' : ''}`}>
                           {typingUsers.get(conversation.id)?.size > 0 ? 'typing...' : subtitle}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end gap-1.5">
                       <span className={`text-xs ${
-                        isActive ? 'text-cyan-400' : 'text-zinc-400'
+                        isActive ? 'text-zinc-400' : 'text-zinc-600'
                       }`}>{lastTime}</span>
                       {unreadCount > 0 && (
-                        <div className={`px-2 py-1 bg-cyan-500 text-white text-xs font-bold rounded-full min-w-[22px] text-center`}>
+                        <div className="px-1.5 py-0.5 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white text-[10px] font-bold rounded-md min-w-[18px] text-center shadow-lg shadow-cyan-500/20">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </div>
                       )}

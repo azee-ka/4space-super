@@ -52,7 +52,7 @@ export function Dashboard() {
     else setGreeting('Good evening');
   }, []);
 
-  // Generate mock recent activity
+  // Generate mock recent activity - only run once on mount
   useEffect(() => {
     const activities: ActivityItem[] = [
       {
@@ -61,8 +61,7 @@ export function Dashboard() {
         title: 'New discussion started',
         description: 'Sarah shared the latest design mockups for review',
         timestamp: '2 min ago',
-        spaceId: spaces[0]?.id,
-        spaceName: spaces[0]?.name || 'Design Team',
+        spaceName: 'Design Team',
         user: 'Sarah Chen'
       },
       {
@@ -71,8 +70,7 @@ export function Dashboard() {
         title: 'Document uploaded',
         description: 'Final_Report_Q4.pdf added to shared files',
         timestamp: '15 min ago',
-        spaceId: spaces[1]?.id,
-        spaceName: spaces[1]?.name || 'Project Alpha',
+        spaceName: 'Project Alpha',
         user: 'Mike Johnson'
       },
       {
@@ -81,8 +79,7 @@ export function Dashboard() {
         title: 'Task completed',
         description: 'API integration milestone reached',
         timestamp: '1 hr ago',
-        spaceId: spaces[2]?.id,
-        spaceName: spaces[2]?.name || 'Development',
+        spaceName: 'Development',
         user: 'Alex Rivera'
       },
       {
@@ -91,7 +88,6 @@ export function Dashboard() {
         title: 'Team expanded',
         description: 'Jordan joined the Marketing space',
         timestamp: '3 hrs ago',
-        spaceId: spaces[0]?.id,
         spaceName: 'Marketing',
         user: 'Jordan Lee'
       },
@@ -106,7 +102,7 @@ export function Dashboard() {
       }
     ];
     setRecentActivity(activities);
-  }, [spaces]);
+  }, []);
 
   // Stats data
   const stats = {

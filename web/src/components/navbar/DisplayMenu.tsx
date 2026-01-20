@@ -48,6 +48,7 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
 
   // Local tab state for browsing - doesn't trigger preview until user makes a choice
   const [activeTab, setActiveTab] = useState<'gradient' | 'solid' | 'none'>('gradient');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const currentSettings = store.getCurrentSettings();
   const {
@@ -66,22 +67,26 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
     animations,
   } = currentSettings;
 
-  // Sync activeTab with actual backgroundType on mount and when settings change
+  // Sync activeTab with actual backgroundType only on mount
   useEffect(() => {
-    if (backgroundType === 'radial' || backgroundType === 'linear') {
-      setActiveTab('gradient');
-    } else if (backgroundType === 'solid') {
-      setActiveTab('solid');
-    } else {
-      setActiveTab('none');
+    if (!isInitialized) {
+      if (backgroundType === 'radial' || backgroundType === 'linear') {
+        setActiveTab('gradient');
+      } else if (backgroundType === 'solid') {
+        setActiveTab('solid');
+      } else {
+        setActiveTab('none');
+      }
+      setIsInitialized(true);
     }
-  }, [backgroundType]);
+  }, [backgroundType, isInitialized]);
 
   const { label: themeLabel, icon: ThemeIcon } =
     themeOptions.find(o => o.value === themeMode) || themeOptions[0];
   const effectiveTheme = themeMode === 'system' ? getSystemTheme() : themeMode;
   const isLight = effectiveTheme === 'light';
 
+  // Initialize color count and radial position only on mount
   useEffect(() => {
     const safeLen = Array.isArray(gradientColors) ? gradientColors.length : 1;
     setColorCount(Math.min(MAX_COLOR_COUNT, Math.max(1, safeLen)));
@@ -93,7 +98,8 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
     if (!Number.isNaN(x) && !Number.isNaN(y)) {
       setRadialCoord({ x, y });
     }
-  }, [currentSettings, gradientColors, radialPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const update = (key: string, value: any) => {
     store.updatePreview({ [key]: value });
@@ -127,9 +133,10 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
     setSaving(true);
     setSaveError(null);
     try {
-      store.savePreview();
+      await store.savePreview();
       onClose();
     } catch (err) {
+      console.error('Save error:', err);
       setSaveError('Failed to save display settings');
     } finally {
       setSaving(false);

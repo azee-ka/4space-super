@@ -453,7 +453,7 @@ export function GeneralChat() {
   // ====================================
 
   return (
-    <div className="h-full flex bg-transparent overflow-hidden">
+    <div className="h-full flex bg-black overflow-hidden">
       {/* LEFT SIDEBAR - Space Chat Replica */}
       <LeftSidebar
         conversations={conversations as unknown as any[]}
@@ -791,7 +791,7 @@ export function GeneralChat() {
 
       {/* Regular Chat Sidebar */}
       {selectedConversationId && (
-        <div className="w-80 flex flex-col border-l border-zinc-800/50">
+        <div className="w-80 flex flex-col bg-black border-l border-white/[0.04]">
               {/* Main Tabs */}
               <div className="flex-shrink-0 p-3">
                 <div className="flex gap-1 justify-center">

@@ -193,7 +193,7 @@ interface DisplaySettingsStore extends DisplaySettings {
 
   // Preview actions
   updatePreview: (updates: Partial<DisplaySettings>) => void;
-  savePreview: () => void;
+  savePreview: () => Promise<void>;
   revertPreview: () => void;
 
   // Computed
@@ -213,6 +213,46 @@ const hexToRgba = (hex: string, alpha: number): string => {
   const b = n & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
+
+// Helper to convert camelCase settings to snake_case for database
+const toSnakeCase = (settings: DisplaySettings): Record<string, unknown> => ({
+  theme_mode: settings.themeMode,
+  background_type: settings.backgroundType,
+  gradient_colors: settings.gradientColors,
+  radial_position: settings.radialPosition,
+  radial_size_x: settings.radialSizeX,
+  radial_size_y: settings.radialSizeY,
+  linear_angle: settings.linearAngle,
+  solid_color: settings.solidColor,
+  brightness: settings.brightness,
+  contrast: settings.contrast,
+  saturation: settings.saturation,
+  blur: settings.blur,
+  font_size: settings.fontSize,
+  ui_opacity: settings.uiOpacity,
+  animations: settings.animations,
+  reduced_motion: settings.reducedMotion,
+});
+
+// Helper to convert snake_case database record to camelCase settings
+const toCamelCase = (data: Record<string, unknown>): Partial<DisplaySettings> => ({
+  themeMode: (data.theme_mode as ThemeMode) || defaultDisplaySettings.themeMode,
+  backgroundType: (data.background_type as GradientType) || defaultDisplaySettings.backgroundType,
+  gradientColors: (data.gradient_colors as GradientColor[]) || defaultDisplaySettings.gradientColors,
+  radialPosition: (data.radial_position as string) || defaultDisplaySettings.radialPosition,
+  radialSizeX: (data.radial_size_x as number) || defaultDisplaySettings.radialSizeX,
+  radialSizeY: (data.radial_size_y as number) || defaultDisplaySettings.radialSizeY,
+  linearAngle: (data.linear_angle as number) || defaultDisplaySettings.linearAngle,
+  solidColor: (data.solid_color as string) || defaultDisplaySettings.solidColor,
+  brightness: (data.brightness as number) ?? defaultDisplaySettings.brightness,
+  contrast: (data.contrast as number) ?? defaultDisplaySettings.contrast,
+  saturation: (data.saturation as number) ?? defaultDisplaySettings.saturation,
+  blur: (data.blur as number) ?? defaultDisplaySettings.blur,
+  fontSize: (data.font_size as number) ?? defaultDisplaySettings.fontSize,
+  uiOpacity: (data.ui_opacity as number) ?? defaultDisplaySettings.uiOpacity,
+  animations: (data.animations as boolean) ?? defaultDisplaySettings.animations,
+  reducedMotion: (data.reduced_motion as boolean) ?? defaultDisplaySettings.reducedMotion,
+});
 
 // Compute CSS gradient string
 const computeGradient = (settings: DisplaySettings): string => {
@@ -273,8 +313,8 @@ async function loadFromDatabase() {
     }
 
     if (data) {
-      // Merge with defaults to ensure all fields are present
-      const settings = { ...defaultDisplaySettings, ...data };
+      // Convert snake_case database fields to camelCase and merge with defaults
+      const settings = { ...defaultDisplaySettings, ...toCamelCase(data as Record<string, unknown>) };
       useDisplaySettingsStore.setState(settings);
     }
 
@@ -373,9 +413,31 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            const { error } = await supabase
+            // Convert camelCase to snake_case for database
+            const dbData = toSnakeCase(preview);
+
+            // First check if settings exist for this user
+            const { data: existing } = await supabase
               .from('display_settings')
-              .upsert({ user_id: user.id, ...preview });
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            let error;
+            if (existing) {
+              // Update existing record
+              const result = await supabase
+                .from('display_settings')
+                .update(dbData)
+                .eq('user_id', user.id);
+              error = result.error;
+            } else {
+              // Insert new record
+              const result = await supabase
+                .from('display_settings')
+                .insert({ user_id: user.id, ...dbData });
+              error = result.error;
+            }
 
             if (error) throw error;
           } catch (error) {
