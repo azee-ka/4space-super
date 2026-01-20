@@ -12,7 +12,6 @@ export type ModerationLevel = 'low' | 'medium' | 'high' | 'extreme';
 export type DefaultRoomPrivacy = 'public' | 'private' | 'hidden';
 export type ThemePreference = 'light' | 'dark' | 'auto';
 export type SidebarPosition = 'left' | 'right';
-export type MessageDensity = 'compact' | 'comfortable' | 'spacious';
 
 export interface UserPreferences {
   notifications_enabled: boolean;
@@ -201,6 +200,67 @@ export interface RoomMemberSettings {
   notificationPreference: NotificationPreference;
   isMuted: boolean;
 }
+
+export interface DisplaySettings {
+  // Theme
+  themeMode: 'system' | 'light' | 'dark';
+
+  // Background type
+  backgroundType: 'radial' | 'linear' | 'solid' | 'none';
+
+  // Gradient colors
+  gradientColors: Array<{
+    color: string;
+    alpha: number;
+  }>;
+
+  // Radial gradient settings
+  radialPosition: string;
+  radialSizeX: number;
+  radialSizeY: number;
+
+  // Linear gradient settings
+  linearAngle: number;
+
+  // Solid color
+  solidColor: string;
+
+  // Image effects
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  blur: number;
+
+  // UI settings
+  fontSize: number;
+  uiOpacity: number;
+  animations: boolean;
+  reducedMotion: boolean;
+}
+
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  themeMode: 'dark',
+  backgroundType: 'solid',
+  gradientColors: [
+    { color: '#000000', alpha: 0 },
+    { color: '#000000', alpha: 0 },
+    { color: '#000000', alpha: 0 },
+    { color: '#000000', alpha: 0 },
+  ],
+  radialPosition: '50% 0%',
+  radialSizeX: 85,
+  radialSizeY: 70,
+  linearAngle: 135,
+  solidColor: '#000000',
+  brightness: 1,
+  contrast: 1,
+  saturation: 1,
+  blur: 0,
+  fontSize: 1,
+  uiOpacity: 1,
+  animations: true,
+  reducedMotion: false,
+};
 
 export const DEFAULT_CHAT_THEME: ChatTheme = {
   backgroundType: 'solid',

@@ -3,6 +3,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
+import { createSettingsHooks } from '@4space/shared/src/hooks/useSettings';
 
 export interface GradientColor {
   color: string;
@@ -48,11 +50,11 @@ export interface DisplaySettings {
 
 export const defaultDisplaySettings: DisplaySettings = {
   themeMode: 'dark',
-  backgroundType: 'radial',
+  backgroundType: 'solid',
   gradientColors: [
-    { color: '#7c3aed', alpha: 0.35 },
-    { color: '#06b6d4', alpha: 0.25 },
-    { color: '#10b981', alpha: 0.15 },
+    { color: '#000000', alpha: 0 },
+    { color: '#000000', alpha: 0 },
+    { color: '#000000', alpha: 0 },
     { color: '#000000', alpha: 0 },
   ],
   radialPosition: '50% 0%',
@@ -249,14 +251,46 @@ const computeGradient = (settings: DisplaySettings): string => {
     ${c3} 55%)`;
 };
 
-export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
-  persist(
-    (set, get) => ({
-      ...defaultDisplaySettings,
+// Initialize store with database data
+let isInitialized = false;
 
-      // Preview state
-      previewSettings: null,
-      hasUnsavedChanges: false,
+async function loadFromDatabase() {
+  if (isInitialized) return;
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('display_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Failed to load display settings:', error);
+      return;
+    }
+
+    if (data) {
+      // Merge with defaults to ensure all fields are present
+      const settings = { ...defaultDisplaySettings, ...data };
+      useDisplaySettingsStore.setState(settings);
+    }
+
+    isInitialized = true;
+  } catch (error) {
+    console.error('Failed to initialize display settings:', error);
+  }
+}
+
+export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
+  (set, get) => ({
+    ...defaultDisplaySettings,
+
+    // Preview state
+    previewSettings: null,
+    hasUnsavedChanges: false,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
 
@@ -332,10 +366,23 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
         });
       },
 
-      savePreview: () => {
+      savePreview: async () => {
         const preview = get().previewSettings;
         if (preview) {
-          const { previewSettings, hasUnsavedChanges, ...savedSettings } = get();
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            const { error } = await supabase
+              .from('display_settings')
+              .upsert({ user_id: user.id, ...preview });
+
+            if (error) throw error;
+          } catch (error) {
+            console.error('Failed to save display settings:', error);
+            throw error;
+          }
+
           set({
             ...preview,
             previewSettings: null,
@@ -415,33 +462,11 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
 
         return filters.length > 0 ? { filter: filters.join(' ') } : {};
       },
-    }),
-    {
-      name: 'display-settings-storage',
-      // Only persist saved settings, NOT preview state
-      // This ensures unsaved changes are lost on page reload
-      partialize: (state) => ({
-        themeMode: state.themeMode,
-        backgroundType: state.backgroundType,
-        gradientColors: state.gradientColors,
-        radialPosition: state.radialPosition,
-        radialSizeX: state.radialSizeX,
-        radialSizeY: state.radialSizeY,
-        linearAngle: state.linearAngle,
-        solidColor: state.solidColor,
-        brightness: state.brightness,
-        contrast: state.contrast,
-        saturation: state.saturation,
-        blur: state.blur,
-        fontSize: state.fontSize,
-        uiOpacity: state.uiOpacity,
-        animations: state.animations,
-        reducedMotion: state.reducedMotion,
-        // Explicitly NOT including: previewSettings, hasUnsavedChanges
-      }),
-    }
-  )
+    })
 );
+
+// Initialize from database when the store is first used
+loadFromDatabase();
 
 // Hook to get effective theme (resolves 'system' to actual theme)
 export function useEffectiveTheme(): 'light' | 'dark' {

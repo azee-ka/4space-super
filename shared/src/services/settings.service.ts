@@ -1,11 +1,13 @@
 // shared/src/services/settings.service.ts
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  DEFAULT_DISPLAY_SETTINGS,
   DEFAULT_ROOM_MEMBER_SETTINGS,
   DEFAULT_ROOM_SETTINGS,
   DEFAULT_SPACE_SETTINGS,
   DEFAULT_USER_CHAT_SETTINGS,
   DEFAULT_USER_PREFERENCES,
+  type DisplaySettings,
   type MessageRetention,
   type RoomMemberSettings,
   type RoomSettings,
@@ -207,6 +209,48 @@ export class SettingsService {
     if (error) throw error;
 
     return data as UserPreferences;
+  }
+
+  async getDisplaySettings(): Promise<DisplaySettings> {
+    const user = await this.requireUser();
+
+    const { data, error } = await this.supabase
+      .from('display_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      // Insert default display settings
+      const { data: newData, error: insertError } = await this.supabase
+        .from('display_settings')
+        .insert({ user_id: user.id, ...DEFAULT_DISPLAY_SETTINGS })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return newData as DisplaySettings;
+    }
+
+    return { ...DEFAULT_DISPLAY_SETTINGS, ...data } as DisplaySettings;
+  }
+
+  async updateDisplaySettings(updates: Partial<DisplaySettings>): Promise<DisplaySettings> {
+    const user = await this.requireUser();
+    const current = await this.getDisplaySettings();
+    const next = { ...current, ...updates };
+
+    const { data, error } = await this.supabase
+      .from('display_settings')
+      .upsert({ user_id: user.id, ...next })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data as DisplaySettings;
   }
 
   async getSpaceSettings(spaceId: string): Promise<SpaceSettings> {

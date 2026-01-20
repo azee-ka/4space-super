@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  type DisplaySettings,
   type RoomMemberSettings,
   type RoomSettings,
   type SpaceSettings,
@@ -14,6 +15,7 @@ export const settingsKeys = {
   all: ['settings'] as const,
   user: () => [...settingsKeys.all, 'user'] as const,
   userPrefs: () => [...settingsKeys.all, 'user-prefs'] as const,
+  display: () => [...settingsKeys.all, 'display'] as const,
   spaces: () => [...settingsKeys.all, 'spaces'] as const,
   space: (spaceId: string) => [...settingsKeys.spaces(), spaceId] as const,
   rooms: () => [...settingsKeys.all, 'rooms'] as const,
@@ -60,6 +62,26 @@ export function createSettingsHooks(supabase: SupabaseClient) {
         settingsService.updateUserPreferences(updates),
       onSuccess: (preferences) => {
         queryClient.setQueryData(settingsKeys.userPrefs(), preferences);
+      },
+    });
+  }
+
+  function useDisplaySettings() {
+    return useQuery({
+      queryKey: settingsKeys.display(),
+      queryFn: () => settingsService.getDisplaySettings(),
+      staleTime: 1000 * 60 * 5,
+    });
+  }
+
+  function useUpdateDisplaySettings() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: (updates: Partial<DisplaySettings>) =>
+        settingsService.updateDisplaySettings(updates),
+      onSuccess: (settings) => {
+        queryClient.setQueryData(settingsKeys.display(), settings);
       },
     });
   }
@@ -164,6 +186,8 @@ export function createSettingsHooks(supabase: SupabaseClient) {
     useUpdateUserChatSettings,
     useUserPreferences,
     useUpdateUserPreferences,
+    useDisplaySettings,
+    useUpdateDisplaySettings,
     useSpaceSettings,
     useUpdateSpaceSettings,
     useRoomSettings,

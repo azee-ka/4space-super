@@ -389,6 +389,83 @@ export type Database = {
           },
         ]
       }
+      display_settings: {
+        Row: {
+          animations: boolean | null
+          background_type: string | null
+          blur: number | null
+          brightness: number | null
+          contrast: number | null
+          created_at: string | null
+          font_size: number | null
+          gradient_colors: Json | null
+          id: string
+          linear_angle: number | null
+          radial_position: string | null
+          radial_size_x: number | null
+          radial_size_y: number | null
+          reduced_motion: boolean | null
+          saturation: number | null
+          solid_color: string | null
+          theme_mode: string | null
+          ui_opacity: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          animations?: boolean | null
+          background_type?: string | null
+          blur?: number | null
+          brightness?: number | null
+          contrast?: number | null
+          created_at?: string | null
+          font_size?: number | null
+          gradient_colors?: Json | null
+          id?: string
+          linear_angle?: number | null
+          radial_position?: string | null
+          radial_size_x?: number | null
+          radial_size_y?: number | null
+          reduced_motion?: boolean | null
+          saturation?: number | null
+          solid_color?: string | null
+          theme_mode?: string | null
+          ui_opacity?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          animations?: boolean | null
+          background_type?: string | null
+          blur?: number | null
+          brightness?: number | null
+          contrast?: number | null
+          created_at?: string | null
+          font_size?: number | null
+          gradient_colors?: Json | null
+          id?: string
+          linear_angle?: number | null
+          radial_position?: string | null
+          radial_size_x?: number | null
+          radial_size_y?: number | null
+          reduced_motion?: boolean | null
+          saturation?: number | null
+          solid_color?: string | null
+          theme_mode?: string | null
+          ui_opacity?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_files: {
         Row: {
           created_at: string | null
