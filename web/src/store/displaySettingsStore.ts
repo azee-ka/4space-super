@@ -163,7 +163,7 @@ export const solidColorPresets = [
 ];
 
 interface DisplaySettingsStore extends DisplaySettings {
-  // Preview state
+  // Preview state (for UI only, not applied to background)
   previewSettings: DisplaySettings | null;
   hasUnsavedChanges: boolean;
 
@@ -197,7 +197,8 @@ interface DisplaySettingsStore extends DisplaySettings {
   // Computed
   getBackgroundStyle: () => React.CSSProperties;
   getFilterStyle: () => React.CSSProperties;
-  getCurrentSettings: () => DisplaySettings;
+  getCurrentSettings: () => DisplaySettings; // Returns preview if available (for menu UI)
+  getSavedSettings: () => DisplaySettings; // Returns only saved settings (for background)
 }
 
 // Helper to convert hex to rgba
@@ -350,6 +351,7 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
 
       getCurrentSettings: () => {
         const state = get();
+        // Returns preview settings if available (used by DisplayMenu UI)
         return state.previewSettings || {
           themeMode: state.themeMode,
           backgroundType: state.backgroundType,
@@ -370,7 +372,31 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
         };
       },
 
+      getSavedSettings: () => {
+        const state = get();
+        // Returns only saved settings (ignores preview - used by BackgroundProvider)
+        return {
+          themeMode: state.themeMode,
+          backgroundType: state.backgroundType,
+          gradientColors: state.gradientColors,
+          radialPosition: state.radialPosition,
+          radialSizeX: state.radialSizeX,
+          radialSizeY: state.radialSizeY,
+          linearAngle: state.linearAngle,
+          solidColor: state.solidColor,
+          brightness: state.brightness,
+          contrast: state.contrast,
+          saturation: state.saturation,
+          blur: state.blur,
+          fontSize: state.fontSize,
+          uiOpacity: state.uiOpacity,
+          animations: state.animations,
+          reducedMotion: state.reducedMotion,
+        };
+      },
+
       getBackgroundStyle: () => {
+        // Use current settings (includes preview) for live preview
         const settings = get().getCurrentSettings();
         return {
           background: computeGradient(settings),
@@ -378,6 +404,7 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
       },
 
       getFilterStyle: () => {
+        // Use current settings (includes preview) for live preview
         const settings = get().getCurrentSettings();
         const { brightness, contrast, saturation, blur } = settings;
         const filters = [];
@@ -391,6 +418,27 @@ export const useDisplaySettingsStore = create<DisplaySettingsStore>()(
     }),
     {
       name: 'display-settings-storage',
+      // Only persist saved settings, NOT preview state
+      // This ensures unsaved changes are lost on page reload
+      partialize: (state) => ({
+        themeMode: state.themeMode,
+        backgroundType: state.backgroundType,
+        gradientColors: state.gradientColors,
+        radialPosition: state.radialPosition,
+        radialSizeX: state.radialSizeX,
+        radialSizeY: state.radialSizeY,
+        linearAngle: state.linearAngle,
+        solidColor: state.solidColor,
+        brightness: state.brightness,
+        contrast: state.contrast,
+        saturation: state.saturation,
+        blur: state.blur,
+        fontSize: state.fontSize,
+        uiOpacity: state.uiOpacity,
+        animations: state.animations,
+        reducedMotion: state.reducedMotion,
+        // Explicitly NOT including: previewSettings, hasUnsavedChanges
+      }),
     }
   )
 );

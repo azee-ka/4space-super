@@ -46,6 +46,9 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Local tab state for browsing - doesn't trigger preview until user makes a choice
+  const [activeTab, setActiveTab] = useState<'gradient' | 'solid' | 'none'>('gradient');
+
   const currentSettings = store.getCurrentSettings();
   const {
     themeMode,
@@ -62,6 +65,17 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
     fontSize,
     animations,
   } = currentSettings;
+
+  // Sync activeTab with actual backgroundType on mount and when settings change
+  useEffect(() => {
+    if (backgroundType === 'radial' || backgroundType === 'linear') {
+      setActiveTab('gradient');
+    } else if (backgroundType === 'solid') {
+      setActiveTab('solid');
+    } else {
+      setActiveTab('none');
+    }
+  }, [backgroundType]);
 
   const { label: themeLabel, icon: ThemeIcon } =
     themeOptions.find(o => o.value === themeMode) || themeOptions[0];
@@ -136,7 +150,16 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
           <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
             <FontAwesomeIcon icon={faPalette} className="text-violet-400" />
           </div>
-          <h3 className="text-sm font-bold text-white">Display Settings</h3>
+          <div>
+            <h3 className="text-sm font-bold text-white">Display Settings</h3>
+            {/* Saved/Unsaved Status */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${hasUnsavedChanges ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span className={`text-[10px] font-medium ${hasUnsavedChanges ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+              </span>
+            </div>
+          </div>
         </div>
         <button
           className="w-8 h-8 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors flex items-center justify-center"
@@ -156,7 +179,7 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
       {/* Background Settings */}
       {!isLight && (
         <div className="space-y-3 mb-3">
-          {/* Background Type */}
+          {/* Background Type Tabs - Just for browsing, doesn't change background */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center">
@@ -166,17 +189,15 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
             </div>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { value: 'radial', label: 'Gradient', color: 'violet' },
-                { value: 'solid', label: 'Solid', color: 'emerald' },
-                { value: 'none', label: 'None', color: 'zinc' },
+                { value: 'gradient' as const, label: 'Gradient', color: 'violet' },
+                { value: 'solid' as const, label: 'Solid', color: 'emerald' },
+                { value: 'none' as const, label: 'None', color: 'zinc' },
               ].map(({ value, label, color }) => {
-                const isActive = (backgroundType === 'radial' || backgroundType === 'linear') && value === 'radial'
-                  ? true
-                  : backgroundType === value;
+                const isActive = activeTab === value;
                 return (
                   <button
                     key={value}
-                    onClick={() => update('backgroundType', value === 'radial' ? 'radial' : value)}
+                    onClick={() => setActiveTab(value)}
                     className={`py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? `bg-${color}-500/20 text-${color}-400`
@@ -191,13 +212,13 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Gradient Controls */}
-          {(backgroundType === 'radial' || backgroundType === 'linear') && (
+          {activeTab === 'gradient' && (
             <div className="space-y-2">
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
                   <label className="text-xs text-zinc-400 mb-1 block">Style</label>
                   <select
-                    value={backgroundType}
+                    value={backgroundType === 'linear' ? 'linear' : 'radial'}
                     onChange={e => update('backgroundType', e.target.value)}
                     className="w-full h-8 px-2 bg-zinc-800/50 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-violet-500/50 box-border"
                   >
@@ -212,14 +233,20 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                     min="1"
                     max={MAX_COLOR_COUNT}
                     value={colorCount}
-                    onChange={handleCount}
+                    onChange={(e) => {
+                      handleCount(e);
+                      // Also ensure background type is set to gradient when changing colors
+                      if (backgroundType !== 'radial' && backgroundType !== 'linear') {
+                        update('backgroundType', 'radial');
+                      }
+                    }}
                     className="w-full h-8 px-2 bg-zinc-800/50 rounded-lg text-xs text-center focus:outline-none focus:ring-1 focus:ring-violet-500/50 box-border"
                   />
                 </div>
               </div>
 
           {/* Radial Position */}
-          {backgroundType === 'radial' && (
+          {(backgroundType === 'radial' || (activeTab === 'gradient' && backgroundType !== 'linear')) && (
             <div>
               <label className="text-sm text-zinc-400 mb-1.5 block">Position</label>
               <div
@@ -231,6 +258,10 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                     const x = Math.max(0, Math.min(100, ((ev.clientX - left) / width) * 100));
                     const y = Math.max(0, Math.min(100, ((ev.clientY - top) / height) * 100));
                     setRadialCoord({ x, y });
+                    // Set background type to radial when user adjusts position
+                    if (backgroundType !== 'radial') {
+                      update('backgroundType', 'radial');
+                    }
                     update('radialPosition', `${x.toFixed(0)}% ${y.toFixed(0)}%`);
                   };
                   const up = () => {
@@ -259,7 +290,7 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Radial Size */}
-          {backgroundType === 'radial' && (
+          {(backgroundType === 'radial' || (activeTab === 'gradient' && backgroundType !== 'linear')) && (
             <div className="grid grid-cols-2 gap-2">
               <div className="px-2.5 py-2 bg-zinc-800/50 rounded-lg">
                 <div className="flex justify-between items-center">
@@ -272,7 +303,10 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                   max="120"
                   step="1"
                   value={radialSizeX}
-                  onChange={e => update('radialSizeX', parseFloat(e.target.value))}
+                  onChange={e => {
+                    if (backgroundType !== 'radial') update('backgroundType', 'radial');
+                    update('radialSizeX', parseFloat(e.target.value));
+                  }}
                   className="w-full h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer slider-thumb-purple mt-1.5"
                 />
               </div>
@@ -287,7 +321,10 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                   max="120"
                   step="1"
                   value={radialSizeY}
-                  onChange={e => update('radialSizeY', parseFloat(e.target.value))}
+                  onChange={e => {
+                    if (backgroundType !== 'radial') update('backgroundType', 'radial');
+                    update('radialSizeY', parseFloat(e.target.value));
+                  }}
                   className="w-full h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer slider-thumb-purple mt-1.5"
                 />
               </div>
@@ -307,7 +344,10 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                 max="360"
                 step="1"
                 value={linearAngle}
-                onChange={e => update('linearAngle', parseFloat(e.target.value))}
+                onChange={e => {
+                  if (backgroundType !== 'linear') update('backgroundType', 'linear');
+                  update('linearAngle', parseFloat(e.target.value));
+                }}
                 className="w-full h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer slider-thumb-purple mt-1.5"
               />
             </div>
@@ -333,7 +373,13 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                       <div className="p-3 bg-zinc-900 rounded-xl" onClick={e => e.stopPropagation()}>
                         <HexColorPicker
                           color={gradientColors[idx]?.color ?? '#000000'}
-                          onChange={newColor => updateColor(idx, 'color', newColor)}
+                          onChange={newColor => {
+                            // Set background type to gradient when picking a color
+                            if (backgroundType !== 'radial' && backgroundType !== 'linear') {
+                              update('backgroundType', 'radial');
+                            }
+                            updateColor(idx, 'color', newColor);
+                          }}
                         />
                       </div>
                     </DropdownButton>
@@ -344,7 +390,13 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                         gradientColors[idx]?.color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-800' : ''
                       }`}
                       style={{ backgroundColor: c }}
-                      onClick={() => updateColor(idx, 'color', c)}
+                      onClick={() => {
+                        // Set background type to gradient when picking a color
+                        if (backgroundType !== 'radial' && backgroundType !== 'linear') {
+                          update('backgroundType', 'radial');
+                        }
+                        updateColor(idx, 'color', c);
+                      }}
                     />
                   )
                 )}
@@ -358,7 +410,13 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                   max="1"
                   step="0.01"
                   value={gradientColors[idx]?.alpha ?? 0.2}
-                  onChange={e => updateColor(idx, 'alpha', parseFloat(e.target.value))}
+                  onChange={e => {
+                    // Set background type to gradient when adjusting alpha
+                    if (backgroundType !== 'radial' && backgroundType !== 'linear') {
+                      update('backgroundType', 'radial');
+                    }
+                    updateColor(idx, 'alpha', parseFloat(e.target.value));
+                  }}
                   className="flex-1 h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer slider-thumb-cyan box-border"
                 />
                 <span className="text-sm text-cyan-400 font-medium w-8 text-right">{(gradientColors[idx]?.alpha ?? 0.2).toFixed(2)}</span>
@@ -369,16 +427,20 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Solid Color Controls */}
-          {backgroundType === 'solid' && (
+          {activeTab === 'solid' && (
             <div className="px-2.5 py-2 bg-zinc-800/50 rounded-lg">
               <label className="text-sm text-zinc-400 font-medium block mb-2">Solid Color</label>
               <div className="grid grid-cols-6 gap-1.5 mb-2">
                 {solidColorPresets.map((color) => (
                   <button
                     key={color}
-                    onClick={() => update('solidColor', color)}
+                    onClick={() => {
+                      // Set background type to solid when picking a color
+                      if (backgroundType !== 'solid') update('backgroundType', 'solid');
+                      update('solidColor', color);
+                    }}
                     className={`aspect-square rounded-full transition-all hover:scale-105 box-border ${
-                      solidColor === color ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-800' : ''
+                      solidColor === color && backgroundType === 'solid' ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-800' : ''
                     }`}
                     style={{ backgroundColor: color }}
                     title={color}
@@ -389,13 +451,19 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
                 <input
                   type="color"
                   value={solidColor}
-                  onChange={(e) => update('solidColor', e.target.value)}
+                  onChange={(e) => {
+                    if (backgroundType !== 'solid') update('backgroundType', 'solid');
+                    update('solidColor', e.target.value);
+                  }}
                   className="w-8 h-8 rounded-lg cursor-pointer box-border"
                 />
                 <input
                   type="text"
                   value={solidColor}
-                  onChange={(e) => update('solidColor', e.target.value)}
+                  onChange={(e) => {
+                    if (backgroundType !== 'solid') update('backgroundType', 'solid');
+                    update('solidColor', e.target.value);
+                  }}
                   className="flex-1 px-2.5 py-1.5 bg-zinc-700/50 rounded-lg text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/50 box-border"
                   placeholder="#000000"
                 />
@@ -403,12 +471,22 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* None Background Info */}
-          {backgroundType === 'none' && (
-            <div className="px-2 py-2 bg-zinc-800/50 rounded-lg">
-              <p className="text-xs text-zinc-500 text-center">
-                No background - transparent
+          {/* None Background - Apply button */}
+          {activeTab === 'none' && (
+            <div className="px-2.5 py-3 bg-zinc-800/50 rounded-lg">
+              <p className="text-xs text-zinc-400 text-center mb-3">
+                Remove background gradient for a clean black look
               </p>
+              <button
+                onClick={() => update('backgroundType', 'none')}
+                className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
+                  backgroundType === 'none'
+                    ? 'bg-zinc-600/30 text-zinc-300'
+                    : 'bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                }`}
+              >
+                {backgroundType === 'none' ? 'Applied' : 'Apply No Background'}
+              </button>
             </div>
           )}
         </div>
@@ -521,7 +599,13 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Buttons */}
-      <div className="flex flex-col gap-2 pt-3">
+      <div className="flex flex-col gap-2 pt-3 border-t border-zinc-800">
+        {/* Unsaved changes warning */}
+        {hasUnsavedChanges && (
+          <p className="text-[10px] text-amber-400/70 text-center pt-2">
+            Changes will be lost on page reload unless saved
+          </p>
+        )}
         <div className="flex gap-2">
           <button
             onClick={reset}
@@ -538,11 +622,15 @@ function GradientDisplayPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <button
-          className="w-full py-2.5 px-3 text-xs font-medium bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full py-2.5 px-3 text-xs font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            hasUnsavedChanges
+              ? 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white shadow-lg shadow-violet-500/20'
+              : 'bg-zinc-800/50 text-zinc-500'
+          }`}
           onClick={save}
           disabled={saving || !hasUnsavedChanges}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes' : 'Saved'}
         </button>
       </div>
     </div>

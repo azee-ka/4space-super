@@ -1,5 +1,7 @@
 // web/src/components/layout/BackgroundProvider.tsx
 // Global background provider that applies display settings
+// Uses current settings (includes preview) for live preview
+// Preview settings are NOT persisted - they'll be lost on page reload unless saved
 
 import { useEffect } from 'react';
 import { useDisplaySettingsStore } from '../../store/displaySettingsStore';
@@ -9,27 +11,16 @@ interface BackgroundProviderProps {
 }
 
 export function BackgroundProvider({ children }: BackgroundProviderProps) {
-  // Get the store instance to check for preview settings
-  const store = useDisplaySettingsStore();
+  // Get current settings (includes preview) for live preview
+  // Preview settings are NOT persisted - they'll be lost on page reload unless saved
+  const { getBackgroundStyle, getFilterStyle, getCurrentSettings } = useDisplaySettingsStore();
 
-  // Subscribe to preview state changes
-  const hasUnsavedChanges = store.hasUnsavedChanges;
-
-  // Get current settings (includes preview)
-  const currentSettings = store.getCurrentSettings();
-
-  const { getBackgroundStyle, getFilterStyle } = useDisplaySettingsStore();
+  // Get current settings (includes preview) to trigger re-render on any change
+  const currentSettings = getCurrentSettings();
 
   useEffect(() => {
     const backgroundStyle = getBackgroundStyle();
     const filterStyle = getFilterStyle();
-
-    console.log('Display settings changed:', {
-      hasUnsavedChanges,
-      currentSettings,
-      backgroundStyle,
-      filterStyle
-    });
 
     // Force remove any CSS class backgrounds first
     document.body.classList.remove('gradient-bg');
@@ -65,14 +56,8 @@ export function BackgroundProvider({ children }: BackgroundProviderProps) {
     document.body.style.margin = '0';
     document.body.style.padding = '0';
 
-    console.log('Final body styles:', {
-      background: document.body.style.background,
-      backgroundColor: document.body.style.backgroundColor,
-      filter: document.body.style.filter
-    });
-
     // Cleanup function - no cleanup needed since we want styles to persist
-  }, [hasUnsavedChanges, currentSettings, getBackgroundStyle, getFilterStyle]);
+  }, [currentSettings, getBackgroundStyle, getFilterStyle]);
 
   return <>{children}</>;
 }
