@@ -1,10 +1,11 @@
 // web/src/components/navbar/Navbar.tsx
 // Clean, modern navbar with centered search and right-aligned profile
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useConversations } from '../../hooks/useConversations';
 import { NotificationsModal } from '../notifications/NotificationsModal';
 import { NotificationsMenuPanel } from '../notifications/NotificationsMenu';
 import { DisplayMenuPanel } from './DisplayMenu';
@@ -26,6 +27,9 @@ export function Navbar() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // Get conversations to calculate unread messages count
+  const { data: conversations = [] } = useConversations();
 
 
   useEffect(() => {
@@ -82,10 +86,23 @@ export function Navbar() {
   const isOnSpacesPage = location.pathname === '/spaces';
   const isOnDashboardPage = location.pathname === '/dashboard';
 
+  // Calculate total unread messages count
+  const totalUnreadMessages = useMemo(() => {
+    return conversations.reduce((total, conversation) => {
+      return total + (conversation.unread_count || 0);
+    }, 0);
+  }, [conversations]);
+
   // Navigation items
   const navItems = [
     { path: '/dashboard', icon: faHome, label: 'Home', isActive: isOnDashboardPage },
-    { path: '/messages', icon: faComments, label: 'Messages', isActive: isOnMessagesPage, badge: 3 },
+    {
+      path: '/messages',
+      icon: faComments,
+      label: 'Messages',
+      isActive: isOnMessagesPage,
+      badge: totalUnreadMessages > 9 ? '9+' : totalUnreadMessages > 0 ? totalUnreadMessages : null
+    },
     { path: '/spaces', icon: faLayerGroup, label: 'Spaces', isActive: isOnSpacesPage },
   ];
 
@@ -137,7 +154,7 @@ export function Navbar() {
                   >
                     <FontAwesomeIcon icon={icon} className="text-sm" />
                     <span className="hidden md:inline">{label}</span>
-                    {badge && badge > 0 && (
+                    {badge && badge !== null && (
                       <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center">
                         <span className="text-white text-[10px] font-bold">{badge}</span>
                       </span>

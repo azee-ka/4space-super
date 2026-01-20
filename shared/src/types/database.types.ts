@@ -1565,21 +1565,21 @@ export type Database = {
       }
       user_kept_messages: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           message_id: string
           note: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           message_id: string
           note?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           message_id?: string
           note?: string | null
@@ -1760,21 +1760,21 @@ export type Database = {
       }
       user_saved_messages: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           message_id: string
           note: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           message_id: string
           note?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           message_id?: string
           note?: string | null

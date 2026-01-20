@@ -1,4 +1,4 @@
--- Add display settings table for storing UI appearance preferences
+-- Restore display settings table for storing UI appearance preferences
 -- This includes background gradients, colors, effects, and UI settings
 
 -- =====================================================
@@ -46,12 +46,29 @@ CREATE TABLE IF NOT EXISTS public.display_settings (
   UNIQUE(user_id)
 );
 
-CREATE TRIGGER update_display_settings_updated_at
-  BEFORE UPDATE ON public.display_settings
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+-- Create trigger if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'update_display_settings_updated_at'
+    AND tgrelid = 'public.display_settings'::regclass
+  ) THEN
+    CREATE TRIGGER update_display_settings_updated_at
+      BEFORE UPDATE ON public.display_settings
+      FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+  END IF;
+END $$;
 
 ALTER TABLE public.display_settings ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "display_settings_select_own" ON public.display_settings;
+DROP POLICY IF EXISTS "display_settings_insert_own" ON public.display_settings;
+DROP POLICY IF EXISTS "display_settings_update_own" ON public.display_settings;
+DROP POLICY IF EXISTS "display_settings_delete_own" ON public.display_settings;
+
+-- Create policies
 CREATE POLICY "display_settings_select_own"
   ON public.display_settings FOR SELECT
   USING (auth.uid() = user_id);
