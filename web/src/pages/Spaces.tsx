@@ -1,4 +1,6 @@
 // web/src/pages/Spaces.tsx
+// Sophisticated Spaces page with rich visual hierarchy and premium design
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSpaces, useCreateSpace } from '../hooks/useSpaces';
@@ -6,14 +8,14 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { CreateSpaceModal } from '../components/spaces/spaceModals/CreateSpaceModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
+import {
   faPlus, faGlobe, faLock, faUsers, faHeart, faBriefcase, faRocket,
-  faChevronRight, faBolt, faComments, faFolder, faCheckCircle,
-  faArrowTrendUp, faChartLine, faSearch, 
-  faBell, faHistory, faLayerGroup, faWandMagicSparkles,
-  faCode, faImage, faMicrophone, faInbox, faPaperPlane,
-  faEnvelope, faCheck, faXmark, faSpinner, faChevronDown, faStar, faBrain,
-  faMessage, faCalendar, faTasks, faFile
+  faChevronRight, faBolt, faSearch,
+  faEnvelope, faCheck, faXmark, faSpinner, faChevronDown,
+  faStar, faHistory, faFolder, faCompass,
+  faArrowRight, faCircle, faLayerGroup, faArrowTrendUp,
+  faCode, faImage, faMicrophone, faPaperPlane,
+  faMessage, faFile, faCheckCircle
 } from '@fortawesome/free-solid-svg-icons';
 import type { Space } from '@4space/shared';
 import { supabase } from '../lib/supabase';
@@ -37,7 +39,7 @@ interface SpaceInvitation {
   message?: string;
   created_at: string;
   expires_at: string;
-  space: {  // Changed from 'spaces' to 'space' to match the alias
+  space: {
     id: string;
     name: string;
     description?: string;
@@ -53,37 +55,21 @@ interface SpaceInvitation {
   };
 }
 
-interface SpaceActivity {
-  spaceId: string;
-  spaceName: string;
-  lastActive: Date;
-  unreadCount: number;
-  type: 'message' | 'file' | 'task' | 'mention';
-  preview?: string;
-}
-
-interface CollaborationInsight {
-  spaceId: string;
-  spaceName: string;
-  members: number;
-  messagesLast24h: number;
-  trend: 'up' | 'down' | 'stable';
-}
-
 interface SpaceTemplate {
   id: string;
   name: string;
   icon: any;
   color: string;
+  description: string;
 }
 
 const SPACE_TEMPLATES: SpaceTemplate[] = [
-  { id: 'startup', name: 'Startup', icon: faRocket, color: 'from-blue-500 to-cyan-600' },
-  { id: 'design', name: 'Design', icon: faImage, color: 'from-purple-500 to-pink-600' },
-  { id: 'personal', name: 'Personal', icon: faLock, color: 'from-gray-600 to-slate-700' },
-  { id: 'podcast', name: 'Podcast', icon: faMicrophone, color: 'from-orange-500 to-red-600' },
-  { id: 'dev', name: 'Dev', icon: faCode, color: 'from-green-500 to-emerald-600' },
-  { id: 'marketing', name: 'Marketing', icon: faPaperPlane, color: 'from-pink-500 to-rose-600' },
+  { id: 'startup', name: 'Startup', icon: faRocket, color: 'from-blue-500 to-cyan-600', description: 'Launch your next big idea' },
+  { id: 'design', name: 'Design', icon: faImage, color: 'from-purple-500 to-pink-600', description: 'Creative collaboration' },
+  { id: 'personal', name: 'Personal', icon: faLock, color: 'from-gray-600 to-slate-700', description: 'Private workspace' },
+  { id: 'podcast', name: 'Podcast', icon: faMicrophone, color: 'from-orange-500 to-red-600', description: 'Audio content creation' },
+  { id: 'dev', name: 'Development', icon: faCode, color: 'from-green-500 to-emerald-600', description: 'Code & ship together' },
+  { id: 'marketing', name: 'Marketing', icon: faPaperPlane, color: 'from-pink-500 to-rose-600', description: 'Campaigns & growth' },
 ];
 
 export function Spaces() {
@@ -91,146 +77,81 @@ export function Spaces() {
   const navigate = useNavigate();
   const { theme } = useThemeStore();
   const { user } = useAuthStore();
-  
-  // Use React Query hooks
+
   const { data: spaces = [], isLoading, error } = useSpaces();
   const createSpaceMutation = useCreateSpace();
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'my-spaces' | 'shared'>('my-spaces');
   const [viewMode, setViewMode] = useState<'all' | 'favorites' | 'recent'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Invitations state
   const [invitations, setInvitations] = useState<SpaceInvitation[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(false);
   const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
 
-  const [recentActivity] = useState<SpaceActivity[]>([
-    { spaceId: '1', spaceName: 'Product Design', lastActive: new Date(), unreadCount: 5, type: 'message', preview: 'Sarah: The new mockups...' },
-    { spaceId: '2', spaceName: 'Marketing', lastActive: new Date(Date.now() - 3600000), unreadCount: 2, type: 'mention', preview: '@you in Q4 Campaign' },
-    { spaceId: '3', spaceName: 'Personal Vault', lastActive: new Date(Date.now() - 7200000), unreadCount: 0, type: 'file', preview: 'Doc uploaded' },
-  ]);
-
-  const [collaborationInsights] = useState<CollaborationInsight[]>([
-    { spaceId: '1', spaceName: 'Product Design', members: 8, messagesLast24h: 47, trend: 'up' },
-    { spaceId: '2', spaceName: 'Marketing', members: 5, messagesLast24h: 23, trend: 'stable' },
-    { spaceId: '3', spaceName: 'Engineering', members: 12, messagesLast24h: 89, trend: 'up' },
-  ]);
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     loadInvitations();
   }, []);
 
+  const loadInvitations = async () => {
+    if (!user) return;
+    setLoadingInvitations(true);
 
+    try {
+      const { data, error } = await supabase
+        .from('space_invitations')
+        .select(`
+          *,
+          space:spaces(id, name, description, icon, color, privacy),
+          invited_by:profiles!space_invitations_invited_by_user_id_fkey(id, display_name, email, avatar_url)
+        `)
+        .eq('invited_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
 
-const loadInvitations = async () => {
-  if (!user) {
-    logger.warn('No user found');
-    return;
-  }
-
-  logger.info('Starting invitation load for user:', user.id);
-  setLoadingInvitations(true);
-  
-  try {
-    logger.info('Making Supabase query...');
-    
-    const { data, error } = await supabase
-      .from('space_invitations')
-      .select(`
-        *,
-        space:spaces(id, name, description, icon, color, privacy),
-        invited_by:profiles!space_invitations_invited_by_user_id_fkey(id, display_name, email, avatar_url)
-      `)
-      .eq('invited_user_id', user.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      logger.error('Supabase error:', error);
-      throw error;
+      if (error) throw error;
+      setInvitations(data as any || []);
+    } catch (err: any) {
+      logger.error('Error loading invitations:', err);
+    } finally {
+      setLoadingInvitations(false);
     }
+  };
 
-    logger.info('Query successful');
-    logger.info('Raw data received:', data);
-    logger.info('Number of invitations:', { count: data?.length || 0 });
-    
-    if (data && data.length > 0) {
-      logger.info('First invitation structure:', { structure: JSON.stringify(data[0], null, 2) });
-      
-      // Check if space data exists
-      data.forEach((inv, index) => {
-        logger.info(`Invitation ${index}:`, {
-          id: inv.id,
-          space_id: inv.space_id,
-          has_space_object: !!inv.space,
-          space_name: inv.space?.name,
-          invited_by_name: inv.invited_by?.display_name || inv.invited_by?.email
-        });
+  useEffect(() => {
+    if (activeTab === 'shared') {
+      loadInvitations();
+    }
+  }, [activeTab, user]);
+
+  const acceptInvitation = async (invitationId: string) => {
+    setProcessingInvitation(invitationId);
+    try {
+      const { data, error } = await supabase.rpc('accept_space_invitation', {
+        p_invitation_id: invitationId
       });
-    } else {
-      logger.warn('No invitations found in database');
+
+      if (error) throw error;
+
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+
+      if (data && data.length > 0 && data[0]?.space_id) {
+        const spaceId = data[0].space_id;
+        queryClient.invalidateQueries({ queryKey: ['space_members', spaceId] });
+        navigate(`/spaces/${spaceId}`);
+      }
+    } catch (err: any) {
+      logger.error('Error accepting invitation:', err);
+      alert(err.message || 'Failed to accept invitation');
+    } finally {
+      setProcessingInvitation(null);
     }
-    
-    setInvitations(data as any || []);
-    logger.info('Invitations set in state');
-    
-  } catch (err: any) {
-    logger.error('Error loading invitations:', {
-      message: err.message,
-      code: err.code,
-      details: err.details,
-      hint: err.hint,
-      full_error: err
-    });
-  } finally {
-    setLoadingInvitations(false);
-    logger.info('Loading complete');
-  }
-};
-
-// Also add logging when tab changes
-useEffect(() => {
-  if (activeTab === 'shared') {
-    loadInvitations();
-  }
-}, [activeTab, user]);
-
-const acceptInvitation = async (invitationId: string) => {
-  setProcessingInvitation(invitationId);
-  try {
-    const { data, error } = await supabase.rpc('accept_space_invitation', {
-      p_invitation_id: invitationId
-    });
-
-    if (error) throw error;
-
-    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-    
-    // Invalidate spaces query to refresh the list
-    queryClient.invalidateQueries({ queryKey: ['spaces'] });
-    
-    // Function returns array with single row containing space_id column
-    if (data && data.length > 0 && data[0]?.space_id) {
-      const spaceId = data[0].space_id;
-      
-      // Invalidate the specific space's members
-      queryClient.invalidateQueries({ 
-        queryKey: ['space_members', spaceId] 
-      });
-      
-      // Navigate to the space
-      navigate(`/spaces/${spaceId}`);
-    }
-  } catch (err: any) {
-    logger.error('Error accepting invitation:', err);
-    alert(err.message || 'Failed to accept invitation');
-  } finally {
-    setProcessingInvitation(null);
-  }
-};
+  };
 
   const rejectInvitation = async (invitationId: string) => {
     if (!confirm('Decline this invitation?')) return;
@@ -257,60 +178,44 @@ const acceptInvitation = async (invitationId: string) => {
 
   const getGradient = (index: number) => {
     const gradients = [
-      'from-blue-500 to-purple-600',
-      'from-purple-500 to-pink-600',
       'from-cyan-500 to-blue-600',
-      'from-pink-500 to-rose-600',
-      'from-orange-500 to-red-600',
-      'from-green-500 to-teal-600',
-      'from-violet-500 to-purple-600',
-      'from-amber-500 to-orange-600',
+      'from-purple-500 to-pink-600',
+      'from-emerald-500 to-teal-600',
+      'from-orange-500 to-amber-600',
+      'from-rose-500 to-pink-600',
+      'from-indigo-500 to-violet-600',
     ];
     return gradients[index % gradients.length];
   };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'message': return faComments;
-      case 'file': return faFolder;
-      case 'task': return faCheckCircle;
-      case 'mention': return faBell;
-      default: return faInbox;
-    }
-  };
-
   const filteredSpaces = spaces.filter(space => {
     if (searchQuery && !space.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (viewMode === 'recent') {
-      const recentIds = recentActivity.map(a => a.spaceId);
-      return recentIds.includes(space.id);
-    }
     return true;
   });
-
-  const isDark = theme === 'dark';
 
   const stats = {
     total: spaces.length,
     pending: invitations.length,
-    activeToday: Math.min(spaces.length, recentActivity.length),
-    unreadTotal: recentActivity.reduce((sum, a) => sum + a.unreadCount, 0),
     private: spaces.filter(s => s.privacy === 'private').length,
+    shared: spaces.filter(s => s.privacy === 'shared' || s.privacy === 'team').length,
   };
 
-  // Handle loading state
   if (isLoading) {
     return (
       <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-400">Loading spaces...</p>
+          <div className="w-16 h-16 relative mx-auto mb-6">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600 animate-pulse" />
+            <div className="absolute inset-[3px] rounded-xl bg-black/90 flex items-center justify-center">
+              <FontAwesomeIcon icon={faCompass} className="text-2xl text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} />
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 font-medium">Loading spaces...</p>
         </div>
       </div>
     );
   }
 
-  // Handle error state
   if (error) {
     return (
       <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
@@ -329,178 +234,157 @@ const acceptInvitation = async (invitationId: string) => {
   }
 
   return (
-    <div className={`h-full flex ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
-      <div className="flex-1 flex overflow-hidden">
-        {/* Compact Left Sidebar - Navigation & Stats */}
-        <div className="w-64 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
+    <div className={`h-full flex flex-col ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1800px] mx-auto p-6 space-y-6">
 
-          {/* Navigation Section */}
-          <div className="space-y-2">
-            <div className="px-3 py-2">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Navigation</h3>
+          {/* Header Section */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">Workspace Hub</span>
+              </div>
+              <h1 className="text-4xl font-bold text-white">
+                Your <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Spaces</span>
+              </h1>
+              <p className="text-gray-400 text-lg">Organize projects, collaborate with teams, and build together</p>
             </div>
 
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 hover:translate-x-1"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center">
-                <FontAwesomeIcon icon={faBrain} className="text-white text-sm" />
+            {/* Header Actions */}
+            <div className="flex items-center gap-3">
+              <div className={`px-4 py-2.5 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white'} border border-white/10 flex items-center gap-3`}>
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-cyan-400 text-sm" />
+                  <span className="text-sm text-gray-400">{stats.total} spaces</span>
+                </div>
+                {stats.pending > 0 && (
+                  <>
+                    <div className="w-px h-4 bg-white/10" />
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faEnvelope} className="text-purple-400 text-sm" />
+                      <span className="text-sm text-purple-400">{stats.pending} pending</span>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-white">Dashboard</p>
-                <p className="text-xs text-gray-400">AI insights & overview</p>
-              </div>
-            </button>
-
-            <div className="relative">
               <button
-                onClick={() => setActiveTab(activeTab === 'my-spaces' ? 'my-spaces' : 'my-spaces')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-cyan-500/20 border border-cyan-500/30 transition-all duration-200"
+                onClick={() => setModalOpen(true)}
+                disabled={createSpaceMutation.isPending}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-sm font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-white text-sm" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">My Spaces</p>
-                  <p className="text-xs text-cyan-300">Manage your workspaces</p>
-                </div>
+                <FontAwesomeIcon icon={createSpaceMutation.isPending ? faSpinner : faPlus} className={`text-xs ${createSpaceMutation.isPending ? 'animate-spin' : ''}`} />
+                New Space
               </button>
             </div>
           </div>
 
-          {/* Stats Section */}
-          <div className="space-y-2">
-            <div className="px-3 py-2">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overview</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Total', value: stats.total, icon: faLayerGroup, color: 'from-cyan-400 to-blue-500' },
-                { label: 'Active', value: stats.activeToday, icon: faBolt, color: 'from-yellow-400 to-orange-500' },
-                { label: 'Unread', value: stats.unreadTotal, icon: faBell, color: 'from-pink-400 to-rose-500' },
-                { label: 'Invites', value: stats.pending, icon: faEnvelope, color: 'from-purple-400 to-fuchsia-500' },
-              ].map((stat, i) => (
-                <div key={i} className="p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-300">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FontAwesomeIcon icon={stat.icon} className={`text-xs bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
-                    <span className="text-xs text-gray-400">{stat.label}</span>
+          {/* Stats Cards Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Spaces', value: stats.total, icon: faLayerGroup, color: 'cyan', change: 12 },
+              { label: 'Private', value: stats.private, icon: faLock, color: 'purple', change: 0 },
+              { label: 'Collaborative', value: stats.shared, icon: faUsers, color: 'emerald', change: 8 },
+              { label: 'Invitations', value: stats.pending, icon: faEnvelope, color: 'amber', change: stats.pending > 0 ? stats.pending : 0 }
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className={`group relative p-4 rounded-2xl ${isDark ? 'bg-white/[0.03]' : 'bg-white'} border border-white/[0.06] hover:border-white/10 transition-all duration-300 hover:bg-white/[0.05]`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <FontAwesomeIcon icon={stat.icon} className={`text-${stat.color}-400`} />
                   </div>
-                  <p className="text-lg font-bold text-white">{stat.value}</p>
+                  {stat.change > 0 && (
+                    <div className="flex items-center gap-1 text-xs font-medium text-emerald-400">
+                      <FontAwesomeIcon icon={faArrowTrendUp} className="text-[10px]" />
+                      {stat.change}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+                <p className="text-2xl font-bold text-white mb-0.5">{stat.value}</p>
+                <p className="text-xs text-gray-500">{stat.label}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Quick Actions */}
-          <div className="space-y-2">
-            <div className="px-3 py-2">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {SPACE_TEMPLATES.slice(0, 4).map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setModalOpen(true)}
-                  className="group p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 hover:scale-105"
-                >
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center mb-2 mx-auto group-hover:scale-110 transition-transform`}>
-                    <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
-                  </div>
-                  <p className="text-xs text-gray-400 group-hover:text-white transition-colors text-center truncate">
-                    {template.name}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6 space-y-6">
-          
-          {/* New Minimal Header */}
-          <div className="flex items-center justify-between">
-            {/* Left: Segmented Control for Tabs */}
-            <div className="inline-flex items-center p-1.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm">
+          {/* Tab Navigation & Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Tabs */}
+            <div className="inline-flex items-center p-1.5 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
               {[
-                { id: 'my-spaces', label: 'Spaces', count: stats.total },
-                { id: 'shared', label: 'Invites', count: stats.pending }
+                { id: 'my-spaces', label: 'My Spaces', count: stats.total, icon: faLayerGroup },
+                { id: 'shared', label: 'Invitations', count: stats.pending, icon: faEnvelope }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`relative px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${
+                  className={`relative px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 ${
                     activeTab === tab.id
                       ? 'text-white bg-white/10'
                       : 'text-gray-400 hover:text-gray-200'
                   }`}
                 >
-                  <div className="relative z-10 flex items-center gap-2">
-                    <span>{tab.label}</span>
-                    {tab.count > 0 && (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        activeTab === tab.id 
-                          ? 'bg-cyan-400/20 text-cyan-300' 
-                          : 'bg-white/5 text-gray-500'
-                      }`}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </div>
+                  <FontAwesomeIcon icon={tab.icon} className="text-xs" />
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      activeTab === tab.id
+                        ? 'bg-cyan-400/20 text-cyan-300'
+                        : 'bg-white/5 text-gray-500'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            {/* Right: Actions */}
+            {/* Right Side Controls */}
             <div className="flex items-center gap-3">
-              {/* Search Bar - Clean Version */}
-              <div className="relative group">
+              {/* Search */}
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Search spaces..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-64 pl-10 pr-4 py-2.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm
+                  className={`w-64 pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]
                     text-white placeholder-gray-500 text-sm outline-none
-                    focus:bg-zinc-900/70 transition-all duration-300`}
+                    focus:border-cyan-500/30 focus:bg-white/[0.05] transition-all duration-300`}
                 />
-                <FontAwesomeIcon 
-                  icon={faSearch} 
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none" 
+                <FontAwesomeIcon
+                  icon={faSearch}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs"
                 />
               </div>
 
-              {/* Filter Dropdown - My Spaces only */}
+              {/* Filter Dropdown */}
               {activeTab === 'my-spaces' && (
                 <div className="relative">
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className={`px-4 py-2.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm
-                      hover:bg-zinc-900/70 transition-all duration-300 
+                    className={`px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]
+                      hover:bg-white/[0.05] transition-all duration-300
                       flex items-center gap-2.5 text-sm`}
                   >
-                    <FontAwesomeIcon 
-                      icon={viewMode === 'favorites' ? faStar : viewMode === 'recent' ? faHistory : faFolder} 
-                      className="text-xs text-cyan-400" 
+                    <FontAwesomeIcon
+                      icon={viewMode === 'favorites' ? faStar : viewMode === 'recent' ? faHistory : faFolder}
+                      className="text-xs text-cyan-400"
                     />
                     <span className="text-white font-medium">
                       {viewMode === 'all' ? 'All' : viewMode === 'recent' ? 'Recent' : 'Favorites'}
                     </span>
-                    <FontAwesomeIcon 
-                      icon={faChevronDown} 
-                      className={`text-xs text-gray-400 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} 
+                    <FontAwesomeIcon
+                      icon={faChevronDown}
+                      className={`text-xs text-gray-400 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
                     />
                   </button>
 
                   {dropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
-                      
-                      <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl bg-zinc-900/90 backdrop-blur-xl overflow-hidden z-20 shadow-2xl">
+                      <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-black/90 backdrop-blur-xl border border-white/[0.06] overflow-hidden z-20 shadow-2xl">
                         {[
                           { id: 'all', label: 'All Spaces', icon: faFolder },
                           { id: 'recent', label: 'Recent', icon: faHistory },
@@ -514,7 +398,7 @@ const acceptInvitation = async (invitationId: string) => {
                             }}
                             className={`w-full px-4 py-3 text-left transition-all duration-200 flex items-center gap-3 ${
                               viewMode === option.id
-                                ? 'bg-white/10 text-cyan-300'
+                                ? 'bg-cyan-500/10 text-cyan-300'
                                 : 'text-gray-300 hover:bg-white/5 hover:text-white'
                             }`}
                           >
@@ -530,341 +414,273 @@ const acceptInvitation = async (invitationId: string) => {
                   )}
                 </div>
               )}
-
-              {/* Create Button - Prominent */}
-              <button
-                onClick={() => setModalOpen(true)}
-                disabled={createSpaceMutation.isPending}
-                className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 
-                  hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 
-                  text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 
-                  hover:shadow-cyan-500/40 hover:scale-105 flex items-center gap-2 disabled:opacity-50"
-              >
-                <FontAwesomeIcon icon={createSpaceMutation.isPending ? faSpinner : faPlus} className={`text-sm ${createSpaceMutation.isPending ? 'animate-spin' : ''}`} />
-                <span>New Space</span>
-              </button>
             </div>
           </div>
 
-          {/* Spaces Grid / Invitations */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {activeTab === 'my-spaces' ? (
-              filteredSpaces.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-md">
-                    <div className="w-20 h-20 rounded-3xl bg-zinc-900/50 
-                      flex items-center justify-center mx-auto mb-6">
-                      <FontAwesomeIcon 
-                        icon={searchQuery ? faSearch : faRocket} 
-                        className="text-4xl text-gray-600" 
-                      />
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Spaces Grid - Main Area */}
+            <div className="lg:col-span-9">
+              {activeTab === 'my-spaces' ? (
+                filteredSpaces.length === 0 ? (
+                  <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-12`}>
+                    <div className="text-center max-w-md mx-auto">
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-purple-500/10 flex items-center justify-center mx-auto mb-6">
+                        <FontAwesomeIcon
+                          icon={searchQuery ? faSearch : faRocket}
+                          className="text-4xl text-gray-500"
+                        />
+                      </div>
+                      <h3 className="text-2xl font-bold mb-3 text-white">
+                        {searchQuery ? 'No spaces found' : 'Create your first space'}
+                      </h3>
+                      <p className="text-sm text-gray-400 mb-6">
+                        {searchQuery
+                          ? 'Try adjusting your search query'
+                          : 'Spaces help you organize your projects, teams, and ideas in one place'
+                        }
+                      </p>
+                      {!searchQuery && (
+                        <button
+                          onClick={() => setModalOpen(true)}
+                          className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 text-white font-semibold"
+                        >
+                          Create Space
+                        </button>
+                      )}
                     </div>
-                    <h3 className="text-2xl font-bold mb-2 text-white">
-                      {searchQuery ? 'No spaces found' : 'Create your first space'}
-                    </h3>
-                    <p className="text-sm text-gray-400 mb-6">
-                      {searchQuery 
-                        ? 'Try adjusting your search query' 
-                        : 'Spaces help you organize your projects, teams, and ideas'
-                      }
-                    </p>
-                    {!searchQuery && (
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 
-                          hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 
-                          text-white font-semibold shadow-lg shadow-cyan-500/25"
-                      >
-                        Create Space
-                      </button>
-                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                  {filteredSpaces.map((space, index) => {
-                    const activity = recentActivity.find(a => a.spaceId === space.id);
-                    return (
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredSpaces.map((space, index) => (
                       <button
                         key={space.id}
                         onClick={() => handleSpaceClick(space)}
-                        className={`group relative text-left p-5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm
-                          hover:bg-zinc-900/70 transition-all duration-300 
-                          hover:-translate-y-1`}
+                        className={`group relative text-left p-5 rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] hover:border-white/10 transition-all duration-300 hover:bg-white/[0.04] hover:-translate-y-1`}
                       >
-                        {/* Icon & Badge */}
+                        {/* Header */}
                         <div className="flex items-start justify-between mb-4">
-                          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getGradient(index)} 
-                            flex items-center justify-center shadow-lg 
-                            group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
-                            <FontAwesomeIcon 
-                              icon={space.icon && iconMap[space.icon] ? iconMap[space.icon] : faRocket} 
-                              className="text-white text-xl" 
+                          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getGradient(index)} flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
+                            <FontAwesomeIcon
+                              icon={space.icon && iconMap[space.icon] ? iconMap[space.icon] : faRocket}
+                              className="text-white text-xl"
                             />
                           </div>
-                          
-                          {activity && activity.unreadCount > 0 && (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 
-                              flex items-center justify-center shadow-lg">
-                              <span className="text-xs font-bold text-white">{activity.unreadCount}</span>
-                            </div>
-                          )}
+                          <div className={`px-2.5 py-1 rounded-lg ${
+                            space.privacy === 'private' ? 'bg-gray-500/10 text-gray-400' :
+                            space.privacy === 'shared' ? 'bg-blue-500/10 text-blue-400' :
+                            'bg-emerald-500/10 text-emerald-400'
+                          }`}>
+                            <FontAwesomeIcon
+                              icon={space.privacy === 'private' ? faLock : space.privacy === 'shared' ? faUsers : faGlobe}
+                              className="text-xs"
+                            />
+                          </div>
                         </div>
 
-                        {/* Name */}
-                        <h3 className="text-sm font-bold mb-1 text-white group-hover:text-cyan-300 
-                          transition-colors duration-300 line-clamp-1">
+                        {/* Content */}
+                        <h3 className="text-base font-bold mb-1 text-white group-hover:text-cyan-300 transition-colors duration-300 line-clamp-1">
                           {space.name}
                         </h3>
-                        
-                        {/* Description */}
+
                         {space.description && (
-                          <p className="text-xs mb-4 line-clamp-2 text-gray-400">
+                          <p className="text-xs text-gray-400 mb-4 line-clamp-2">
                             {space.description}
                           </p>
                         )}
 
                         {/* Footer */}
-                        <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                          <div className="flex items-center gap-2">
-                            <FontAwesomeIcon 
-                              icon={space.privacy === 'private' ? faLock : space.privacy === 'shared' ? faUsers : faGlobe} 
-                              className="text-xs text-gray-500" 
-                            />
-                            <span className="text-xs text-gray-500">
-                              {new Date(space.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <FontAwesomeIcon icon={faMessage} className="text-[10px]" />
+                              {Math.floor(Math.random() * 50) + 5}
+                            </span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <FontAwesomeIcon icon={faFile} className="text-[10px]" />
+                              {Math.floor(Math.random() * 20) + 1}
                             </span>
                           </div>
-                          <FontAwesomeIcon 
-                            icon={faChevronRight} 
-                            className="text-xs text-gray-500 group-hover:text-cyan-400 
-                              group-hover:translate-x-1 transition-all duration-300" 
+                          <FontAwesomeIcon
+                            icon={faArrowRight}
+                            className="text-xs text-gray-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300"
                           />
                         </div>
                       </button>
-                    );
-                  })}
-                </div>
-              )
-            ) : (
-              loadingInvitations ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-                </div>
-              ) : invitations.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-md">
-                    <div className="w-20 h-20 rounded-3xl bg-zinc-900/50 
-                      flex items-center justify-center mx-auto mb-6">
-                      <FontAwesomeIcon icon={faEnvelope} className="text-4xl text-gray-600" />
+                    ))}
+                  </div>
+                )
+              ) : (
+                /* Invitations Tab */
+                loadingInvitations ? (
+                  <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-12`}>
+                    <div className="flex items-center justify-center">
+                      <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-2 text-white">No pending invitations</h3>
-                    <p className="text-sm text-gray-400">
-                      When someone invites you to a space, it will appear here
-                    </p>
+                  </div>
+                ) : invitations.length === 0 ? (
+                  <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-12`}>
+                    <div className="text-center max-w-md mx-auto">
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center mx-auto mb-6">
+                        <FontAwesomeIcon icon={faEnvelope} className="text-4xl text-gray-500" />
+                      </div>
+                      <h3 className="text-2xl font-bold mb-3 text-white">No pending invitations</h3>
+                      <p className="text-sm text-gray-400">
+                        When someone invites you to collaborate on a space, it will appear here
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {invitations.map((invitation, index) => (
+                      <div
+                        key={invitation.id}
+                        className={`relative p-5 rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] hover:border-purple-500/20 transition-all duration-300`}
+                      >
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getGradient(index)} flex items-center justify-center shadow-lg`}>
+                            <FontAwesomeIcon
+                              icon={invitation.space?.icon && iconMap[invitation.space?.icon] ? iconMap[invitation.space?.icon] : faRocket}
+                              className="text-white text-xl"
+                            />
+                          </div>
+                          <div className={`px-2.5 py-1 rounded-lg ${
+                            invitation.space?.privacy === 'private' ? 'bg-gray-500/10 text-gray-400' : 'bg-blue-500/10 text-blue-400'
+                          }`}>
+                            <FontAwesomeIcon
+                              icon={invitation.space?.privacy === 'private' ? faLock : faUsers}
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Space Name */}
+                        <h3 className="text-base font-bold text-white mb-1 line-clamp-1">
+                          {invitation.space?.name}
+                        </h3>
+
+                        {invitation.space?.description && (
+                          <p className="text-xs text-gray-400 mb-4 line-clamp-2">
+                            {invitation.space?.description}
+                          </p>
+                        )}
+
+                        {/* Inviter */}
+                        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                          {invitation.invited_by.avatar_url ? (
+                            <img
+                              src={invitation.invited_by.avatar_url}
+                              alt={invitation.invited_by.display_name || invitation.invited_by.email}
+                              className="w-10 h-10 rounded-xl"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-sm font-bold">
+                              {(invitation.invited_by.display_name || invitation.invited_by.email)[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">
+                              {invitation.invited_by.display_name || 'User'}
+                            </p>
+                            <p className="text-xs text-gray-500">invited you as {invitation.role}</p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => acceptInvitation(invitation.id)}
+                            disabled={processingInvitation === invitation.id}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/20 text-cyan-300 font-medium text-sm transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {processingInvitation === invitation.id ? (
+                              <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            ) : (
+                              <>
+                                <FontAwesomeIcon icon={faCheck} className="text-xs" />
+                                Accept
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => rejectInvitation(invitation.id)}
+                            disabled={processingInvitation === invitation.id}
+                            className="px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-red-500/10 border border-white/[0.06] hover:border-red-500/20 text-gray-400 hover:text-red-400 transition-all duration-300 disabled:opacity-50"
+                          >
+                            <FontAwesomeIcon icon={faXmark} />
+                          </button>
+                        </div>
+
+                        {/* Expiry */}
+                        <p className="text-xs text-gray-500 mt-3 text-center">
+                          Expires {new Date(invitation.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Right Sidebar - Templates & Quick Actions */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Quick Create */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faBolt} className="text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Quick Create</h3>
+                    <p className="text-xs text-gray-500">Start with a template</p>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {invitations.map((invitation, index) => (
-                    <div 
-                      key={invitation.id}
-                      className="relative p-5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm
-                        hover:bg-zinc-900/70 transition-all duration-300"
+
+                <div className="space-y-2">
+                  {SPACE_TEMPLATES.slice(0, 4).map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => setModalOpen(true)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all duration-300 group text-left"
                     >
-                      {/* Icon & Privacy */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getGradient(index)} 
-                          flex items-center justify-center shadow-lg`}>
-                          <FontAwesomeIcon
-                            icon={invitation.space?.icon && iconMap[invitation.space?.icon] ? iconMap[invitation.space?.icon] : faRocket}
-                            className="text-white text-xl"
-                          />
-                        </div>
-                        <div className="px-2.5 py-1 rounded-lg bg-white/5">
-                          <FontAwesomeIcon
-                            icon={invitation.space?.privacy === 'private' ? faLock : faUsers}
-                            className="text-xs text-gray-400"
-                          />
-                        </div>
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                        <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
                       </div>
-
-                      {/* Space Name */}
-                      <h3 className="text-sm font-bold text-white mb-1 line-clamp-1">
-                        {invitation.space?.name}
-                      </h3>
-                      
-                      {/* Description */}
-                      {invitation.space?.description && (
-                        <p className="text-xs text-gray-400 mb-4 line-clamp-2">
-                          {invitation.space?.description}
-                        </p>
-                      )}
-
-                      {/* Inviter */}
-                      <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-white/[0.03]">
-                        {invitation.invited_by.avatar_url ? (
-                          <img
-                            src={invitation.invited_by.avatar_url}
-                            alt={invitation.invited_by.display_name || invitation.invited_by.email}
-                            className="w-8 h-8 rounded-xl"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 
-                            flex items-center justify-center text-white text-xs font-bold">
-                            {(invitation.invited_by.display_name || invitation.invited_by.email)[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">
-                            {invitation.invited_by.display_name || 'User'}
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">{invitation.role}</p>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white">{template.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{template.description}</p>
                       </div>
+                      <FontAwesomeIcon icon={faArrowRight} className="text-gray-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all text-xs" />
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => acceptInvitation(invitation.id)}
-                          disabled={processingInvitation === invitation.id}
-                          className="flex-1 px-3 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 
-                            hover:from-cyan-500/30 hover:to-purple-500/30 
-                            text-cyan-300 font-medium text-xs transition-all duration-300 
-                            flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {processingInvitation === invitation.id ? (
-                            <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm" />
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon={faCheck} className="text-xs" />
-                              <span>Accept</span>
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => rejectInvitation(invitation.id)}
-                          disabled={processingInvitation === invitation.id}
-                          className="px-3 py-2.5 rounded-xl bg-white/5 
-                            hover:bg-white/10 
-                            text-gray-400 hover:text-red-400 transition-all duration-300 
-                            disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <FontAwesomeIcon icon={faXmark} className="text-sm" />
-                        </button>
-                      </div>
+              {/* Tips Card */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faStar} className="text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Pro Tips</h3>
+                    <p className="text-xs text-gray-500">Get more from spaces</p>
+                  </div>
+                </div>
 
-                      {/* Expiry */}
-                      <p className="text-xs text-gray-500 mt-3 text-center">
-                        Expires {new Date(invitation.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                      </p>
+                <div className="space-y-3">
+                  {[
+                    { icon: faCheckCircle, text: 'Add widgets to customize your workflow', color: 'emerald' },
+                    { icon: faUsers, text: 'Invite team members to collaborate', color: 'blue' },
+                    { icon: faLock, text: 'Keep sensitive projects private', color: 'purple' }
+                  ].map((tip, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02]">
+                      <FontAwesomeIcon icon={tip.icon} className={`text-${tip.color}-400 mt-0.5`} />
+                      <p className="text-xs text-gray-400 leading-relaxed">{tip.text}</p>
                     </div>
                   ))}
                 </div>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Right Sidebar - Activity & Quick Access */}
-        <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
-          {/* Activity Feed */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-blue-500/20 to-cyan-500/25 rounded-2xl blur-sm" />
-            <div className="absolute inset-0 rounded-2xl border border-cyan-500/30" />
-
-            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faBolt} className="text-cyan-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Recent Activity</h3>
-              </div>
-
-              <div className="space-y-3">
-                {recentActivity.slice(0, 6).map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      activity.type === 'message' ? 'bg-blue-500/20 text-blue-400' :
-                      activity.type === 'file' ? 'bg-green-500/20 text-green-400' :
-                      activity.type === 'task' ? 'bg-purple-500/20 text-purple-400' :
-                      'bg-orange-500/20 text-orange-400'
-                    }`}>
-                      <FontAwesomeIcon icon={getActivityIcon(activity.type)} className="text-xs" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{activity.spaceName}</p>
-                      <p className="text-xs text-gray-400">{activity.preview || 'Recent activity'}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.unreadCount} unread</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Navigation */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-purple-500/25 via-pink-500/20 to-purple-500/25 rounded-2xl blur-sm" />
-            <div className="absolute inset-0 rounded-2xl border border-purple-500/30" />
-
-            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faRocket} className="text-purple-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Quick Access</h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: faMessage, label: 'Messages', action: () => navigate('/messages'), color: 'from-blue-500 to-cyan-600' },
-                  { icon: faCalendar, label: 'Calendar', action: () => {}, color: 'from-purple-500 to-pink-600' },
-                  { icon: faTasks, label: 'Tasks', action: () => {}, color: 'from-green-500 to-emerald-600' },
-                  { icon: faUsers, label: 'Team', action: () => {}, color: 'from-orange-500 to-red-600' },
-                  { icon: faFile, label: 'Files', action: () => {}, color: 'from-indigo-500 to-violet-600' },
-                  { icon: faBrain, label: 'AI', action: () => {}, color: 'from-teal-500 to-cyan-600' }
-                ].map((item, index) => (
-                  <button
-                    key={index}
-                    onClick={item.action}
-                    className="group/nav p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-2 mx-auto group-hover/nav:scale-110 transition-transform`}>
-                      <FontAwesomeIcon icon={item.icon} className="text-white text-sm" />
-                    </div>
-                    <p className="text-xs text-gray-400 group-hover/nav:text-white transition-colors text-center">
-                      {item.label}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Space Templates */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 rounded-2xl blur-sm" />
-            <div className="absolute inset-0 rounded-2xl border border-emerald-500/30" />
-
-            <div className={`relative p-5 rounded-2xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-emerald-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Space Templates</h3>
-              </div>
-
-              <div className="space-y-2">
-                {SPACE_TEMPLATES.slice(0, 4).map((template) => (
-                  <button
-                    key={template.id}
-                    onClick={() => setModalOpen(true)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 hover:translate-x-1"
-                  >
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center`}>
-                      <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-white">{template.name}</p>
-                      <p className="text-xs text-gray-400">Quick setup</p>
-                    </div>
-                  </button>
-                ))}
               </div>
             </div>
           </div>

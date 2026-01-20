@@ -1,4 +1,6 @@
 // web/src/pages/SpaceView.tsx
+// Sophisticated SpaceView with rich visual hierarchy and premium design
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSpace, useSpaceStats, useSpaceMembers } from '../hooks/useSpaces';
@@ -9,22 +11,20 @@ import { SpaceMembersModal } from '../components/spaces/spaceModals/SpaceMembers
 import { WidgetLibraryModal } from '../components/spaces/spaceModals/WidgetLibraryModal';
 import { ConvertSpaceModal } from '../components/spaces/spaceModals/ConvertSpaceModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faArrowLeft, faComments, faFolder, faFileAlt, faCheckCircle, 
-  faUsers, faCalendar, faChartBar, faLock, faHeart, faBriefcase, 
-  faGlobe, faRocket, faPlus, faEllipsisV, faCode, faImage, 
+import {
+  faArrowLeft, faComments, faFolder, faFileAlt, faCheckCircle,
+  faUsers, faCalendar, faChartBar, faLock, faHeart, faBriefcase,
+  faGlobe, faRocket, faPlus, faEllipsisV, faCode, faImage,
   faLink, faVideo, faMicrophone, faPoll, faUserPlus, faBuilding,
-  faBell, faHistory, faArrowTrendUp, faClock, faFire, faBolt,
-  faBrain, faChartLine, faCircleNodes, faLayerGroup, faEye,
-  faStar, faCrown, faAtom, faWandMagicSparkles, faShieldAlt,
-  faInbox, faPaperPlane, faBookmark, faDownload, faShare, faChevronRight,
-  faPalette, faCog, faTrash, faArchive, faCopy, faExternalLinkAlt,
-  faUserShield, faBan, faFileExport, faCloudUploadAlt, faChartPie,
-  faTags, faFilter, faSearch, faSliders, faMoon, faSun, faExpand,
-  faCompress, faVolumeUp, faVolumeMute, faInfoCircle, faQuestionCircle,
-  faDatabase, faServer, faNetworkWired, faKey, faFingerprint, faQrcode,
-  faRobot, faLightbulb, faFlag, faHeartbeat, faChevronDown, faCheck,
-  faSpinner, faExclamationTriangle
+  faBell, faArrowTrendUp, faClock, faFire, faBolt,
+  faBrain, faLayerGroup,
+  faStar, faWandMagicSparkles, faShieldAlt,
+  faBookmark, faShare, faChevronRight,
+  faPalette, faCog, faTrash,
+  faSearch, faCompass,
+  faDatabase, faKey,
+  faExclamationTriangle, faArrowRight,
+  faMessage, faFile
 } from '@fortawesome/free-solid-svg-icons';
 
 const iconMap: { [key: string]: any } = {
@@ -39,17 +39,17 @@ interface Widget {
 
 const AVAILABLE_WIDGETS: Widget[] = [
   { id: 'chat', name: 'Chat', icon: faComments, color: 'from-blue-500 to-cyan-600', description: 'Real-time messaging', category: 'communication' },
-  { id: 'files', name: 'Files', icon: faFolder, color: 'from-purple-500 to-pink-600', description: 'File storage', category: 'content' },
-  { id: 'notes', name: 'Notes', icon: faFileAlt, color: 'from-green-500 to-teal-600', description: 'Docs & notes', category: 'content' },
+  { id: 'files', name: 'Files', icon: faFolder, color: 'from-purple-500 to-pink-600', description: 'File storage & sharing', category: 'content' },
+  { id: 'notes', name: 'Notes', icon: faFileAlt, color: 'from-green-500 to-teal-600', description: 'Documents & notes', category: 'content' },
   { id: 'tasks', name: 'Tasks', icon: faCheckCircle, color: 'from-orange-500 to-red-600', description: 'Task management', category: 'productivity' },
-  { id: 'calendar', name: 'Calendar', icon: faCalendar, color: 'from-pink-500 to-rose-600', description: 'Events', category: 'productivity' },
-  { id: 'board', name: 'Board', icon: faChartBar, color: 'from-indigo-500 to-purple-600', description: 'Kanban', category: 'productivity' },
-  { id: 'whiteboard', name: 'Whiteboard', icon: faImage, color: 'from-amber-500 to-orange-600', description: 'Visual collab', category: 'collaboration' },
+  { id: 'calendar', name: 'Calendar', icon: faCalendar, color: 'from-pink-500 to-rose-600', description: 'Events & scheduling', category: 'productivity' },
+  { id: 'board', name: 'Board', icon: faChartBar, color: 'from-indigo-500 to-purple-600', description: 'Kanban boards', category: 'productivity' },
+  { id: 'whiteboard', name: 'Whiteboard', icon: faImage, color: 'from-amber-500 to-orange-600', description: 'Visual collaboration', category: 'collaboration' },
   { id: 'video', name: 'Video', icon: faVideo, color: 'from-red-500 to-pink-600', description: 'Video calls', category: 'communication' },
-  { id: 'voice', name: 'Voice', icon: faMicrophone, color: 'from-blue-500 to-indigo-600', description: 'Audio', category: 'communication' },
-  { id: 'polls', name: 'Polls', icon: faPoll, color: 'from-teal-500 to-cyan-600', description: 'Surveys', category: 'collaboration' },
+  { id: 'voice', name: 'Voice', icon: faMicrophone, color: 'from-blue-500 to-indigo-600', description: 'Audio channels', category: 'communication' },
+  { id: 'polls', name: 'Polls', icon: faPoll, color: 'from-teal-500 to-cyan-600', description: 'Surveys & voting', category: 'collaboration' },
   { id: 'links', name: 'Links', icon: faLink, color: 'from-violet-500 to-purple-600', description: 'Bookmarks', category: 'content' },
-  { id: 'code', name: 'Code', icon: faCode, color: 'from-slate-500 to-gray-600', description: 'Coding', category: 'productivity' },
+  { id: 'code', name: 'Code', icon: faCode, color: 'from-slate-500 to-gray-600', description: 'Code snippets', category: 'productivity' },
 ];
 
 const PRIVACY_OPTIONS = [
@@ -61,12 +61,7 @@ const PRIVACY_OPTIONS = [
 
 interface ActivityItem {
   id: string; type: 'message' | 'file' | 'task' | 'member' | 'edit';
-  user: string; action: string; time: Date; metadata?: any;
-}
-
-interface CollaborationMetric {
-  label: string; value: number; change: number; trend: 'up' | 'down' | 'stable';
-  icon: any; color: string;
+  user: string; action: string; time: Date;
 }
 
 export function SpaceView() {
@@ -74,12 +69,11 @@ export function SpaceView() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
-  
-  // Use React Query hooks
+
   const { data: space, isLoading: loadingSpace, error: spaceError } = useSpace(id);
-  const { data: stats, isLoading: loadingStats } = useSpaceStats(id);
+  const { data: stats } = useSpaceStats(id);
   const { data: members = [] } = useSpaceMembers(id);
-  
+
   const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -89,11 +83,8 @@ export function SpaceView() {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(['chat', 'files', 'tasks']);
   const [filterCategory, setFilterCategory] = useState<'all' | 'communication' | 'productivity' | 'content' | 'collaboration'>('all');
   const [widgetSearchQuery, setWidgetSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showQuickActions, setShowQuickActions] = useState(false);
-  
+
   const settingsMenuRef = useRef<HTMLDivElement>(null);
-  const quickActionsRef = useRef<HTMLDivElement>(null);
 
   const [recentActivity] = useState<ActivityItem[]>([
     { id: '1', type: 'message', user: 'Sarah Chen', action: 'New design iteration ready for review', time: new Date(Date.now() - 180000) },
@@ -101,13 +92,6 @@ export function SpaceView() {
     { id: '3', type: 'task', user: 'You', action: 'Completed "API Integration"', time: new Date(Date.now() - 720000) },
     { id: '4', type: 'edit', user: 'Jamie Lee', action: 'Updated project roadmap', time: new Date(Date.now() - 1200000) },
     { id: '5', type: 'member', user: 'Chris Park', action: 'Joined the space', time: new Date(Date.now() - 1800000) },
-  ]);
-
-  const [metrics] = useState<CollaborationMetric[]>([
-    { label: 'Messages', value: stats?.messages || 147, change: 23, trend: 'up', icon: faComments, color: 'cyan' },
-    { label: 'Active Users', value: 3, change: 1, trend: 'up', icon: faBolt, color: 'orange' },
-    { label: 'Files Shared', value: stats?.files || 23, change: 5, trend: 'up', icon: faFolder, color: 'purple' },
-    { label: 'Tasks Done', value: 8, change: -2, trend: 'down', icon: faCheckCircle, color: 'green' },
   ]);
 
   const [teamMembers] = useState([
@@ -122,9 +106,6 @@ export function SpaceView() {
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
         setShowSettingsMenu(false);
-      }
-      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
-        setShowQuickActions(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -174,6 +155,17 @@ export function SpaceView() {
     }
   };
 
+  const getActivityStyle = (type: string) => {
+    switch (type) {
+      case 'message': return { bg: 'from-blue-500 to-cyan-500', color: 'text-blue-400' };
+      case 'file': return { bg: 'from-purple-500 to-pink-500', color: 'text-purple-400' };
+      case 'task': return { bg: 'from-emerald-500 to-teal-500', color: 'text-emerald-400' };
+      case 'member': return { bg: 'from-orange-500 to-amber-500', color: 'text-orange-400' };
+      case 'edit': return { bg: 'from-indigo-500 to-violet-500', color: 'text-indigo-400' };
+      default: return { bg: 'from-gray-500 to-slate-500', color: 'text-gray-400' };
+    }
+  };
+
   const formatTimeAgo = (date: Date) => {
     const mins = Math.floor((Date.now() - date.getTime()) / 60000);
     if (mins < 1) return 'just now';
@@ -183,27 +175,29 @@ export function SpaceView() {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  // Get current user's role
   const currentUserRole = (members.find(m => m.user.id === user?.id)?.role as 'owner' | 'admin' | 'editor' | 'commenter' | 'viewer') || 'viewer';
 
-  // Handle loading state
   if (loadingSpace) {
     return (
       <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-400">Loading space...</p>
+          <div className="w-16 h-16 relative mx-auto mb-6">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600 animate-pulse" />
+            <div className="absolute inset-[3px] rounded-xl bg-black/90 flex items-center justify-center">
+              <FontAwesomeIcon icon={faCompass} className="text-2xl text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} />
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 font-medium">Loading space...</p>
         </div>
       </div>
     );
   }
 
-  // Handle error state
   if (spaceError) {
     return (
       <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-6">
             <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 text-3xl" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Cannot Load Space</h2>
@@ -211,17 +205,16 @@ export function SpaceView() {
             {(spaceError as Error)?.message || 'Failed to load space'}
           </p>
           <button
-            onClick={() => navigate('/dashboard')}
-            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold"
+            onClick={() => navigate('/spaces')}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 text-white font-semibold"
           >
-            Back to Dashboard
+            Back to Spaces
           </button>
         </div>
       </div>
     );
   }
 
-  // Handle no space found
   if (!space) {
     return (
       <div className={`h-full flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
@@ -233,454 +226,115 @@ export function SpaceView() {
   }
 
   return (
-    <div className={`h-full flex ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Insights with Glowing Cards */}
-        <div className="w-80 flex-shrink-0 p-4 space-y-4 overflow-y-auto custom-scrollbar">
-          
-          {/* Back Button & Space Header */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-purple-500/20 to-cyan-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-cyan-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <button 
-                onClick={() => navigate('/dashboard')} 
-                className="mb-4 px-3 py-2 rounded-xl flex items-center gap-2 text-sm transition-all hover:bg-white/5 text-gray-400 hover:text-white"
+    <div className={`h-full flex flex-col ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1800px] mx-auto p-6 space-y-6">
+
+          {/* Header Section */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="space-y-3">
+              {/* Back button */}
+              <button
+                onClick={() => navigate('/spaces')}
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
               >
-                <FontAwesomeIcon icon={faArrowLeft} className="text-xs" />
-                <span className="font-medium">Back</span>
+                <FontAwesomeIcon icon={faArrowLeft} className="text-xs group-hover:-translate-x-1 transition-transform" />
+                <span className="text-sm font-medium">Back to Spaces</span>
               </button>
 
-              <div className="flex items-center gap-3">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${currentPrivacy?.color || 'from-purple-500 to-purple-600'} flex items-center justify-center shadow-lg`}>
-                  <FontAwesomeIcon icon={space?.icon && iconMap[space.icon] ? iconMap[space.icon] : faRocket} className="text-white text-xl" />
+              {/* Space Info */}
+              <div className="flex items-center gap-4">
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${currentPrivacy?.color || 'from-purple-500 to-purple-600'} flex items-center justify-center shadow-lg`}>
+                  <FontAwesomeIcon icon={space?.icon && iconMap[space.icon] ? iconMap[space.icon] : faRocket} className="text-white text-2xl" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-bold truncate text-white">
-                    {space?.name || 'Space'}
-                  </h2>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <FontAwesomeIcon icon={currentPrivacy?.icon || faLock} className="text-xs text-cyan-400" />
-                    <span className="text-xs text-gray-400">{currentPrivacy?.label}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Metrics */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-purple-500/25 via-pink-500/20 to-purple-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-purple-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <h3 className="text-sm font-bold text-white mb-4">Metrics</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {metrics.map((metric, i) => (
-                  <div key={i} className="relative group/stat">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${metric.color === 'cyan' ? 'from-cyan-400 to-blue-500' : metric.color === 'orange' ? 'from-yellow-400 to-orange-500' : metric.color === 'purple' ? 'from-pink-400 to-rose-500' : 'from-purple-400 to-fuchsia-500'} opacity-0 group-hover/stat:opacity-10 rounded-lg transition-opacity duration-300`} />
-                    <div className="relative p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-300">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`w-7 h-7 rounded-lg bg-${metric.color}-500/20 flex items-center justify-center`}>
-                          <FontAwesomeIcon icon={metric.icon} className={`text-${metric.color}-400 text-xs`} />
-                        </div>
-                        {metric.change !== 0 && (
-                          <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${
-                            metric.trend === 'up' ? 'bg-green-500/20' : 'bg-red-500/20'
-                          }`}>
-                            <FontAwesomeIcon 
-                              icon={faArrowTrendUp} 
-                              className={`text-xs ${metric.trend === 'up' ? 'text-green-400' : 'text-red-400'}`} 
-                              style={{ transform: metric.trend === 'down' ? 'rotate(180deg)' : 'none' }} 
-                            />
-                            <span className={`text-xs font-semibold ${metric.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
-                              {Math.abs(metric.change)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-2xl font-bold text-white mb-0.5">{metric.value}</p>
-                      <p className="text-xs text-gray-400">{metric.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Space DNA */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-purple-500/25 via-fuchsia-500/20 to-purple-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-purple-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faAtom} className="text-purple-400 text-sm" />
-                </div>
-                <h3 className="text-sm font-bold text-white">Space DNA</h3>
-              </div>
-              <div className="space-y-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-400">Engagement Score</span>
-                    <span className="text-sm font-bold text-purple-400">87%</span>
-                  </div>
-                  <div className="relative h-2 rounded-full bg-white/5 overflow-hidden">
-                    <div 
-                      className="absolute h-full rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-600 shadow-lg shadow-purple-500/50 transition-all duration-500" 
-                      style={{ width: '87%' }} 
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5">
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faClock} className="text-purple-400 text-xs" />
-                    <span className="text-xs text-gray-400">Response Time</span>
-                  </div>
-                  <span className="text-sm font-bold text-cyan-400">12min</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Insights */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-green-500/25 via-emerald-500/20 to-green-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-green-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faBrain} className="text-green-400 text-sm" />
-                </div>
-                <h3 className="text-sm font-bold text-white">AI Insights</h3>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { icon: faFire, color: 'orange', text: 'Peak activity 2-4 PM', subtext: 'Schedule meetings then' },
-                  { icon: faArrowTrendUp, color: 'green', text: 'Collaboration up 34%', subtext: 'Great team synergy' },
-                  { icon: faWandMagicSparkles, color: 'purple', text: 'Suggest weekly sync', subtext: 'Based on patterns' },
-                ].map((insight, i) => (
-                  <div key={i} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer">
-                    <div className="flex items-start gap-2">
-                      <div className={`w-6 h-6 rounded-md bg-${insight.color}-500/20 flex items-center justify-center flex-shrink-0`}>
-                        <FontAwesomeIcon icon={insight.icon} className={`text-${insight.color}-400 text-xs`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-white">{insight.text}</p>
-                        <p className="text-xs text-gray-500">{insight.subtext}</p>
-                      </div>
+                  <h1 className="text-3xl font-bold text-white">{space?.name}</h1>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1.5">
+                      <FontAwesomeIcon icon={currentPrivacy?.icon || faLock} className="text-xs text-cyan-400" />
+                      <span className="text-sm text-gray-400">{currentPrivacy?.label}</span>
                     </div>
+                    <div className="w-1 h-1 rounded-full bg-gray-600" />
+                    <span className="text-sm text-gray-400">{stats?.members || members.length} members</span>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Activity Feed */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-cyan-500/25 via-blue-500/20 to-cyan-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-blue-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <FontAwesomeIcon icon={faHistory} className="text-cyan-400 text-sm" />
-                <h3 className="text-sm font-bold text-white">Live Feed</h3>
-              </div>
-              <div className="space-y-2">
-                {recentActivity.slice(0, 4).map((item) => (
-                  <div key={item.id} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                        <FontAwesomeIcon icon={getActivityIcon(item.type)} className="text-xs text-gray-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white line-clamp-1">
-                          <span className="font-semibold">{item.user}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 line-clamp-1">{item.action}</p>
-                        <p className="text-xs text-gray-600 mt-0.5">{formatTimeAgo(item.time)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Team Members */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-orange-500/25 via-red-500/20 to-orange-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-orange-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faBolt} className="text-orange-400 text-sm" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">Team</h3>
                 </div>
-                <span className="text-xs text-gray-400">{teamMembers.filter(m => m.status === 'online').length} online</span>
-              </div>
-              <div className="space-y-2">
-                {teamMembers.map((member, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white">
-                        {member.avatar}
-                      </div>
-                      {member.status === 'online' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-black animate-pulse" />
-                      )}
-                      {member.status === 'away' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-500 border-2 border-black" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate text-white">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.role}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
-          </div>
 
-          {/* Storage */}
-          <div className="relative group">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-pink-500/25 via-rose-500/20 to-pink-500/25 rounded-xl blur-sm" />
-            <div className="absolute inset-0 rounded-xl border border-pink-500/30" />
-            <div className="absolute -inset-2 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-500" />
-            
-            <div className={`relative p-5 rounded-xl backdrop-blur-xl ${isDark ? 'bg-black/70' : 'bg-white/70'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faDatabase} className="text-pink-400 text-sm" />
-                  <h3 className="text-sm font-bold text-white">Storage</h3>
-                </div>
-                <span className="text-xs text-gray-400">{stats?.storageUsed || 3.7}GB / 10GB</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2">
-                <div 
-                  className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-600" 
-                  style={{ width: `${((stats?.storageUsed || 3.7) / 10) * 100}%` }} 
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">{Math.round(((stats?.storageUsed || 3.7) / 10) * 100)}% used</span>
-                <button className="text-cyan-400 hover:text-cyan-300 transition-colors">Upgrade</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6 space-y-6">
-          
-          {/* Enhanced Top Bar */}
-          <div className="flex items-center justify-between">
+            {/* Header Actions */}
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => setShowMembersModal(true)}
-                className="px-4 py-2.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-300 flex items-center gap-2 text-sm text-white"
+                className={`px-4 py-2.5 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white'} border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2 text-sm text-white`}
               >
                 <FontAwesomeIcon icon={faUsers} className="text-xs text-cyan-400" />
                 <span className="font-medium">{stats?.members || members.length} Members</span>
               </button>
-
-              <button 
-                onClick={handleInviteClick} 
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-cyan-500/25"
+              <button
+                onClick={handleInviteClick}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-sm font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center gap-2"
               >
-                <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
+                <FontAwesomeIcon icon={faUserPlus} className="text-xs" />
                 Invite
               </button>
-              
-              <button 
-                onClick={() => setShowWidgetLibrary(true)} 
-                className="px-4 py-2.5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-300 flex items-center gap-2 text-sm text-white"
-              >
-                <FontAwesomeIcon icon={faPlus} className="text-xs" />
-                Widget
+              <button className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center transition-all text-gray-400 hover:text-white">
+                <FontAwesomeIcon icon={faBookmark} className="text-sm" />
               </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Quick Actions Menu */}
-              <div className="relative" ref={quickActionsRef}>
-                <button 
-                  onClick={() => setShowQuickActions(!showQuickActions)}
-                  className="w-9 h-9 rounded-xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 flex items-center justify-center transition-all text-gray-400 hover:text-white"
-                >
-                  <FontAwesomeIcon icon={faBolt} className="text-xs" />
-                </button>
-
-                {showQuickActions && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-zinc-900/90 backdrop-blur-xl overflow-hidden z-50 shadow-2xl border border-white/[0.05]">
-                    <div className="p-2 border-b border-white/10">
-                      <p className="text-xs font-semibold px-2 text-gray-400">Quick Actions</p>
-                    </div>
-                    <div className="p-2">
-                      {[
-                        { icon: faSearch, label: 'Search Space', color: 'cyan' },
-                        { icon: faFileExport, label: 'Export Data', color: 'purple' },
-                        { icon: faCopy, label: 'Duplicate Space', color: 'blue' },
-                        { icon: faArchive, label: 'Archive Space', color: 'yellow' },
-                        { icon: faChartPie, label: 'View Analytics', color: 'green' },
-                        { icon: faQrcode, label: 'Share QR Code', color: 'pink' },
-                      ].map((action, i) => (
-                        <button
-                          key={i}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5 text-white"
-                        >
-                          <div className={`w-8 h-8 rounded-lg bg-${action.color}-500/20 flex items-center justify-center flex-shrink-0`}>
-                            <FontAwesomeIcon icon={action.icon} className={`text-${action.color}-400 text-xs`} />
-                          </div>
-                          <span className="text-sm font-medium">{action.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button className="w-9 h-9 rounded-xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 flex items-center justify-center transition-all text-gray-400 hover:text-white">
-                <FontAwesomeIcon icon={faShare} className="text-xs" />
-              </button>
-              <button className="w-9 h-9 rounded-xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 flex items-center justify-center transition-all text-gray-400 hover:text-white">
-                <FontAwesomeIcon icon={faBookmark} className="text-xs" />
-              </button>
-              <button className="w-9 h-9 rounded-xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 flex items-center justify-center transition-all text-gray-400 hover:text-white">
-                <FontAwesomeIcon icon={faStar} className="text-xs" />
+              <button className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center transition-all text-gray-400 hover:text-white">
+                <FontAwesomeIcon icon={faShare} className="text-sm" />
               </button>
 
-              {/* Enhanced Settings Menu */}
+              {/* Settings Menu */}
               <div className="relative" ref={settingsMenuRef}>
-                <button 
-                  onClick={() => setShowSettingsMenu(!showSettingsMenu)} 
-                  className="w-9 h-9 rounded-xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 flex items-center justify-center transition-all text-gray-400 hover:text-white"
+                <button
+                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center transition-all text-gray-400 hover:text-white"
                 >
-                  <FontAwesomeIcon icon={faEllipsisV} className="text-xs" />
+                  <FontAwesomeIcon icon={faEllipsisV} className="text-sm" />
                 </button>
 
                 {showSettingsMenu && (
-                  <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-zinc-900/90 backdrop-blur-xl overflow-hidden z-50 shadow-2xl border border-white/[0.05]">
-                    {/* Privacy Section */}
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-black/90 backdrop-blur-xl border border-white/[0.06] overflow-hidden z-50 shadow-2xl">
                     <div className="p-2 border-b border-white/10">
-                      <p className="text-xs font-semibold px-2 text-gray-400 mb-2">Privacy</p>
-                      <div className="space-y-1">
-                        {PRIVACY_OPTIONS.map((privacy) => (
-                          <button
-                            key={privacy.value}
-                            onClick={() => handlePrivacyChange(privacy.value as any)}
-                            disabled={space?.privacy === privacy.value}
-                            className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all ${
-                              space?.privacy === privacy.value
-                                ? 'bg-cyan-500/10 border border-cyan-500/20'
-                                : 'hover:bg-white/5'
-                            } disabled:cursor-default`}
-                          >
-                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${privacy.color} flex items-center justify-center flex-shrink-0`}>
-                              <FontAwesomeIcon icon={privacy.icon} className="text-white text-xs" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-semibold ${space?.privacy === privacy.value ? 'text-cyan-400' : 'text-white'}`}>
-                                {privacy.label}
-                              </p>
-                              <p className="text-xs text-gray-500">{privacy.desc}</p>
-                            </div>
-                            {space?.privacy === privacy.value && (
-                              <FontAwesomeIcon icon={faCheck} className="text-cyan-400 text-xs" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
+                      <p className="text-xs font-semibold px-3 py-1 text-gray-400">Privacy</p>
+                      {PRIVACY_OPTIONS.map((privacy) => (
+                        <button
+                          key={privacy.value}
+                          onClick={() => handlePrivacyChange(privacy.value as any)}
+                          disabled={space?.privacy === privacy.value}
+                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all ${
+                            space?.privacy === privacy.value ? 'bg-cyan-500/10' : 'hover:bg-white/5'
+                          } disabled:cursor-default`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${privacy.color} flex items-center justify-center flex-shrink-0`}>
+                            <FontAwesomeIcon icon={privacy.icon} className="text-white text-xs" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-semibold ${space?.privacy === privacy.value ? 'text-cyan-400' : 'text-white'}`}>{privacy.label}</p>
+                            <p className="text-xs text-gray-500">{privacy.desc}</p>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-
-                    {/* Appearance Section */}
-                    <div className="p-2 border-b border-white/10">
-                      <p className="text-xs font-semibold px-2 text-gray-400 mb-2">Appearance</p>
-                      <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faPalette} className="text-purple-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Customize Theme</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faImage} className="text-blue-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Change Cover</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Notifications Section */}
-                    <div className="p-2 border-b border-white/10">
-                      <p className="text-xs font-semibold px-2 text-gray-400 mb-2">Notifications</p>
-                      <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faBell} className="text-orange-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Notification Settings</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faVolumeMute} className="text-red-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Mute Space</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Security Section */}
-                    <div className="p-2 border-b border-white/10">
-                      <p className="text-xs font-semibold px-2 text-gray-400 mb-2">Security</p>
-                      <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faShieldAlt} className="text-green-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Encryption Settings</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faKey} className="text-cyan-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Access Keys</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Advanced Section */}
                     <div className="p-2">
-                      <p className="text-xs font-semibold px-2 text-gray-400 mb-2">Advanced</p>
-                      <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5">
-                          <div className="w-8 h-8 rounded-lg bg-gray-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faCog} className="text-gray-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium text-white">Space Settings</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all hover:bg-white/5 text-red-400">
-                          <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faTrash} className="text-red-400 text-xs" />
-                          </div>
-                          <span className="text-sm font-medium">Delete Space</span>
-                        </button>
-                      </div>
+                      <button className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-all">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faPalette} className="text-purple-400 text-xs" />
+                        </div>
+                        <span className="text-sm text-white">Customize</span>
+                      </button>
+                      <button className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-all">
+                        <div className="w-8 h-8 rounded-lg bg-gray-500/20 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faCog} className="text-gray-400 text-xs" />
+                        </div>
+                        <span className="text-sm text-white">Settings</span>
+                      </button>
+                      <button className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-500/10 transition-all">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faTrash} className="text-red-400 text-xs" />
+                        </div>
+                        <span className="text-sm text-red-400">Delete Space</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -688,198 +342,392 @@ export function SpaceView() {
             </div>
           </div>
 
-          {/* Widget Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Category Filter */}
-              <div className="inline-flex items-center p-1 rounded-2xl bg-zinc-900/50 backdrop-blur-sm">
-                {['all', 'communication', 'productivity', 'content', 'collaboration'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setFilterCategory(cat as any)}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                      filterCategory === cat
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Widgets */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search widgets..."
-                  value={widgetSearchQuery}
-                  onChange={(e) => setWidgetSearchQuery(e.target.value)}
-                  className="w-48 pl-9 pr-3 py-2 rounded-2xl bg-zinc-900/50 backdrop-blur-sm text-white placeholder-gray-500 text-xs outline-none focus:bg-zinc-900/70 transition-all"
-                />
-                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none" />
-              </div>
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : 'bg-zinc-900/50 text-gray-400 hover:text-white'
-                }`}
+          {/* Stats Cards Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[
+              { label: 'Messages', value: stats?.messages || 147, icon: faMessage, change: 23, color: 'cyan' },
+              { label: 'Files', value: stats?.files || 23, icon: faFile, change: 5, color: 'purple' },
+              { label: 'Tasks Done', value: 8, icon: faCheckCircle, change: 2, color: 'emerald' },
+              { label: 'Active Now', value: teamMembers.filter(m => m.status === 'online').length, icon: faBolt, change: 0, color: 'amber' },
+              { label: 'Storage', value: `${stats?.storageUsed || 3.7}GB`, icon: faDatabase, change: 0, color: 'rose' },
+              { label: 'Engagement', value: '87%', icon: faArrowTrendUp, change: 12, color: 'indigo' }
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className={`group relative p-4 rounded-2xl ${isDark ? 'bg-white/[0.03]' : 'bg-white'} border border-white/[0.06] hover:border-white/10 transition-all duration-300 hover:bg-white/[0.05]`}
               >
-                <FontAwesomeIcon icon={faLayerGroup} className="text-xs" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : 'bg-zinc-900/50 text-gray-400 hover:text-white'
-                }`}
-              >
-                <FontAwesomeIcon icon={faFilter} className="text-xs" />
-              </button>
-            </div>
-          </div>
-
-          {/* Widgets Display */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {filteredWidgets.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center max-w-md">
-                  <div className="w-20 h-20 rounded-3xl bg-zinc-900/50 flex items-center justify-center mx-auto mb-6">
-                    <FontAwesomeIcon icon={widgetSearchQuery ? faSearch : faLayerGroup} className="text-4xl text-gray-600" />
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <FontAwesomeIcon icon={stat.icon} className={`text-${stat.color}-400`} />
                   </div>
-                  <h3 className="text-2xl font-bold mb-2 text-white">
-                    {widgetSearchQuery ? 'No widgets found' : 'No widgets yet'}
-                  </h3>
-                  <p className="text-sm text-gray-400 mb-6">
-                    {widgetSearchQuery ? 'Try a different search' : 'Add widgets to start collaborating'}
-                  </p>
-                  {!widgetSearchQuery && (
-                    <button 
-                      onClick={() => setShowWidgetLibrary(true)} 
-                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 transition-all duration-300 text-white font-semibold shadow-lg shadow-cyan-500/25"
-                    >
-                      Browse Widgets
-                    </button>
+                  {stat.change > 0 && (
+                    <div className="flex items-center gap-1 text-xs font-medium text-emerald-400">
+                      <FontAwesomeIcon icon={faArrowTrendUp} className="text-[10px]" />
+                      {stat.change}%
+                    </div>
                   )}
                 </div>
+                <p className="text-2xl font-bold text-white mb-0.5">{stat.value}</p>
+                <p className="text-xs text-gray-500">{stat.label}</p>
               </div>
-            ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {filteredWidgets.map((widget) => (
-                  <button
-                    key={widget.id}
-                    onClick={() => navigate(`/spaces/${id}/${widget.id}`)}
-                    className="group relative text-left p-5 rounded-2xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-300 hover:-translate-y-1"
-                  >
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${widget.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
-                      <FontAwesomeIcon icon={widget.icon} className="text-white text-xl" />
+            ))}
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            {/* Left Column - Activity & Team */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Activity Feed */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] overflow-hidden`}>
+                <div className="p-5 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                      <FontAwesomeIcon icon={faClock} className="text-cyan-400" />
                     </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-white">Activity</h3>
+                      <p className="text-xs text-gray-500">Recent updates</p>
+                    </div>
+                  </div>
+                </div>
 
-                    <h3 className="text-sm font-bold mb-1 text-white group-hover:text-cyan-300 transition-colors duration-300 line-clamp-1">
-                      {widget.name}
-                    </h3>
-                    <p className="text-xs text-gray-400 line-clamp-2 mb-3">
-                      {widget.description}
-                    </p>
+                <div className="p-4">
+                  <div className="relative">
+                    <div className="absolute left-[15px] top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/50 via-purple-500/30 to-transparent" />
+                    <div className="space-y-1">
+                      {recentActivity.slice(0, 5).map((activity) => {
+                        const style = getActivityStyle(activity.type);
+                        return (
+                          <div
+                            key={activity.id}
+                            className="relative pl-10 py-3 group cursor-pointer hover:bg-white/[0.02] rounded-xl transition-colors -ml-2 pr-2"
+                          >
+                            <div className={`absolute left-0 top-4 w-5 h-5 rounded-md bg-gradient-to-br ${style.bg} flex items-center justify-center shadow-lg`}>
+                              <FontAwesomeIcon icon={getActivityIcon(activity.type)} className="text-white text-[8px]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-white line-clamp-1">
+                                <span className="font-semibold">{activity.user}</span>
+                              </p>
+                              <p className="text-xs text-gray-500 line-clamp-1">{activity.action}</p>
+                              <p className="text-[10px] text-gray-600 mt-0.5">{formatTimeAgo(activity.time)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                    {widget.id === 'chat' && (stats?.messages || 0) > 0 && (
-                      <div className="absolute top-3 right-3">
-                        <div className="px-2 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg">
-                          <span className="text-xs font-bold text-white">{stats?.messages}</span>
+              {/* Team Members */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center">
+                      <FontAwesomeIcon icon={faUsers} className="text-orange-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-white">Team</h3>
+                      <p className="text-xs text-gray-500">{teamMembers.filter(m => m.status === 'online').length} online</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {teamMembers.slice(0, 5).map((member, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer">
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-xs font-bold text-white">
+                          {member.avatar}
                         </div>
+                        {member.status === 'online' && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-black" />
+                        )}
+                        {member.status === 'away' && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-black" />
+                        )}
                       </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                      <span className="text-xs text-gray-500 capitalize">{widget.category}</span>
-                      <FontAwesomeIcon 
-                        icon={faChevronRight} 
-                        className="text-xs text-gray-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300" 
-                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{member.name}</p>
+                        <p className="text-xs text-gray-500">{member.role}</p>
+                      </div>
                     </div>
-                  </button>
-                ))}
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setShowMembersModal(true)}
+                  className="w-full mt-3 py-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] text-sm text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
+                >
+                  View all members
+                  <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredWidgets.map((widget) => (
-                  <button
-                    key={widget.id}
-                    onClick={() => navigate(`/spaces/${id}/${widget.id}`)}
-                    className="w-full group relative text-left p-4 rounded-2xl bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-300 flex items-center gap-4"
-                  >
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${widget.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300 flex-shrink-0`}>
-                      <FontAwesomeIcon icon={widget.icon} className="text-white text-lg" />
-                    </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold mb-1 text-white group-hover:text-cyan-300 transition-colors duration-300">
+              {/* AI Insights */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faBrain} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">AI Insights</h3>
+                    <p className="text-xs text-gray-500">Recommendations</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { icon: faFire, text: 'Peak activity 2-4 PM', color: 'orange' },
+                    { icon: faArrowTrendUp, text: 'Collaboration up 34%', color: 'emerald' },
+                    { icon: faWandMagicSparkles, text: 'Suggest weekly sync', color: 'purple' }
+                  ].map((insight, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer">
+                      <FontAwesomeIcon icon={insight.icon} className={`text-${insight.color}-400 text-sm`} />
+                      <p className="text-xs text-gray-400">{insight.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Center Column - Widgets */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Widget Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* Category Filter */}
+                <div className="inline-flex items-center p-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  {['all', 'communication', 'productivity', 'content'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setFilterCategory(cat as any)}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                        filterCategory === cat
+                          ? 'bg-white/10 text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search & Add Widget */}
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search widgets..."
+                      value={widgetSearchQuery}
+                      onChange={(e) => setWidgetSearchQuery(e.target.value)}
+                      className="w-48 pl-9 pr-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder-gray-500 text-xs outline-none focus:border-cyan-500/30 transition-all"
+                    />
+                    <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs" />
+                  </div>
+                  <button
+                    onClick={() => setShowWidgetLibrary(true)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all flex items-center gap-2 text-sm text-white"
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="text-xs text-cyan-400" />
+                    Add Widget
+                  </button>
+                </div>
+              </div>
+
+              {/* Widgets Grid */}
+              {filteredWidgets.length === 0 ? (
+                <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-12`}>
+                  <div className="text-center max-w-md mx-auto">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-purple-500/10 flex items-center justify-center mx-auto mb-6">
+                      <FontAwesomeIcon icon={widgetSearchQuery ? faSearch : faLayerGroup} className="text-4xl text-gray-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 text-white">
+                      {widgetSearchQuery ? 'No widgets found' : 'Add your first widget'}
+                    </h3>
+                    <p className="text-sm text-gray-400 mb-6">
+                      {widgetSearchQuery ? 'Try a different search' : 'Widgets help you collaborate effectively'}
+                    </p>
+                    {!widgetSearchQuery && (
+                      <button
+                        onClick={() => setShowWidgetLibrary(true)}
+                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 text-white font-semibold"
+                      >
+                        Browse Widgets
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredWidgets.map((widget) => (
+                    <button
+                      key={widget.id}
+                      onClick={() => navigate(`/spaces/${id}/${widget.id}`)}
+                      className={`group relative text-left p-5 rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] hover:border-white/10 transition-all duration-300 hover:bg-white/[0.04] hover:-translate-y-1`}
+                    >
+                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${widget.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
+                        <FontAwesomeIcon icon={widget.icon} className="text-white text-xl" />
+                      </div>
+
+                      <h3 className="text-base font-bold mb-1 text-white group-hover:text-cyan-300 transition-colors duration-300">
                         {widget.name}
                       </h3>
-                      <p className="text-xs text-gray-400 line-clamp-1">
+                      <p className="text-xs text-gray-400 mb-4">
                         {widget.description}
                       </p>
-                    </div>
 
-                    <div className="flex items-center gap-3">
                       {widget.id === 'chat' && (stats?.messages || 0) > 0 && (
-                        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg">
-                          <span className="text-xs font-bold text-white">{stats?.messages}</span>
+                        <div className="absolute top-4 right-4">
+                          <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg">
+                            <span className="text-xs font-bold text-white">{stats?.messages}</span>
+                          </div>
                         </div>
                       )}
-                      <FontAwesomeIcon 
-                        icon={faChevronRight} 
-                        className="text-xs text-gray-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300" 
-                      />
-                    </div>
-                  </button>
-                ))}
+
+                      <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
+                        <span className="text-xs text-gray-500 capitalize">{widget.category}</span>
+                        <FontAwesomeIcon
+                          icon={faChevronRight}
+                          className="text-xs text-gray-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300"
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Quick Actions & Info */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Quick Actions */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faBolt} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Quick Actions</h3>
+                    <p className="text-xs text-gray-500">Common tasks</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { icon: faMessage, label: 'New Message', desc: 'Start a conversation', action: () => navigate(`/spaces/${id}/chat`), gradient: 'from-blue-500 to-cyan-600' },
+                    { icon: faFile, label: 'Upload File', desc: 'Share a document', action: () => navigate(`/spaces/${id}/files`), gradient: 'from-purple-500 to-pink-600' },
+                    { icon: faCheckCircle, label: 'Create Task', desc: 'Add a new task', action: () => navigate(`/spaces/${id}/tasks`), gradient: 'from-emerald-500 to-teal-600' },
+                    { icon: faUserPlus, label: 'Invite People', desc: 'Grow your team', action: handleInviteClick, gradient: 'from-orange-500 to-amber-600' }
+                  ].map((action, index) => (
+                    <button
+                      key={index}
+                      onClick={action.action}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all duration-300 group text-left"
+                    >
+                      <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                        <FontAwesomeIcon icon={action.icon} className="text-white text-sm" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white">{action.label}</p>
+                        <p className="text-xs text-gray-500">{action.desc}</p>
+                      </div>
+                      <FontAwesomeIcon icon={faArrowRight} className="text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all text-xs" />
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
+
+              {/* Space Info */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faShieldAlt} className="text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Space Info</h3>
+                    <p className="text-xs text-gray-500">Details & settings</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02]">
+                    <span className="text-xs text-gray-400">Privacy</span>
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={currentPrivacy?.icon || faLock} className="text-xs text-cyan-400" />
+                      <span className="text-xs text-white font-medium">{currentPrivacy?.label}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02]">
+                    <span className="text-xs text-gray-400">Your Role</span>
+                    <span className="text-xs text-white font-medium capitalize">{currentUserRole}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02]">
+                    <span className="text-xs text-gray-400">Created</span>
+                    <span className="text-xs text-white font-medium">
+                      {space?.created_at ? new Date(space.created_at).toLocaleDateString() : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Storage */}
+              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faDatabase} className="text-rose-400" />
+                    <span className="text-sm font-semibold text-white">Storage</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{stats?.storageUsed || 3.7}GB / 10GB</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-600"
+                    style={{ width: `${((stats?.storageUsed || 3.7) / 10) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {Math.round(((stats?.storageUsed || 3.7) / 10) * 100)}% used
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Modals */}
-      <WidgetLibraryModal 
-        isOpen={showWidgetLibrary} 
-        onClose={() => setShowWidgetLibrary(false)} 
-        activeWidgets={activeWidgets} 
-        onToggleWidget={toggleWidget} 
-        availableWidgets={AVAILABLE_WIDGETS} 
+      <WidgetLibraryModal
+        isOpen={showWidgetLibrary}
+        onClose={() => setShowWidgetLibrary(false)}
+        activeWidgets={activeWidgets}
+        onToggleWidget={toggleWidget}
+        availableWidgets={AVAILABLE_WIDGETS}
       />
       {showConvertModal && id && space && (
-        <ConvertSpaceModal 
-          isOpen={showConvertModal} 
-          onClose={() => setShowConvertModal(false)} 
-          spaceId={id} 
-          spaceName={space.name} 
-          currentPrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'} 
-          targetPrivacy={targetPrivacy} 
-          onSuccess={handleConvertSuccess} 
+        <ConvertSpaceModal
+          isOpen={showConvertModal}
+          onClose={() => setShowConvertModal(false)}
+          spaceId={id}
+          spaceName={space.name}
+          currentPrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'}
+          targetPrivacy={targetPrivacy}
+          onSuccess={handleConvertSuccess}
         />
       )}
       {showInviteModal && id && space && (
-        <InviteToSpaceModal 
-          isOpen={showInviteModal} 
-          onClose={() => setShowInviteModal(false)} 
-          spaceId={id} 
-          spaceName={space.name} 
-          spacePrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'} 
+        <InviteToSpaceModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          spaceId={id}
+          spaceName={space.name}
+          spacePrivacy={space.privacy as 'public' | 'private' | 'shared' | 'team'}
         />
       )}
       {showMembersModal && id && space && (
-        <SpaceMembersModal 
-          isOpen={showMembersModal} 
-          onClose={() => setShowMembersModal(false)} 
-          spaceId={id} 
+        <SpaceMembersModal
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+          spaceId={id}
           spaceName={space.name}
           currentUserRole={currentUserRole}
           onInviteClick={() => {
