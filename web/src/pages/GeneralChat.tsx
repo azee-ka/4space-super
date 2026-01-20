@@ -847,7 +847,7 @@ export function GeneralChat() {
             )}
             {rightSidebarTab === 'theme' && (
               <RightSidebar
-                activeTab={'customization'}
+                activeTab={'theme'}
                 onTabChange={() => {}}
                 theme={activeTheme}
                 onThemeChange={setTheme as (theme: any, roomId?: string | undefined, category?: string | undefined) => void}

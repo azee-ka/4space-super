@@ -404,21 +404,21 @@ export function RightSidebarCustomizationTab({ theme, onThemeChange }: RightSide
               key: 'messageAnimations',
               label: 'Message Animations',
               description: 'Smooth entrance animations for messages',
-              enabled: animationSettings.messageAnimations,
+              enabled: animationSettings?.messageAnimations,
               setter: (value: boolean) => setAnimationSettings({ ...animationSettings, messageAnimations: value }),
             },
             {
               key: 'typingIndicators',
               label: 'Typing Indicators',
               description: 'Show typing animations',
-              enabled: animationSettings.typingIndicators,
+              enabled: animationSettings?.typingIndicators,
               setter: (value: boolean) => setAnimationSettings({ ...animationSettings, typingIndicators: value }),
             },
             {
               key: 'emojiReactions',
               label: 'Emoji Reactions',
               description: 'Animated emoji reactions',
-              enabled: animationSettings.emojiReactions,
+              enabled: animationSettings?.emojiReactions,
               setter: (value: boolean) => setAnimationSettings({ ...animationSettings, emojiReactions: value }),
             },
           ].map((setting) => (
@@ -450,21 +450,21 @@ export function RightSidebarCustomizationTab({ theme, onThemeChange }: RightSide
               key: 'messageSounds',
               label: 'Message Sounds',
               description: 'Play sound when receiving messages',
-              enabled: soundSettings.messageSounds,
+              enabled: soundSettings?.messageSounds,
               setter: (value: boolean) => setSoundSettings({ ...soundSettings, messageSounds: value }),
             },
             {
               key: 'notificationSounds',
               label: 'Notification Sounds',
               description: 'Alert sounds for mentions and replies',
-              enabled: soundSettings.notificationSounds,
+              enabled: soundSettings?.notificationSounds,
               setter: (value: boolean) => setSoundSettings({ ...soundSettings, notificationSounds: value }),
             },
             {
               key: 'typingSounds',
               label: 'Typing Sounds',
               description: 'Subtle sounds while typing',
-              enabled: soundSettings.typingSounds,
+              enabled: soundSettings?.typingSounds,
               setter: (value: boolean) => setSoundSettings({ ...soundSettings, typingSounds: value }),
             },
           ].map((setting) => (
@@ -494,7 +494,7 @@ export function RightSidebarCustomizationTab({ theme, onThemeChange }: RightSide
           <div>
             <label className="text-sm text-gray-400 mb-2 block">Message Density</label>
             <select
-              value={messageDensity}
+              value={messageDensity || 'comfortable'}
               onChange={(e) => setMessageDensity(e.target.value as any)}
               className="w-full px-3 py-2 bg-zinc-800/50 border border-zinc-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
             >
