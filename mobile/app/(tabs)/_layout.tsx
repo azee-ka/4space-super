@@ -1,32 +1,75 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../../src/styles/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#18181b',
-          borderTopColor: '#27272a',
+          backgroundColor: theme.colors.base,
+          borderTopColor: theme.colors.base,
+          borderTopWidth: 0,
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 10,
         },
-        tabBarActiveTintColor: '#0ea5e9',
-        tabBarInactiveTintColor: '#71717a',
+        headerStyle: {
+          backgroundColor: theme.colors.base,
+          borderBottomColor: theme.colors.base,
+          borderBottomWidth: 0,
+        },
+        headerTintColor: theme.colors.textPrimary,
+        headerTitleStyle: {
+          fontWeight: '700',
+          letterSpacing: 0.3,
+        },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Spaces',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="apps" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="spaces/[id]"
+        name="messages/index"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="spaces/index"
+        options={{
+          title: 'Spaces',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="apps-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings/index"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages/[id]"
         options={{
           href: null,
+          title: 'Chat',
         }}
       />
     </Tabs>

@@ -1,25 +1,17 @@
-import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
+import { LoadingSpinner } from '../src/components/ui';
 
 export default function Index() {
-  const router = useRouter();
-  const { user, loading } = useAuthStore();
+  const { user, initialized } = useAuthStore();
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/login');
-      }
-    }
-  }, [user, loading]);
+  if (!initialized) {
+    return <LoadingSpinner fullScreen />;
+  }
 
-  return (
-    <View className="flex-1 bg-dark-900 items-center justify-center">
-      <ActivityIndicator size="large" color="#0ea5e9" />
-    </View>
-  );
+  if (user) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  return <Redirect href="/login" />;
 }

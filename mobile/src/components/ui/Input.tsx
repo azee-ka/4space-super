@@ -1,71 +1,90 @@
 import React from 'react';
-import { TextInput, View, Text, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { TextInput, View, Text, StyleSheet } from 'react-native';
+import { theme } from '../../styles/theme';
 
 interface InputProps {
-  label?: string;
   placeholder?: string;
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
+  label?: string;
   error?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  multiline?: boolean;
-  numberOfLines?: number;
+  leftIcon?: React.ReactNode;
 }
 
-export function Input({
-  label,
+export const Input: React.FC<InputProps> = ({
   placeholder,
   value,
   onChangeText,
-  secureTextEntry = false,
+  secureTextEntry,
+  label,
   error,
   autoCapitalize = 'none',
   keyboardType = 'default',
-  multiline = false,
-  numberOfLines = 1,
-}: InputProps) {
-  const [isSecure, setIsSecure] = React.useState(secureTextEntry);
-
+  leftIcon,
+}) => {
   return (
-    <View className="mb-4">
-      {label && (
-        <Text className="text-white text-sm font-medium mb-2">{label}</Text>
-      )}
-      <View className="relative">
+    <View style={styles.container}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View style={[styles.inputContainer, error ? styles.inputError : styles.inputNormal]}>
+        {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
         <TextInput
-          className={`
-            bg-dark-800 border rounded-lg px-4 py-3 text-white
-            ${error ? 'border-red-500' : 'border-dark-700'}
-            ${multiline ? 'min-h-[100px]' : ''}
-          `}
           placeholder={placeholder}
-          placeholderTextColor="#71717a"
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={isSecure}
+          secureTextEntry={secureTextEntry}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
-          multiline={multiline}
-          numberOfLines={numberOfLines}
-          textAlignVertical={multiline ? 'top' : 'center'}
+          placeholderTextColor={theme.colors.textSubtle}
+          selectionColor={theme.colors.accent}
+          style={styles.input}
         />
-        {secureTextEntry && (
-          <Pressable
-            onPress={() => setIsSecure(!isSecure)}
-            className="absolute right-3 top-3"
-          >
-            <Ionicons
-              name={isSecure ? 'eye-off' : 'eye'}
-              size={24}
-              color="#71717a"
-            />
-          </Pressable>
-        )}
       </View>
-      {error && <Text className="text-red-500 text-xs mt-1">{error}</Text>}
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  label: {
+    color: theme.colors.textMuted,
+    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 12,
+    minHeight: 48,
+  },
+  inputNormal: {
+    borderColor: theme.colors.border,
+  },
+  inputError: {
+    borderColor: theme.colors.danger,
+  },
+  iconContainer: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 15,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: 13,
+    marginTop: 4,
+  },
+});

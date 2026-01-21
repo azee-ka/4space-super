@@ -1,25 +1,14 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import { theme } from '../../styles/theme';
 
 interface AvatarProps {
-  name: string;
-  imageUrl?: string;
-  size?: 'sm' | 'md' | 'lg';
+  uri?: string | null;
+  name?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export function Avatar({ name, imageUrl, size = 'md' }: AvatarProps) {
-  const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-16 h-16',
-  };
-
-  const textSizeClasses = {
-    sm: 'text-xs',
-    md: 'text-sm',
-    lg: 'text-xl',
-  };
-
+export const Avatar: React.FC<AvatarProps> = ({ uri, name = 'U', size = 'md' }) => {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -27,24 +16,66 @@ export function Avatar({ name, imageUrl, size = 'md' }: AvatarProps) {
     .toUpperCase()
     .slice(0, 2);
 
+  const sizeStyle = size === 'sm' ? styles.sm : size === 'lg' ? styles.lg : size === 'xl' ? styles.xl : styles.md;
+  const textSize = size === 'sm' ? styles.textSm : size === 'lg' ? styles.textLg : size === 'xl' ? styles.textXl : styles.textMd;
+
+  if (uri) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[styles.avatar, sizeStyle]}
+        resizeMode="cover"
+      />
+    );
+  }
+
   return (
-    <View
-      className={`
-        ${sizeClasses[size]}
-        rounded-full
-        bg-primary-600
-        items-center
-        justify-center
-        overflow-hidden
-      `}
-    >
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} className="w-full h-full" />
-      ) : (
-        <Text className={`text-white font-bold ${textSizeClasses[size]}`}>
-          {initials}
-        </Text>
-      )}
+    <View style={[styles.avatar, styles.placeholder, sizeStyle]}>
+      <Text style={[styles.initials, textSize]}>{initials}</Text>
     </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  avatar: {
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
+  placeholder: {
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sm: {
+    width: 32,
+    height: 32,
+  },
+  md: {
+    width: 40,
+    height: 40,
+  },
+  lg: {
+    width: 48,
+    height: 48,
+  },
+  xl: {
+    width: 80,
+    height: 80,
+  },
+  initials: {
+    color: theme.colors.white,
+    fontWeight: 'bold',
+  },
+  textSm: {
+    fontSize: 12,
+  },
+  textMd: {
+    fontSize: 14,
+  },
+  textLg: {
+    fontSize: 16,
+  },
+  textXl: {
+    fontSize: 24,
+  },
+});

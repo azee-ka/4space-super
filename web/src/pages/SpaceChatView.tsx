@@ -600,7 +600,6 @@ const handleSendMessage = useCallback((
       }
 
       attempts++;
-      console.log(`Fetching page ${attempts} to find message ${messageId}`);
 
       await fetchNextPage();
 
@@ -610,7 +609,6 @@ const handleSendMessage = useCallback((
       // Check again
       messageElement = document.getElementById(`message-${messageId}`);
       if (messageElement) {
-        console.log(`Found message ${messageId} after ${attempts} page fetches`);
         messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
