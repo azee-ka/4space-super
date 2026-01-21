@@ -7,11 +7,15 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useConversations } from '../../src/hooks/useConversations';
 import { Avatar } from '../../src/components/ui';
 import { ConversationItem } from '../../src/components/chat';
+import { useThemeStore } from '../../src/store/themeStore';
+import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { theme } from '../../src/styles/theme';
 
 export default function DashboardScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const { accentColor } = useThemeStore();
+  const accentHex = getAccentColorHex(accentColor);
   const { data: conversations } = useConversations(user?.id || '');
   const recentConversations = (conversations || []).slice(0, 3);
   const totalConversations = conversations?.length || 0;
@@ -35,7 +39,7 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={() => router.push('/messages' as any)}
           >
-            <Ionicons name="chatbubbles-outline" size={22} color={theme.colors.textPrimary} />
+            <Ionicons name="chatbubbles-outline" size={22} color="#f472b6" />
             <Text style={styles.actionTitle}>Messages</Text>
             <Text style={styles.actionSubtitle}>Jump into chats</Text>
           </TouchableOpacity>
@@ -43,7 +47,7 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={() => router.push('/spaces' as any)}
           >
-            <Ionicons name="apps-outline" size={22} color={theme.colors.textPrimary} />
+            <Ionicons name="apps-outline" size={22} color="#34d399" />
             <Text style={styles.actionTitle}>Spaces</Text>
             <Text style={styles.actionSubtitle}>Manage teams</Text>
           </TouchableOpacity>
@@ -74,7 +78,7 @@ export default function DashboardScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Conversations</Text>
             <TouchableOpacity onPress={() => router.push('/messages' as any)}>
-              <Text style={styles.sectionLink}>View all</Text>
+              <Text style={[styles.sectionLink, { color: accentHex }]}>View all</Text>
             </TouchableOpacity>
           </View>
           {recentConversations.length === 0 ? (

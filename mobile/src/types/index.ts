@@ -60,10 +60,16 @@ export interface Space {
   id: string;
   name: string;
   description?: string;
-  avatar_url?: string;
+  type?: 'personal' | 'couple' | 'team' | 'portfolio' | 'community' | 'custom' | 'project';
+  privacy: 'private' | 'shared' | 'team' | 'public' | 'unlisted';
   owner_id: string;
-  member_count: number;
+  icon?: string;
+  color?: string;
+  avatar_url?: string;
+  members_count?: number;
+  member_count?: number;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Room {

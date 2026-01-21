@@ -1,5 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { useThemeStore } from '../../store/themeStore';
+import { getAccentColorHex } from '../../utils/themeUtils';
 import { theme } from '../../styles/theme';
 
 interface ButtonProps {
@@ -23,13 +25,16 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   fullWidth = false,
 }) => {
+  const { accentColor } = useThemeStore();
+  const accentHex = getAccentColorHex(accentColor);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
       style={[
         styles.button,
-        variant === 'primary' && styles.primary,
+        variant === 'primary' && [styles.primary, { backgroundColor: accentHex }],
         variant === 'secondary' && styles.secondary,
         variant === 'ghost' && styles.ghost,
         variant === 'danger' && styles.danger,
@@ -48,7 +53,7 @@ export const Button: React.FC<ButtonProps> = ({
           <Text
             style={[
               styles.text,
-              variant === 'ghost' && styles.textGhost,
+              variant === 'ghost' && [styles.textGhost, { color: accentHex }],
               variant === 'secondary' && styles.textSecondary,
               variant === 'danger' && styles.textDanger,
             ]}

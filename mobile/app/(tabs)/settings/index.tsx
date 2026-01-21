@@ -5,11 +5,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../src/store/authStore';
 import { Avatar, Button } from '../../../src/components/ui';
+import { useThemeStore } from '../../../src/store/themeStore';
+import { ACCENT_OPTIONS, getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuthStore();
   const router = useRouter();
+  const { accentColor, setAccentColor } = useThemeStore();
+  const accentHex = getAccentColorHex(accentColor);
+  const profileAccent = '#22d3ee';
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -54,7 +59,7 @@ export default function SettingsScreen() {
             </Text>
             <Text style={styles.username}>@{user?.username}</Text>
             <TouchableOpacity style={styles.editProfileButton}>
-              <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+              <Ionicons name="create-outline" size={16} color={profileAccent} />
               <Text style={styles.editProfileText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -65,7 +70,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="person-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="person-outline" size={20} color={profileAccent} />
                 </View>
                 <Text style={styles.menuItemText}>Profile Settings</Text>
               </View>
@@ -75,7 +80,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="shield-checkmark-outline" size={20} color="#a78bfa" />
                 </View>
                 <Text style={styles.menuItemText}>Privacy & Security</Text>
               </View>
@@ -85,7 +90,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="key-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="key-outline" size={20} color="#f59e0b" />
                 </View>
                 <Text style={styles.menuItemText}>Change Password</Text>
               </View>
@@ -99,14 +104,14 @@ export default function SettingsScreen() {
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="notifications-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="notifications-outline" size={20} color="#f97316" />
                 </View>
                 <Text style={styles.menuItemText}>Push Notifications</Text>
               </View>
               <Switch
                 value={notifications}
                 onValueChange={setNotifications}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
                 thumbColor={theme.colors.white}
               />
             </View>
@@ -114,14 +119,14 @@ export default function SettingsScreen() {
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="volume-high-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="volume-high-outline" size={20} color="#ec4899" />
                 </View>
                 <Text style={styles.menuItemText}>Sound</Text>
               </View>
               <Switch
                 value={soundEnabled}
                 onValueChange={setSoundEnabled}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
                 thumbColor={theme.colors.white}
               />
             </View>
@@ -129,14 +134,14 @@ export default function SettingsScreen() {
             <View style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="phone-portrait-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="phone-portrait-outline" size={20} color="#10b981" />
                 </View>
                 <Text style={styles.menuItemText}>Vibration</Text>
               </View>
               <Switch
                 value={vibrationEnabled}
                 onValueChange={setVibrationEnabled}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
                 thumbColor={theme.colors.white}
               />
             </View>
@@ -148,14 +153,14 @@ export default function SettingsScreen() {
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="moon-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="moon-outline" size={20} color="#38bdf8" />
                 </View>
                 <Text style={styles.menuItemText}>Dark Mode</Text>
               </View>
               <Switch
                 value={darkMode}
                 onValueChange={setDarkMode}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
                 thumbColor={theme.colors.white}
               />
             </View>
@@ -163,7 +168,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="color-palette-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="color-palette-outline" size={20} color={accentHex} />
                 </View>
                 <Text style={styles.menuItemText}>Theme</Text>
               </View>
@@ -176,7 +181,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="text-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="text-outline" size={20} color="#a855f7" />
                 </View>
                 <Text style={styles.menuItemText}>Font Size</Text>
               </View>
@@ -187,13 +192,37 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.accentSection}>
+            <Text style={styles.sectionTitle}>Accent Color</Text>
+            <View style={styles.accentRow}>
+              {ACCENT_OPTIONS.map((option) => {
+                const isActive = option.value === accentColor;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.accentSwatch,
+                      { backgroundColor: option.hex },
+                      isActive && styles.accentSwatchActive,
+                    ]}
+                    onPress={() => setAccentColor(option.value)}
+                  >
+                    {isActive && (
+                      <Ionicons name="checkmark" size={14} color={theme.colors.base} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Support */}
           <Text style={styles.sectionTitle}>Support</Text>
           <View style={styles.section}>
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="help-circle-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="help-circle-outline" size={20} color="#60a5fa" />
                 </View>
                 <Text style={styles.menuItemText}>Help Center</Text>
               </View>
@@ -203,7 +232,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color="#22d3ee" />
                 </View>
                 <Text style={styles.menuItemText}>Contact Support</Text>
               </View>
@@ -213,7 +242,7 @@ export default function SettingsScreen() {
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="document-text-outline" size={20} color={theme.colors.textPrimary} />
+                  <Ionicons name="document-text-outline" size={20} color="#34d399" />
                 </View>
                 <Text style={styles.menuItemText}>Terms & Privacy</Text>
               </View>
@@ -277,7 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   editProfileText: {
-    color: theme.colors.accent,
+    color: '#22d3ee',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -296,6 +325,27 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 8,
     overflow: 'hidden',
+  },
+  accentSection: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  accentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+  },
+  accentSwatch: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accentSwatchActive: {
+    transform: [{ scale: 1.05 }],
   },
   menuItem: {
     flexDirection: 'row',

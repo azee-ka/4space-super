@@ -10,14 +10,13 @@ import {
   StyleSheet,
   Modal,
   TextInput,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
-import { useChatStore } from '../../../src/store/chatStore';
+import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../../src/store/chatStore';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../../src/hooks/useConversations';
 import { BackgroundPicker, ChatBackground, TypingIndicator } from '../../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../../src/components/ui';
@@ -32,7 +31,7 @@ export default function ChatScreen() {
   const conversationId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   const { user } = useAuthStore();
-  const { replyingTo, setReplyingTo, addTypingUser, typingUsers } = useChatStore();
+  const { replyingTo, setReplyingTo, addTypingUser, typingUsers, conversationSettings } = useChatStore();
   const queryClient = useQueryClient();
   const { data: conversation } = useConversation(conversationId || '', user?.id || '');
   const { data: messages, isLoading, error: messagesError } = useMessages(conversationId || '');
@@ -46,12 +45,12 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
-  const [showConversationSettings, setShowConversationSettings] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
-  const [typingIndicatorsEnabled, setTypingIndicatorsEnabled] = useState(true);
-  const [muteConversation, setMuteConversation] = useState(false);
-  const [pinConversation, setPinConversation] = useState(false);
+  const currentSettings = conversationId
+    ? conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
+    : DEFAULT_CONVERSATION_SETTINGS;
+  const readReceiptsEnabled = currentSettings.readReceipts;
+  const typingIndicatorsEnabled = currentSettings.typingIndicators;
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const quickEmojis = ['😀', '😂', '😍', '🤔', '👍', '🎉', '🔥', '💯', '✨', '❤️'];
@@ -138,6 +137,7 @@ export default function ChatScreen() {
   }, [messageText, user, conversationId, replyingTo, sendMessageMutation]);
 
   const handleTyping = useCallback(() => {
+    if (!typingIndicatorsEnabled) return;
     if (!user || !conversationId) return;
 
     if (typingTimeoutRef.current) {
@@ -164,7 +164,7 @@ export default function ChatScreen() {
     typingTimeoutRef.current = setTimeout(() => {
       typingTimeoutRef.current = null;
     }, 2000);
-  }, [user, conversationId]);
+  }, [user, conversationId, typingIndicatorsEnabled]);
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
@@ -333,7 +333,7 @@ metadata=${formatDebugValue(item.metadata)}`
         </View>
       </TouchableOpacity>
     );
-  }, [user, messages, handleReaction]);
+  }, [user, messages, handleReaction, readReceiptsEnabled]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -394,7 +394,11 @@ metadata=${formatDebugValue(item.metadata)}`
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerAction}
-              onPress={() => setShowConversationSettings(true)}
+              onPress={() => {
+                if (conversationId) {
+                  router.push(`/messages/${conversationId}/settings` as any);
+                }
+              }}
             >
               <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textPrimary} />
             </TouchableOpacity>
@@ -573,78 +577,6 @@ metadata=${formatDebugValue(item.metadata)}`
                 )}
               </View>
             </View>
-          </TouchableOpacity>
-        </Modal>
-        <Modal
-          visible={showConversationSettings}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowConversationSettings(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setShowConversationSettings(false)}
-            style={styles.modalOverlay}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.settingsSheet}>
-              <View style={styles.settingsHeader}>
-                <Text style={styles.settingsTitle}>Conversation Settings</Text>
-                <TouchableOpacity onPress={() => setShowConversationSettings(false)}>
-                  <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Read Receipts</Text>
-                <Switch
-                  value={readReceiptsEnabled}
-                  onValueChange={setReadReceiptsEnabled}
-                  trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
-                  thumbColor={theme.colors.white}
-                />
-              </View>
-
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Typing Indicators</Text>
-                <Switch
-                  value={typingIndicatorsEnabled}
-                  onValueChange={setTypingIndicatorsEnabled}
-                  trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
-                  thumbColor={theme.colors.white}
-                />
-              </View>
-
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Mute Notifications</Text>
-                <Switch
-                  value={muteConversation}
-                  onValueChange={setMuteConversation}
-                  trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
-                  thumbColor={theme.colors.white}
-                />
-              </View>
-
-              <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Pin Conversation</Text>
-                <Switch
-                  value={pinConversation}
-                  onValueChange={setPinConversation}
-                  trackColor={{ false: theme.colors.surfaceSubtle, true: theme.colors.accent }}
-                  thumbColor={theme.colors.white}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.settingsAction}
-                onPress={() => {
-                  setShowConversationSettings(false);
-                  setShowBackgroundPicker(true);
-                }}
-              >
-                <Text style={styles.settingsActionText}>Change Chat Background</Text>
-                <Ionicons name="color-palette-outline" size={18} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-            </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
       </KeyboardAvoidingView>
@@ -970,47 +902,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
     fontWeight: '500',
-  },
-  settingsSheet: {
-    backgroundColor: theme.colors.base,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 16,
-  },
-  settingsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  settingsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  settingsLabel: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  settingsAction: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  settingsActionText: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
   },
 });

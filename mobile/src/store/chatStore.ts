@@ -1,22 +1,39 @@
 import { create } from 'zustand';
 import { Conversation, Message, TypingIndicator } from '../types';
 
+interface ConversationSettings {
+  readReceipts: boolean;
+  typingIndicators: boolean;
+  muteNotifications: boolean;
+  pinned: boolean;
+}
+
+export const DEFAULT_CONVERSATION_SETTINGS: ConversationSettings = {
+  readReceipts: true,
+  typingIndicators: true,
+  muteNotifications: false,
+  pinned: false,
+};
+
 interface ChatState {
   activeConversation: Conversation | null;
   typingUsers: Map<string, TypingIndicator[]>;
   replyingTo: Message | null;
+  conversationSettings: Record<string, ConversationSettings>;
   
   setActiveConversation: (conversation: Conversation | null) => void;
   addTypingUser: (conversationId: string, indicator: TypingIndicator) => void;
   removeTypingUser: (conversationId: string, userId: string) => void;
   setReplyingTo: (message: Message | null) => void;
   clearTypingUsers: (conversationId: string) => void;
+  setConversationSettings: (conversationId: string, updates: Partial<ConversationSettings>) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   activeConversation: null,
   typingUsers: new Map(),
   replyingTo: null,
+  conversationSettings: {},
 
   setActiveConversation: (conversation) => set({ activeConversation: conversation }),
 
@@ -58,4 +75,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setReplyingTo: (message) => set({ replyingTo: message }),
+  setConversationSettings: (conversationId, updates) =>
+    set((state) => ({
+      conversationSettings: {
+        ...state.conversationSettings,
+        [conversationId]: {
+          ...DEFAULT_CONVERSATION_SETTINGS,
+          ...state.conversationSettings[conversationId],
+          ...updates,
+        },
+      },
+    })),
 }));

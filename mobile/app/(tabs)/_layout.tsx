@@ -1,40 +1,48 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Text } from 'react-native';
 import { theme } from '../../src/styles/theme';
 
 export default function TabsLayout() {
+  const tabColors = {
+    dashboard: { base: '#22d3ee', active: '#06b6d4' },
+    messages: { base: '#f472b6', active: '#ec4899' },
+    spaces: { base: '#34d399', active: '#10b981' },
+    settings: { base: '#fbbf24', active: '#f59e0b' },
+  };
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        headerShown: false,
         tabBarStyle: {
           backgroundColor: theme.colors.base,
           borderTopColor: theme.colors.base,
           borderTopWidth: 0,
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 10,
+          height: 74,
+          paddingBottom: 16,
+          paddingTop: 8,
         },
-        headerStyle: {
-          backgroundColor: theme.colors.base,
-          borderBottomColor: theme.colors.base,
-          borderBottomWidth: 0,
+        tabBarItemStyle: {
+          paddingTop: 4,
         },
-        headerTintColor: theme.colors.textPrimary,
-        headerTitleStyle: {
-          fontWeight: '700',
-          letterSpacing: 0.3,
-        },
-        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+          tabBarLabel: ({ focused }) => (
+            <Text style={{ fontSize: 11, color: focused ? tabColors.dashboard.active : tabColors.dashboard.base }}>
+              Home
+            </Text>
+          ),
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name="grid-outline"
+              size={size}
+              color={focused ? tabColors.dashboard.active : tabColors.dashboard.base}
+            />
           ),
         }}
       />
@@ -42,8 +50,17 @@ export default function TabsLayout() {
         name="messages/index"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          tabBarLabel: ({ focused }) => (
+            <Text style={{ fontSize: 11, color: focused ? tabColors.messages.active : tabColors.messages.base }}>
+              Messages
+            </Text>
+          ),
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name="chatbubbles-outline"
+              size={size}
+              color={focused ? tabColors.messages.active : tabColors.messages.base}
+            />
           ),
         }}
       />
@@ -51,8 +68,17 @@ export default function TabsLayout() {
         name="spaces/index"
         options={{
           title: 'Spaces',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="apps-outline" size={size} color={color} />
+          tabBarLabel: ({ focused }) => (
+            <Text style={{ fontSize: 11, color: focused ? tabColors.spaces.active : tabColors.spaces.base }}>
+              Spaces
+            </Text>
+          ),
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name="apps-outline"
+              size={size}
+              color={focused ? tabColors.spaces.active : tabColors.spaces.base}
+            />
           ),
         }}
       />
@@ -60,8 +86,17 @@ export default function TabsLayout() {
         name="settings/index"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+          tabBarLabel: ({ focused }) => (
+            <Text style={{ fontSize: 11, color: focused ? tabColors.settings.active : tabColors.settings.base }}>
+              Settings
+            </Text>
+          ),
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name="settings-outline"
+              size={size}
+              color={focused ? tabColors.settings.active : tabColors.settings.base}
+            />
           ),
         }}
       />
@@ -70,6 +105,15 @@ export default function TabsLayout() {
         options={{
           href: null,
           title: 'Chat',
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="messages/[id]/settings"
+        options={{
+          href: null,
+          title: 'Chat Settings',
+          tabBarStyle: { display: 'none' },
         }}
       />
     </Tabs>

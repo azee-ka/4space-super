@@ -32,16 +32,16 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Enhanced Header with Actions */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <View style={styles.headerActions}>
+          <Text style={styles.headerTitle}>Messages</Text>
+          <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.headerActionButton}
               onPress={() => setShowFilters(!showFilters)}
             >
-              <Ionicons name="filter" size={18} color={theme.colors.textPrimary} />
+              <Ionicons name="filter" size={18} color="#fbbf24" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerActionButton}>
-              <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textPrimary} />
+              <Ionicons name="ellipsis-horizontal" size={18} color="#a855f7" />
             </TouchableOpacity>
           </View>
         </View>
