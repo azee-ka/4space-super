@@ -20,6 +20,7 @@ import {
   Animated,
   Easing,
   Keyboard,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,6 +40,8 @@ import { Message } from '../../src/types';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { theme } from '../../src/styles/theme';
 import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
 import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
@@ -81,7 +84,11 @@ export default function ChatScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [inputHeight, setInputHeight] = useState(0);
+  const plusMenuAnim = useRef(new Animated.Value(0)).current;
+  const [plusMenuScrolled, setPlusMenuScrolled] = useState(false);
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
+  const screenHeight = Dimensions.get('window').height;
 
   const currentSettings = conversationId
     ? conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
@@ -92,6 +99,18 @@ export default function ChatScreen() {
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
+  const plusMenuItems = [
+    { key: 'photos', label: 'Photos', icon: 'image', tint: '#60a5fa' },
+    { key: 'camera', label: 'Camera', icon: 'camera', tint: '#f97316' },
+    { key: 'file', label: 'File', icon: 'document-text', tint: '#a78bfa' },
+    { key: 'poll', label: 'Poll', icon: 'stats-chart', tint: '#34d399' },
+    { key: 'location', label: 'Location', icon: 'location', tint: '#f87171' },
+    { key: 'contact', label: 'Contact', icon: 'person-circle', tint: '#fbbf24' },
+    { key: 'sticker', label: 'Sticker', icon: 'happy', tint: '#22d3ee' },
+    { key: 'gif', label: 'GIF', icon: 'film', tint: '#fb7185' },
+    { key: 'game', label: 'Games', icon: 'game-controller', tint: '#c084fc' },
+    { key: 'extension', label: 'Extensions', icon: 'extensions-puzzle', tint: '#38bdf8' },
+  ];
 
   // Select raw data instead of computed methods to avoid infinite loops
   const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
@@ -136,7 +155,7 @@ export default function ChatScreen() {
 
   const pinnedMessageId = conversationId ? pinnedMessages[conversationId] : null;
   const savedMessageIds = conversationId ? savedMessages[conversationId] || [] : [];
-  const listInputSpacer = Platform.OS === 'ios' ? 72 : 60; // slimmer base spacer for input bar
+  const listInputSpacer = inputHeight || (Platform.OS === 'ios' ? 96 : 80); // fallback until measured
 
   const messages = useMemo(
     () => messagePages?.pages.flat() ?? [],
@@ -219,10 +238,11 @@ export default function ChatScreen() {
         const offset = Platform.OS === 'ios' ? 25 : 0; // Small gap above keyboard
         Animated.timing(inputTranslateAnim, {
           toValue: -(e.endCoordinates.height - offset),
-          duration: e.duration - 150 || 250,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          duration: Math.max(120, e.duration - 150 || 250),
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }).start();
+        requestAnimationFrame(scrollToBottomImmediate);
       }
     );
 
@@ -232,10 +252,11 @@ export default function ChatScreen() {
         setKeyboardHeight(0);
         Animated.timing(inputTranslateAnim, {
           toValue: 0,
-          duration: e.duration - 150 || 250,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          duration: Math.max(120, e.duration - 150 || 250),
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }).start();
+        requestAnimationFrame(scrollToBottomImmediate);
       }
     );
 
@@ -243,7 +264,7 @@ export default function ChatScreen() {
       keyboardShowListener.remove();
       keyboardHideListener.remove();
     };
-  }, [inputTranslateAnim]);
+  }, [inputTranslateAnim, scrollToBottomImmediate]);
 
   const handleSendMessage = useCallback(async () => {
     if (!messageText.trim() || !user || !conversationId) return;
@@ -271,6 +292,35 @@ export default function ChatScreen() {
       setMessageText(content);
     }
   }, [messageText, user, conversationId, replyingTo, sendMessageMutation, setReplyingTo]);
+
+  const openPlusMenu = useCallback(() => {
+    setShowPlusMenu(true);
+    setPlusMenuScrolled(false);
+    plusMenuAnim.setValue(0);
+    Animated.spring(plusMenuAnim, {
+      toValue: 1,
+      speed: 18,
+      bounciness: 7,
+      useNativeDriver: true,
+    }).start();
+    if (currentSettings.hapticFeedback) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+  }, [currentSettings.hapticFeedback, plusMenuAnim]);
+
+  const closePlusMenu = useCallback(() => {
+    Animated.timing(plusMenuAnim, {
+      toValue: 0,
+      duration: 140,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      setShowPlusMenu(false);
+    });
+    if (currentSettings.hapticFeedback) {
+      Haptics.selectionAsync().catch(() => {});
+    }
+  }, [currentSettings.hapticFeedback, plusMenuAnim]);
 
   const handleTyping = useCallback(() => {
     if (!typingIndicatorsEnabled) return;
@@ -442,9 +492,13 @@ export default function ChatScreen() {
     setShowJump(contentOffset.y > 120);
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  };
+  }, []);
+
+  const scrollToBottomImmediate = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
 
   const scrollToPinned = () => {
     if (!pinnedMessageId || !messages.length) return;
@@ -953,11 +1007,19 @@ export default function ChatScreen() {
             </TouchableOpacity>
           )}
 
-          <Animated.View style={[styles.inputContainer, { transform: [{ translateY: inputTranslateAnim }] }]}>
+          <Animated.View
+            style={[styles.inputContainer, { transform: [{ translateY: inputTranslateAnim }] }]}
+            onLayout={(event) => {
+              const nextHeight = Math.round(event.nativeEvent.layout.height);
+              if (nextHeight && nextHeight !== inputHeight) {
+                setInputHeight(nextHeight);
+              }
+            }}
+          >
 
             <View style={styles.inputRow}>
               <TouchableOpacity
-                onPress={() => setShowPlusMenu(true)}
+                onPress={openPlusMenu}
                 style={styles.inputAction}
               >
                 <Ionicons name="add" size={22} color={theme.colors.textMuted} />
@@ -1001,6 +1063,73 @@ export default function ChatScreen() {
         onClose={() => setShowBackgroundPicker(false)}
       />
 
+      <Modal
+        visible={showPlusMenu}
+        transparent
+        animationType="none"
+        onRequestClose={closePlusMenu}
+      >
+        <View style={styles.plusMenuBackdrop}>
+          <BlurView intensity={45} tint="light" style={StyleSheet.absoluteFillObject} />
+          <View style={styles.plusMenuBlurTint} />
+          <Animated.View
+            style={[
+              styles.plusMenuListContainer,
+              {
+                top: 0,
+                transform: [
+                  {
+                    translateY: plusMenuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [18, 0],
+                    }),
+                  },
+                  {
+                    scale: plusMenuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.92, 1],
+                    }),
+                  },
+                ],
+                opacity: plusMenuAnim,
+              },
+            ]}
+          >
+            <ScrollView
+              style={styles.plusMenuList}
+              contentContainerStyle={[
+                styles.plusMenuListContent,
+                { paddingTop: screenHeight * 0.5 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              onScroll={(event) => {
+                setPlusMenuScrolled(event.nativeEvent.contentOffset.y > 2);
+              }}
+              scrollEventThrottle={16}
+            >
+              {plusMenuItems.map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.plusMenuItem}
+                  activeOpacity={0.8}
+                  onPress={closePlusMenu}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={30}
+                    color={item.tint}
+                    style={styles.plusMenuIconGlyph}
+                  />
+                  <View style={styles.plusMenuTextWrap}>
+                    <Text style={styles.plusMenuTextGlow}>{item.label}</Text>
+                    <Text style={styles.plusMenuText}>{item.label}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <Modal
         visible={!!selectedImage}
@@ -1420,40 +1549,48 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.base,
+    backgroundColor: 'transparent',
     borderTopWidth: 0,
     borderTopColor: theme.colors.border,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 12,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
   },
   inputAction: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   textInputWrapper: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 14,
-    minHeight: 44,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    minHeight: 40,
     justifyContent: 'center',
   },
   textInput: {
     color: theme.colors.textPrimary,
     fontSize: 15,
     maxHeight: 100,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1461,7 +1598,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   sendButtonInactive: {
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   modalOverlay: {
     flex: 1,
@@ -1509,45 +1648,58 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: '500',
   },
-  plusMenu: {
-    position: 'absolute',
-    bottom: 80,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+  plusMenuBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
-  plusMenuContent: {
-    backgroundColor: theme.colors.base,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  plusMenuBlurTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  plusMenuListContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 0,
+  },
+  plusMenuList: {
+    width: '100%',
+  },
+  plusMenuListContent: {
+    paddingBottom: 0,
+    gap: 12,
   },
   plusMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     gap: 16,
-    borderRadius: 12,
+    borderRadius: 16,
   },
-  plusMenuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  plusMenuIconGlyph: {
+    textShadowColor: 'transparent',
   },
   plusMenuText: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  plusMenuTextWrap: {
+    position: 'relative',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  plusMenuTextGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    color: 'rgba(255,255,255,0.02)',
+    fontSize: 22,
+    fontWeight: '700',
+    textShadowColor: 'rgba(255,255,255,0.9)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 22,
   },
   imageViewerContainer: {
     flex: 1,
