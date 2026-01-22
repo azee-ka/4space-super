@@ -80,6 +80,7 @@ export default function ChatScreen() {
   const [showJump, setShowJump] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const currentSettings = conversationId
     ? conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
@@ -126,6 +127,7 @@ export default function ChatScreen() {
 
   const pinnedMessageId = conversationId ? pinnedMessages[conversationId] : null;
   const savedMessageIds = conversationId ? savedMessages[conversationId] || [] : [];
+  const listInputSpacer = Platform.OS === 'ios' ? 72 : 60; // slimmer base spacer for input bar
 
   const messages = useMemo(
     () => messagePages?.pages.flat() ?? [],
@@ -203,6 +205,7 @@ export default function ChatScreen() {
     const keyboardShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
         // Position input just above keyboard - move up by keyboard height minus small offset
         const offset = Platform.OS === 'ios' ? 25 : 0; // Small gap above keyboard
         Animated.timing(inputTranslateAnim, {
@@ -217,6 +220,7 @@ export default function ChatScreen() {
     const keyboardHideListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       (e) => {
+        setKeyboardHeight(0);
         Animated.timing(inputTranslateAnim, {
           toValue: 0,
           duration: e.duration - 150 || 250,
@@ -764,7 +768,11 @@ export default function ChatScreen() {
             data={renderedMessages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
-            contentContainerStyle={{ padding: 16, paddingBottom: 0 }}
+            contentContainerStyle={{
+              padding: 16,
+              paddingTop: listInputSpacer + Math.max(10, keyboardHeight - 14),
+              paddingBottom: 16,
+            }}
             style={{ flex: 1 }}
             inverted
             onScroll={handleScroll}
