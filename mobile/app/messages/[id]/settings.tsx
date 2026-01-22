@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -32,10 +32,10 @@ import { useMessagePreferencesStore } from '../../../src/store/messagePreference
 import { ColorPicker } from '../../../src/components/ui/ColorPicker';
 
 const SIDE_TABS = [
-  { id: 'home', label: 'Home', icon: 'planet-outline', color: '#34d399' },
-  { id: 'saved', label: 'Saved', icon: 'bookmark-outline', color: '#f59e0b' },
-  { id: 'theme', label: 'Theme', icon: 'color-palette-outline', color: '#a855f7' },
-  { id: 'settings', label: 'Settings', icon: 'settings-outline', color: '#22d3ee' },
+  { id: 'home', label: 'Home', icon: 'home', color: '#34d399' },
+  { id: 'saved', label: 'Saved', icon: 'bookmark', color: '#f59e0b' },
+  { id: 'theme', label: 'Theme', icon: 'color-palette', color: '#a855f7' },
+  { id: 'settings', label: 'Settings', icon: 'settings', color: '#22d3ee' },
 ] as const;
 
 type SideTabId = (typeof SIDE_TABS)[number]['id'];
@@ -256,7 +256,8 @@ export default function ChatSettingsScreen() {
   const backgroundId = conversationId ? backgroundByConversation[conversationId] || 'void' : 'void';
   const customBackgroundUri = conversationId ? customBackgroundUriByConversation[conversationId] : null;
   const { width } = useWindowDimensions();
-  const isCompact = width < 380;
+  const [pagerWidth, setPagerWidth] = useState(width);
+  const contentPagerRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState<SideTabId>('home');
   const [activeHomeTab, setActiveHomeTab] = useState<HomeTabId>('metrics');
   const [activeThemeTab, setActiveThemeTab] = useState<ThemeTabId>('featured');
@@ -2070,8 +2071,8 @@ export default function ChatSettingsScreen() {
     </View>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
+  const renderContent = (tabId: SideTabId) => {
+    switch (tabId) {
       case 'saved':
         return renderSavedTab();
       case 'theme':
@@ -2124,63 +2125,66 @@ export default function ChatSettingsScreen() {
         </View>
       </View>
 
-      {isCompact ? (
-        <View style={styles.bodyCompact}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.sideTabsRowWrap}
-            contentContainerStyle={styles.sideTabsRow}
-          >
-            {SIDE_TABS.map((tab) => {
-              const isActive = tab.id === activeTab;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[styles.sideTabCompact, isActive && styles.sideTabCompactActive]}
-                  onPress={() => setActiveTab(tab.id)}
-                >
-                  <View style={styles.sideTabIconCompact}>
-                    <Ionicons name={tab.icon} size={16} color={tab.color} />
-                  </View>
-                  <Text style={[styles.sideTabLabel, isActive && styles.sideTabLabelActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-            {renderContent()}
-          </ScrollView>
-        </View>
-      ) : (
-        <View style={styles.body}>
-          <ScrollView style={styles.sideTabs} contentContainerStyle={styles.sideTabsContent}>
-            {SIDE_TABS.map((tab) => {
-              const isActive = tab.id === activeTab;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[styles.sideTab, isActive && styles.sideTabActive]}
-                  onPress={() => setActiveTab(tab.id)}
-                >
-                  <View style={styles.sideTabIcon}>
-                    <Ionicons name={tab.icon} size={16} color={tab.color} />
-                  </View>
-                  <Text style={[styles.sideTabLabel, isActive && styles.sideTabLabelActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+      <View
+        style={styles.bodyCompact}
+        onLayout={(event) => {
+          const nextWidth = Math.round(event.nativeEvent.layout.width);
+          if (nextWidth && nextWidth !== pagerWidth) {
+            setPagerWidth(nextWidth);
+          }
+        }}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.sideTabsRowWrap}
+          contentContainerStyle={styles.sideTabsRow}
+        >
+          {SIDE_TABS.map((tab, index) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.sideTabCompact, isActive && styles.sideTabCompactActive]}
+                onPress={() => {
+                  setActiveTab(tab.id);
+                  contentPagerRef.current?.scrollTo({ x: index * pagerWidth, animated: true });
+                }}
+              >
+                <View style={styles.sideTabIconCompact}>
+                  <Ionicons name={tab.icon} size={20} color={tab.color} />
+                </View>
+                <Text style={[styles.sideTabLabel, isActive && styles.sideTabLabelActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-            {renderContent()}
-          </ScrollView>
-        </View>
-      )}
+        <ScrollView
+          ref={contentPagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(event) => {
+            const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pagerWidth);
+            const nextTab = SIDE_TABS[nextIndex];
+            if (nextTab && nextTab.id !== activeTab) {
+              setActiveTab(nextTab.id);
+            }
+          }}
+          style={styles.content}
+        >
+          {SIDE_TABS.map((tab) => (
+            <View key={tab.id} style={{ width: pagerWidth }}>
+              <ScrollView contentContainerStyle={styles.contentContainer}>
+                {renderContent(tab.id)}
+              </ScrollView>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
 
       <BackgroundPicker
         visible={showBackgroundPicker}
@@ -2280,7 +2284,7 @@ const styles = StyleSheet.create({
   },
   bodyCompact: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
     paddingBottom: 16,
     gap: 12,
   },
@@ -2292,11 +2296,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   sideTabsRowWrap: {
-    maxHeight: 70,
+    maxHeight: 76,
   },
   sideTabsRow: {
-    gap: 10,
-    paddingBottom: 8,
+    gap: 12,
+    paddingBottom: 10,
     alignItems: 'center',
   },
   sideTab: {
@@ -2313,14 +2317,14 @@ const styles = StyleSheet.create({
   sideTabCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: theme.colors.surface,
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceSubtle,
   },
   sideTabCompactActive: {
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.borderStrong,
   },
@@ -2336,18 +2340,18 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   sideTabIconCompact: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: theme.colors.base,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   sideTabLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: theme.colors.textSubtle,
   },
   sideTabLabelActive: {
@@ -2358,6 +2362,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 24,
+    paddingHorizontal: 12,
   },
   homeTabRow: {
     flexDirection: 'row',
