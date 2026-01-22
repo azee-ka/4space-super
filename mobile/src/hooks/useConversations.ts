@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { Conversation, Message, User } from '../types';
 
@@ -292,25 +292,36 @@ export const useConversation = (conversationId: string, userId: string) => {
   });
 };
 
-export const useMessages = (conversationId: string) => {
-  return useQuery({
+export const useMessages = (conversationId: string, pageSize = 30) => {
+  return useInfiniteQuery({
     queryKey: ['messages', conversationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async ({ pageParam }: { pageParam?: string }) => {
+      let query = supabase
         .from('messages')
         .select(
           '*, sender:profiles(id, username, display_name, avatar_url), reactions:message_reactions(id, message_id, emoji, user_id, created_at)'
         )
         .eq('conversation_id', conversationId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true })
-        .limit(100);
+        .order('created_at', { ascending: false })
+        .limit(pageSize);
 
+      if (pageParam) {
+        query = query.lt('created_at', pageParam);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       return (data || []).map((msg: any) => normalizeMessage(msg)) as Message[];
     },
     enabled: !!conversationId,
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage || lastPage.length === 0) return undefined;
+      if (lastPage.length < pageSize) return undefined;
+      return lastPage[lastPage.length - 1]?.created_at;
+    },
   });
 };
 

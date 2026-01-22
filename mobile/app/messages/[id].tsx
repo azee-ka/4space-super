@@ -14,6 +14,7 @@ import {
   NativeScrollEvent,
   Share,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -70,12 +71,18 @@ export default function ChatScreen() {
 
   const queryClient = useQueryClient();
   const { data: conversation } = useConversation(conversationId || '', user?.id || '');
-  const { data: messages, isLoading, error: messagesError } = useMessages(conversationId || '');
+  const {
+    data: messagePages,
+    isLoading,
+    error: messagesError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useMessages(conversationId || '');
   const sendMessageMutation = useSendMessage();
   const addReactionMutation = useAddReaction();
   const flatListRef = useRef<FlatList>(null);
   const typingChannelRef = useRef<any>(null);
-  const didInitialScrollRef = useRef(false);
 
   const [showActions, setShowActions] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -124,8 +131,13 @@ export default function ChatScreen() {
   const pinnedMessageId = conversationId ? pinnedMessages[conversationId] : null;
   const savedMessageIds = conversationId ? savedMessages[conversationId] || [] : [];
 
+  const messages = useMemo(
+    () => messagePages?.pages.flat() ?? [],
+    [messagePages]
+  );
+
   const displayMessages = useMemo(() => {
-    if (!messages) return [];
+    if (!messages.length) return [];
     const query = searchQuery.trim().toLowerCase();
     if (!searchOpen || !query) return messages;
 
@@ -135,24 +147,15 @@ export default function ChatScreen() {
     });
   }, [messages, searchOpen, searchQuery]);
 
+  const renderedMessages = useMemo(
+    () => displayMessages,
+    [displayMessages]
+  );
+
   const pinnedMessage = useMemo(() => {
-    if (!pinnedMessageId || !messages) return null;
+    if (!pinnedMessageId || !messages.length) return null;
     return messages.find((msg) => msg.id === pinnedMessageId) || null;
   }, [messages, pinnedMessageId]);
-
-  useEffect(() => {
-    if (!conversationId) return;
-    didInitialScrollRef.current = false;
-  }, [conversationId]);
-
-  useEffect(() => {
-    if (messages && messages.length > 0 && !didInitialScrollRef.current) {
-      didInitialScrollRef.current = true;
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 0);
-    }
-  }, [messages?.length]);
 
 
   useEffect(() => {
@@ -315,17 +318,19 @@ export default function ChatScreen() {
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
-    setShowJump(distanceFromBottom > 140);
+    const distanceFromBottom = contentOffset.y;
+    const distanceFromTop = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    const shouldShow = distanceFromBottom > 140 && distanceFromTop > 0;
+    setShowJump(shouldShow);
   };
 
   const scrollToBottom = () => {
-    flatListRef.current?.scrollToEnd({ animated: true });
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   const scrollToPinned = () => {
-    if (!pinnedMessageId || !messages) return;
-    const index = messages.findIndex((msg) => msg.id === pinnedMessageId);
+    if (!pinnedMessageId || !messages.length) return;
+    const index = renderedMessages.findIndex((msg) => msg.id === pinnedMessageId);
     if (index < 0) return;
 
     flatListRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
@@ -336,7 +341,7 @@ export default function ChatScreen() {
 
   const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.sender_id === user?.id;
-    const prevMessage = index > 0 && displayMessages ? displayMessages[index - 1] : null;
+    const prevMessage = renderedMessages ? renderedMessages[index + 1] : null;
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
@@ -458,7 +463,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, displayMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -571,17 +576,31 @@ export default function ChatScreen() {
 
           <FlatList
             ref={flatListRef}
-            data={displayMessages}
+            data={renderedMessages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
             contentContainerStyle={styles.messagesList}
+            inverted
             onScroll={handleScroll}
             scrollEventThrottle={16}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.2}
             onScrollToIndexFailed={({ index }) => {
               setTimeout(() => {
                 flatListRef.current?.scrollToIndex({ index, animated: true });
               }, 150);
             }}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View style={styles.paginationLoader}>
+                  <ActivityIndicator size="small" color={theme.colors.textSubtle} />
+                </View>
+              ) : null
+            }
           />
 
           {typingIndicatorsEnabled && conversationTypingUsers.length > 0 && (
@@ -969,6 +988,10 @@ const styles = StyleSheet.create({
   messagesList: {
     padding: 16,
     paddingBottom: 24,
+  },
+  paginationLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   dateSeparator: {
     alignItems: 'center',
