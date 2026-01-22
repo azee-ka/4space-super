@@ -2837,7 +2837,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   backgroundPreviewImage: {
-    resizeMode: 'cover',
+    resizeMode: 'contain',
+    backgroundColor: theme.colors.surface,
   },
   backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
