@@ -4,19 +4,31 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { ChatBackgroundId } from '../styles/chatBackgrounds';
 
 interface ChatBackgroundState {
-  backgroundId: ChatBackgroundId;
-  customBackgroundUri?: string | null;
-  setBackgroundId: (backgroundId: ChatBackgroundId) => void;
-  setCustomBackgroundUri: (uri: string | null) => void;
+  backgroundByConversation: Record<string, ChatBackgroundId | undefined>;
+  customBackgroundUriByConversation: Record<string, string | null | undefined>;
+  setBackgroundId: (conversationId: string, backgroundId: ChatBackgroundId) => void;
+  setCustomBackgroundUri: (conversationId: string, uri: string | null) => void;
 }
 
 export const useChatBackgroundStore = create<ChatBackgroundState>()(
   persist(
     (set) => ({
-      backgroundId: 'void',
-      customBackgroundUri: null,
-      setBackgroundId: (backgroundId) => set({ backgroundId }),
-      setCustomBackgroundUri: (uri) => set({ customBackgroundUri: uri }),
+      backgroundByConversation: {},
+      customBackgroundUriByConversation: {},
+      setBackgroundId: (conversationId, backgroundId) =>
+        set((state) => ({
+          backgroundByConversation: {
+            ...state.backgroundByConversation,
+            [conversationId]: backgroundId,
+          },
+        })),
+      setCustomBackgroundUri: (conversationId, uri) =>
+        set((state) => ({
+          customBackgroundUriByConversation: {
+            ...state.customBackgroundUriByConversation,
+            [conversationId]: uri,
+          },
+        })),
     }),
     {
       name: 'chat-background',

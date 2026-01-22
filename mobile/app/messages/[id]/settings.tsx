@@ -247,7 +247,14 @@ export default function ChatSettingsScreen() {
   const { data: conversation } = useConversation(conversationId || '', user?.id || '');
   const { accentColor, setAccentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
-  const { backgroundId, setBackgroundId, customBackgroundUri, setCustomBackgroundUri } = useChatBackgroundStore();
+  const {
+    backgroundByConversation,
+    customBackgroundUriByConversation,
+    setBackgroundId,
+    setCustomBackgroundUri,
+  } = useChatBackgroundStore();
+  const backgroundId = conversationId ? backgroundByConversation[conversationId] || 'void' : 'void';
+  const customBackgroundUri = conversationId ? customBackgroundUriByConversation[conversationId] : null;
   const { width } = useWindowDimensions();
   const isCompact = width < 380;
   const [activeTab, setActiveTab] = useState<SideTabId>('home');
@@ -500,12 +507,13 @@ export default function ChatSettingsScreen() {
 
   useEffect(() => {
     if (activeThemeTab !== 'custom') return;
+    if (!conversationId) return;
     if (customBackgroundUri) {
-      setBackgroundId('custom-photo');
+      setBackgroundId(conversationId, 'custom-photo');
       return;
     }
     if (backgroundId === 'custom-photo') {
-      setBackgroundId('void');
+      setBackgroundId(conversationId, 'void');
     }
     if (
       !conversationCustomization?.sentBubbleColor &&
@@ -550,20 +558,23 @@ export default function ChatSettingsScreen() {
       quality: 0.9,
     });
     if (!result.canceled && result.assets[0]?.uri) {
-      setCustomBackgroundUri(result.assets[0].uri);
-      setBackgroundId('custom-photo');
+      if (!conversationId) return;
+      setCustomBackgroundUri(conversationId, result.assets[0].uri);
+      setBackgroundId(conversationId, 'custom-photo');
     }
   };
 
   const handleClearCustomBackground = () => {
-    setCustomBackgroundUri(null);
+    if (!conversationId) return;
+    setCustomBackgroundUri(conversationId, null);
     if (backgroundId === 'custom-photo') {
-      setBackgroundId('void');
+      setBackgroundId(conversationId, 'void');
     }
   };
 
   const applyCustomDefaults = () => {
-    setBackgroundId('void');
+    if (!conversationId) return;
+    setBackgroundId(conversationId, 'void');
     setBubbleStyle(conversationId, 'solid');
     setBubbleColors(conversationId, {
       sent: customDefaults.sent,
@@ -995,7 +1006,8 @@ export default function ChatSettingsScreen() {
                 style={styles.syncButton}
                 onPress={() => {
                   if (matchingBackgroundId) {
-                    setBackgroundId(matchingBackgroundId as any);
+                    if (!conversationId) return;
+                    setBackgroundId(conversationId, matchingBackgroundId as any);
                   }
                 }}
               >
@@ -1053,7 +1065,8 @@ export default function ChatSettingsScreen() {
                       key={preset.id}
                       style={[styles.backgroundCard, isActive && styles.backgroundCardActive]}
                       onPress={() => {
-                        setBackgroundId(preset.id);
+                        if (!conversationId) return;
+                        setBackgroundId(conversationId, preset.id);
                         if (!bubblePreset) return;
                         if (bubblePreset.style === 'gradient') {
                           setBubbleStyle(conversationId, 'gradient');

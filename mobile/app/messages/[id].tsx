@@ -21,6 +21,7 @@ import {
   Easing,
   Keyboard,
   Pressable,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -45,6 +46,8 @@ import { BlurView } from 'expo-blur';
 import { theme } from '../../src/styles/theme';
 import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
 import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
+import { useChatBackgroundStore } from '../../src/store/chatBackgroundStore';
+import { CHAT_BACKGROUNDS } from '../../src/styles/chatBackgrounds';
 
 
 export default function ChatScreen() {
@@ -114,7 +117,6 @@ export default function ChatScreen() {
     { key: 'extension', label: 'Extensions', icon: 'extensions-puzzle', tint: '#38bdf8' },
   ];
 
-  // Select raw data instead of computed methods to avoid infinite loops
   const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
   const chatTheme = useMemo(() => {
     if (!conversationId) {
@@ -129,16 +131,65 @@ export default function ChatScreen() {
       sentTextColor: customization?.sentTextColor || base.sentTextColor,
       receivedTextColor: customization?.receivedTextColor || base.receivedTextColor,
       bubbleRadius: customization?.bubbleRadius ?? base.bubbleRadius,
+      bubbleStyle: customization?.bubbleStyle || base.bubbleStyle || 'solid',
+      sentBubbleGradient: customization?.sentBubbleGradient ?? base.sentBubbleGradient,
+      receivedBubbleGradient: customization?.receivedBubbleGradient ?? base.receivedBubbleGradient,
       messageTextSize: customization?.messageTextSize ?? 15,
       density: customization?.density || base.density || 'cozy' as const,
     };
   }, [conversationId, conversationCustomizations]);
-
   const showCallControls = useMemo(() => {
     if (!conversationId) return true;
     const customization = conversationCustomizations[conversationId];
     return customization?.enableCallControls !== false;
   }, [conversationId, conversationCustomizations]);
+  const { backgroundByConversation, customBackgroundUriByConversation } = useChatBackgroundStore();
+  const backgroundId = conversationId ? backgroundByConversation[conversationId] || 'void' : 'void';
+  const customBackgroundUri = conversationId ? customBackgroundUriByConversation[conversationId] : null;
+  const backgroundPreset = useMemo(
+    () => CHAT_BACKGROUNDS.find((preset) => preset.id === backgroundId),
+    [backgroundId]
+  );
+  const backgroundLayer = useMemo(() => {
+    const overlayStyle = backgroundPreset
+      ? { backgroundColor: backgroundPreset.overlayColor, opacity: backgroundPreset.overlayOpacity }
+      : undefined;
+
+    if (backgroundId === 'custom-photo' && customBackgroundUri) {
+      return (
+        <ImageBackground
+          source={{ uri: customBackgroundUri }}
+          style={styles.backgroundFill}
+          imageStyle={styles.backgroundImage}
+        >
+          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
+        </ImageBackground>
+      );
+    }
+
+    if (backgroundPreset?.type === 'image' && backgroundPreset.image) {
+      return (
+        <ImageBackground source={backgroundPreset.image} style={styles.backgroundFill} imageStyle={styles.backgroundImage}>
+          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
+        </ImageBackground>
+      );
+    }
+
+    if (backgroundPreset?.type === 'gradient' && backgroundPreset.colors) {
+      return (
+        <LinearGradient colors={backgroundPreset.colors} style={styles.backgroundFill}>
+          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
+        </LinearGradient>
+      );
+    }
+
+    const solidColor = backgroundPreset?.color || chatTheme.backgroundColor;
+    return (
+      <View style={[styles.backgroundFill, { backgroundColor: solidColor }]}>
+        {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
+      </View>
+    );
+  }, [backgroundId, backgroundPreset, customBackgroundUri, chatTheme.backgroundColor]);
   const messageSpacing =
     chatTheme.density === 'compact'
       ? 4
@@ -648,11 +699,25 @@ export default function ChatScreen() {
 
     const shouldShowMeta = showTimestamps || isPinned || isSaved || (isOwn && readReceiptsEnabled);
 
-    const InlineMeta = () =>
-      shouldShowMeta ? (
-        <View style={[styles.inlineMeta, isOwn && styles.inlineMetaOwn]}>
+  const InlineMeta = () =>
+    shouldShowMeta ? (
+        <View
+          style={[
+            styles.inlineMeta,
+            isOwn && styles.inlineMetaOwn,
+            !isOwn && { backgroundColor: `${chatTheme.receivedBubbleColor}22` },
+          ]}
+        >
           {showTimestamps && (
-            <Text style={[styles.timestampInline, isOwn && styles.timestampInlineOwn]}>{timeLabel}</Text>
+            <Text
+              style={[
+                styles.timestampInline,
+                isOwn && styles.timestampInlineOwn,
+                !isOwn && { color: bubbleTextColor, opacity: 0.7 },
+              ]}
+            >
+              {timeLabel}
+            </Text>
           )}
           {isOwn && readReceiptsEnabled && (
             <View style={styles.readReceiptsInside}>
@@ -880,7 +945,10 @@ export default function ChatScreen() {
         : '';
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: 'transparent' }]} edges={['top']}>
+        <View pointerEvents="none" style={styles.themeLayer}>
+          {backgroundLayer}
+        </View>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -1190,6 +1258,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   themeLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundImage: {
+    resizeMode: 'cover',
+  },
+  backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
   header: {
@@ -1592,16 +1669,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   textInputWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: 12,
     minHeight: 40,
     justifyContent: 'center',
@@ -1623,9 +1700,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   sendButtonInactive: {
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   modalOverlay: {
     flex: 1,
