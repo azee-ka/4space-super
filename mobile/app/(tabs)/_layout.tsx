@@ -66,7 +66,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="spaces/index"
+        name="spaces"
         options={{
           title: 'Spaces',
           tabBarLabel: ({ focused }) => (
@@ -99,13 +99,6 @@ export default function TabsLayout() {
               color={focused ? tabColors.settings.active : inactiveColor}
             />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="spaces/[id]"
-        options={{
-          tabBarStyle: { display: 'none' },
-          tabBarButton: () => null,
         }}
       />
     </Tabs>
