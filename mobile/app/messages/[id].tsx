@@ -17,6 +17,9 @@ import {
   ActivityIndicator,
   Dimensions,
   Linking,
+  Animated,
+  Easing,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -71,6 +74,7 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState('');
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const inputTranslateAnim = useRef(new Animated.Value(0)).current;
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showJump, setShowJump] = useState(false);
@@ -194,6 +198,39 @@ export default function ChatScreen() {
     Alert.alert('Messages error', 'Failed to load messages. Pull to refresh or try again.');
   }, [messagesError]);
 
+
+  useEffect(() => {
+    const keyboardShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        // Position input just above keyboard - move up by keyboard height minus small offset
+        const offset = Platform.OS === 'ios' ? 25 : 0; // Small gap above keyboard
+        Animated.timing(inputTranslateAnim, {
+          toValue: -(e.endCoordinates.height - offset),
+          duration: e.duration - 150 || 250,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          useNativeDriver: true,
+        }).start();
+      }
+    );
+
+    const keyboardHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        Animated.timing(inputTranslateAnim, {
+          toValue: 0,
+          duration: e.duration - 150 || 250,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          useNativeDriver: true,
+        }).start();
+      }
+    );
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, [inputTranslateAnim]);
 
   const handleSendMessage = useCallback(async () => {
     if (!messageText.trim() || !user || !conversationId) return;
@@ -634,11 +671,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? -20 : 0}
-      >
+        <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={22} color={theme.colors.textPrimary} />
@@ -731,7 +764,7 @@ export default function ChatScreen() {
             data={renderedMessages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
-            contentContainerStyle={{ padding: 16, paddingBottom: 12 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 0 }}
             style={{ flex: 1 }}
             inverted
             onScroll={handleScroll}
@@ -784,7 +817,7 @@ export default function ChatScreen() {
             </TouchableOpacity>
           )}
 
-          <View style={styles.inputContainer}>
+          <Animated.View style={[styles.inputContainer, { transform: [{ translateY: inputTranslateAnim }] }]}>
 
             <View style={styles.inputRow}>
               <TouchableOpacity
@@ -823,9 +856,9 @@ export default function ChatScreen() {
               </TouchableOpacity>
             </View>
 
-          </View>
+          </Animated.View>
 
-        </KeyboardAvoidingView>
+        </View>
 
     <BackgroundPicker
         visible={showBackgroundPicker}
@@ -1185,6 +1218,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: theme.colors.base,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
