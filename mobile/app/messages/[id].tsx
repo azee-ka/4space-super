@@ -81,6 +81,7 @@ export default function ChatScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.82, 360);
 
   const currentSettings = conversationId
     ? conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
@@ -451,7 +452,18 @@ export default function ChatScreen() {
   const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.sender_id === user?.id;
     const prevMessage = renderedMessages ? renderedMessages[index + 1] : null;
-    const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
+    const nextMessage = renderedMessages ? renderedMessages[index - 1] : null;
+
+    const withinCluster = (a?: Message | null, b?: Message | null) => {
+      if (!a || !b) return false;
+      const diff = Math.abs(new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      return diff < 6 * 60 * 1000; // 6 minutes cluster window
+    };
+
+    const groupedWithPrev = prevMessage && prevMessage.sender_id === item.sender_id && withinCluster(prevMessage, item);
+    const groupedWithNext = nextMessage && nextMessage.sender_id === item.sender_id && withinCluster(nextMessage, item);
+
+    const showAvatar = !groupedWithPrev && !isOwn;
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
     const isSaved = savedMessageIds.includes(item.id);
@@ -466,16 +478,47 @@ export default function ChatScreen() {
 
     const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
     const currentDate = new Date(item.created_at);
-    const showDateSeparator =
-      !prevDate ||
-      prevDate.toDateString() !== currentDate.toDateString();
+    const showDateSeparator = !prevDate || prevDate.toDateString() !== currentDate.toDateString();
+    const isToday = (() => {
+      const today = new Date();
+      return currentDate.toDateString() === today.toDateString();
+    })();
+    const isYesterday = (() => {
+      const today = new Date();
+      const y = new Date(today);
+      y.setDate(today.getDate() - 1);
+      return currentDate.toDateString() === y.toDateString();
+    })();
+    const dateLabel = isToday
+      ? 'Today'
+      : isYesterday
+        ? 'Yesterday'
+        : currentDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: currentDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined });
+    const timeLabel = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const baseRadius = chatTheme.bubbleRadius;
+    const bubbleRadius = isOwn
+      ? {
+          borderTopLeftRadius: baseRadius,
+          borderTopRightRadius: groupedWithPrev ? 6 : baseRadius,
+          borderBottomLeftRadius: groupedWithNext ? 6 : baseRadius,
+          borderBottomRightRadius: baseRadius,
+        }
+      : {
+          borderTopLeftRadius: groupedWithPrev ? 6 : baseRadius,
+          borderTopRightRadius: baseRadius,
+          borderBottomLeftRadius: baseRadius,
+          borderBottomRightRadius: groupedWithNext ? 6 : baseRadius,
+        };
+
+    const containerMargin = groupedWithPrev ? messageSpacing / 3 : messageSpacing;
 
     return (
       <View>
         {showDateSeparator && (
           <View style={styles.dateSeparator}>
             <Text style={styles.dateSeparatorText}>
-              {currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+              {dateLabel} · {timeLabel}
             </Text>
           </View>
         )}
@@ -485,15 +528,23 @@ export default function ChatScreen() {
             setSelectedMessage(item);
             setShowActions(true);
           }}
-          style={[styles.messageContainer, { marginBottom: messageSpacing }, isOwn && styles.messageContainerOwn]}
+          style={[
+            styles.messageContainer,
+            { marginBottom: containerMargin },
+            isOwn && styles.messageContainerOwn,
+          ]}
         >
-          {!isOwn && showAvatar && (
-            <View style={styles.avatarRow}>
-              <Avatar
-                uri={item.sender.avatar_url}
-                name={item.sender.display_name || item.sender.username}
-                size="sm"
-              />
+          {!isOwn && (
+            <View style={styles.avatarColumn}>
+              {showAvatar ? (
+                <Avatar
+                  uri={item.sender.avatar_url}
+                  name={item.sender.display_name || item.sender.username}
+                  size="sm"
+                />
+              ) : (
+                <View style={styles.avatarSpacer} />
+              )}
             </View>
           )}
 
@@ -521,7 +572,8 @@ export default function ChatScreen() {
                 style={[
                   styles.messageBubble,
                   isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
-                  { borderRadius: chatTheme.bubbleRadius },
+                  bubbleRadius,
+                  { maxWidth: maxBubbleWidth },
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -551,11 +603,40 @@ export default function ChatScreen() {
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'text' && (
-                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
+                {item.type === 'image' ? null : item.type === 'file' ? null : (
+                  <Text
+                    style={[
+                      styles.messageText,
+                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                    ]}
+                  >
                     {displayContent}
                   </Text>
                 )}
+                <View style={[styles.messageMeta, isOwn && styles.messageMetaOwn]}>
+                  <View style={styles.messageFlagsInside}>
+                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
+                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+                  </View>
+                  <Text style={[styles.timestampInside, isOwn && styles.timestampInsideOwn]}>{timeLabel}</Text>
+                  {isOwn && readReceiptsEnabled && (
+                    <View style={styles.readReceiptsInside}>
+                      <Ionicons
+                        name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                        size={12}
+                        color={item.read_by.length > 1 ? '#38bdf8' : 'rgba(255,255,255,0.7)'}
+                      />
+                      {item.read_by.length > 1 && (
+                        <Ionicons
+                          name="checkmark-done"
+                          size={12}
+                          color="#38bdf8"
+                          style={{ marginLeft: -6 }}
+                        />
+                      )}
+                    </View>
+                  )}
+                </View>
               </LinearGradient>
             ) : (
               <View
@@ -563,7 +644,8 @@ export default function ChatScreen() {
                   styles.messageBubble,
                   isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
                   bubbleColorStyle,
-                  { borderRadius: chatTheme.bubbleRadius },
+                  bubbleRadius,
+                  { maxWidth: maxBubbleWidth },
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -593,40 +675,42 @@ export default function ChatScreen() {
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'text' && (
-                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
+                {item.type === 'image' ? null : item.type === 'file' ? null : (
+                  <Text
+                    style={[
+                      styles.messageText,
+                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                    ]}
+                  >
                     {displayContent}
                   </Text>
                 )}
-              </View>
-            )}
-
-            <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
-              <View style={styles.messageFlags}>
-                {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
-                {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
-              </View>
-              <Text style={[styles.timestamp, isOwn && styles.timestampOwn]}>
-                {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-              {isOwn && readReceiptsEnabled && (
-                <View style={styles.readReceipts}>
-                  <Ionicons
-                    name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
-                    size={12}
-                    color={item.read_by.length > 1 ? '#34d399' : theme.colors.textMuted}
-                  />
-                  {item.read_by.length > 1 && (
-                    <Ionicons
-                      name="checkmark-done"
-                      size={12}
-                      color="#34d399"
-                      style={{ marginLeft: -6 }}
-                    />
+                <View style={[styles.messageMeta, isOwn && styles.messageMetaOwn]}>
+                  <View style={styles.messageFlagsInside}>
+                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
+                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+                  </View>
+                  <Text style={[styles.timestampInside, isOwn && styles.timestampInsideOwn]}>{timeLabel}</Text>
+                  {isOwn && readReceiptsEnabled && (
+                    <View style={styles.readReceiptsInside}>
+                      <Ionicons
+                        name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                        size={12}
+                        color={item.read_by.length > 1 ? '#38bdf8' : theme.colors.textMuted}
+                      />
+                      {item.read_by.length > 1 && (
+                        <Ionicons
+                          name="checkmark-done"
+                          size={12}
+                          color="#38bdf8"
+                          style={{ marginLeft: -6 }}
+                        />
+                      )}
+                    </View>
                   )}
                 </View>
-              )}
-            </View>
+              </View>
+            )}
 
               {hasReactions && (
                 <View style={styles.reactionsContainer}>
@@ -652,7 +736,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -1034,6 +1118,7 @@ const styles = StyleSheet.create({
   },
   messageRow: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   avatarRow: {
     marginBottom: 4,
@@ -1043,7 +1128,8 @@ const styles = StyleSheet.create({
     width: 40,
   },
   messageBubbleContainer: {
-    flex: 1,
+    flexShrink: 1,
+    maxWidth: '90%',
   },
   messageBubbleContainerOwn: {
     alignItems: 'flex-end',
@@ -1056,6 +1142,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderLeftWidth: 3,
     borderLeftColor: theme.colors.accent,
+  },
+  avatarColumn: {
+    width: 32,
+    alignItems: 'center',
+    marginRight: 6,
   },
   replyLine: {
     width: 3,
@@ -1080,12 +1171,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 12,
     paddingHorizontal: 14,
-    maxWidth: 280,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    maxWidth: 320,
   },
   messageBubbleOwn: {
     borderTopLeftRadius: 18,
@@ -1108,6 +1194,35 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 20,
+    flexShrink: 1,
+  },
+  messageMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    alignSelf: 'flex-end',
+  },
+  messageMetaOwn: {
+    alignSelf: 'flex-end',
+  },
+  timestampInside: {
+    fontSize: 11,
+    color: 'rgba(30,41,59,0.6)',
+  },
+  timestampInsideOwn: {
+    color: 'rgba(248,250,252,0.8)',
+  },
+  readReceiptsInside: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 2,
+  },
+  messageFlagsInside: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginRight: 2,
   },
   messageImage: {
     width: 200,
