@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CHAT_BACKGROUNDS } from '../../styles/chatBackgrounds';
 import { useChatBackgroundStore } from '../../store/chatBackgroundStore';
 import { theme } from '../../styles/theme';
@@ -57,6 +58,15 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ visible, onC
                         ]}
                       />
                     </ImageBackground>
+                  ) : preset.type === 'gradient' && preset.colors ? (
+                    <LinearGradient colors={preset.colors} style={styles.preview}>
+                      <View
+                        style={[
+                          styles.previewOverlay,
+                          { backgroundColor: preset.overlayColor, opacity: preset.overlayOpacity },
+                        ]}
+                      />
+                    </LinearGradient>
                   ) : (
                     <View style={[styles.preview, { backgroundColor: preset.color || theme.colors.base }]} />
                   )}

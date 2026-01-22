@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../src/store/authStore';
 import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../src/store/chatStore';
 import { useMessagePreferencesStore } from '../../src/store/messagePreferencesStore';
@@ -113,7 +114,16 @@ export default function ChatScreen() {
     }
     const customization = conversationCustomizations[conversationId];
     const base = getChatThemeById(customization?.themeId);
-    return { ...base, density: customization?.density || base.density || 'cozy' as const };
+    return {
+      ...base,
+      sentBubbleColor: customization?.sentBubbleColor || base.sentBubbleColor,
+      receivedBubbleColor: customization?.receivedBubbleColor || base.receivedBubbleColor,
+      sentTextColor: customization?.sentTextColor || base.sentTextColor,
+      receivedTextColor: customization?.receivedTextColor || base.receivedTextColor,
+      bubbleRadius: customization?.bubbleRadius ?? base.bubbleRadius,
+      messageTextSize: customization?.messageTextSize ?? 15,
+      density: customization?.density || base.density || 'cozy' as const,
+    };
   }, [conversationId, conversationCustomizations]);
 
   const showCallControls = useMemo(() => {
@@ -127,6 +137,8 @@ export default function ChatScreen() {
       : chatTheme.density === 'spacious'
         ? 18
         : 12;
+  const messageFontSize = chatTheme.messageTextSize ?? 15;
+  const messageLineHeight = Math.round(messageFontSize * 1.35);
 
   const pinnedMessageId = conversationId ? pinnedMessages[conversationId] : null;
   const savedMessageIds = conversationId ? savedMessages[conversationId] || [] : [];
@@ -350,6 +362,11 @@ export default function ChatScreen() {
     const isPinned = pinnedMessageId === item.id;
     const bubbleColorStyle = { backgroundColor: isOwn ? chatTheme.sentBubbleColor : chatTheme.receivedBubbleColor };
     const bubbleTextColor = isOwn ? chatTheme.sentTextColor : chatTheme.receivedTextColor;
+    const bubbleGradient = isOwn ? chatTheme.sentBubbleGradient : chatTheme.receivedBubbleGradient;
+    const useGradient =
+      chatTheme.bubbleStyle === 'gradient' &&
+      Array.isArray(bubbleGradient) &&
+      bubbleGradient.length === 2;
 
     const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
     const currentDate = new Date(item.created_at);
@@ -399,14 +416,17 @@ export default function ChatScreen() {
                 </View>
               )}
 
-            <View
-              style={[
-                styles.messageBubble,
-                isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
-                bubbleColorStyle,
-                { borderRadius: chatTheme.bubbleRadius },
-              ]}
-            >
+            {useGradient ? (
+              <LinearGradient
+                colors={bubbleGradient as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.messageBubble,
+                  isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
+                  { borderRadius: chatTheme.bubbleRadius },
+                ]}
+              >
                 {!isOwn && showAvatar && (
                   <Text style={styles.senderName}>
                     {item.sender.display_name || item.sender.username}
@@ -417,7 +437,47 @@ export default function ChatScreen() {
                     Unsupported content
                   </Text>
                 ) : (
-                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>
+                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
+                    {displayContent}
+                  </Text>
+                )}
+                <View style={styles.messageFooter}>
+                  <View style={styles.messageFlags}>
+                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
+                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+                  </View>
+                  <Text style={[styles.timestamp, isOwn && styles.timestampOwn]}>
+                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  {isOwn && readReceiptsEnabled && (
+                    <Ionicons
+                      name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                      size={14}
+                      color={item.read_by.length > 1 ? theme.colors.accent : theme.colors.textMuted}
+                    />
+                  )}
+                </View>
+              </LinearGradient>
+            ) : (
+              <View
+                style={[
+                  styles.messageBubble,
+                  isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
+                  bubbleColorStyle,
+                  { borderRadius: chatTheme.bubbleRadius },
+                ]}
+              >
+                {!isOwn && showAvatar && (
+                  <Text style={styles.senderName}>
+                    {item.sender.display_name || item.sender.username}
+                  </Text>
+                )}
+                {showDebug ? (
+                  <Text style={styles.debugText}>
+                    Unsupported content
+                  </Text>
+                ) : (
+                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
                     {displayContent}
                   </Text>
                 )}
@@ -438,6 +498,7 @@ export default function ChatScreen() {
                   )}
                 </View>
               </View>
+            )}
 
               {hasReactions && (
                 <View style={styles.reactionsContainer}>

@@ -11,6 +11,9 @@ export interface ChatThemePreset {
   receivedTextColor: string;
   bubbleRadius: number;
   density: Density;
+  bubbleStyle?: 'solid' | 'gradient';
+  sentBubbleGradient?: [string, string];
+  receivedBubbleGradient?: [string, string];
 }
 
 export const CHAT_THEME_PRESETS: ChatThemePreset[] = [
