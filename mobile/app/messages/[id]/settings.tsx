@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   useWindowDimensions,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,6 +22,8 @@ import { ACCENT_OPTIONS, getAccentColorHex } from '../../../src/utils/themeUtils
 import { theme } from '../../../src/styles/theme';
 import { BackgroundPicker } from '../../../src/components/chat';
 import { CHAT_THEME_PRESETS, DEFAULT_CHAT_THEME, getChatThemeById } from '../../../src/styles/chatThemes';
+import { CHAT_BACKGROUNDS } from '../../../src/styles/chatBackgrounds';
+import { useChatBackgroundStore } from '../../../src/store/chatBackgroundStore';
 import { useChatCustomizationStore } from '../../../src/store/chatCustomizationStore';
 import { useMessagePreferencesStore } from '../../../src/store/messagePreferencesStore';
 
@@ -62,6 +65,7 @@ export default function ChatSettingsScreen() {
   const { data: conversation } = useConversation(conversationId || '', user?.id || '');
   const { accentColor, setAccentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
+  const { backgroundId, setBackgroundId } = useChatBackgroundStore();
   const { width } = useWindowDimensions();
   const isCompact = width < 380;
   const [activeTab, setActiveTab] = useState<SideTabId>('home');
@@ -81,6 +85,24 @@ export default function ChatSettingsScreen() {
     () => messagePages?.pages.flat() ?? [],
     [messagePages]
   );
+
+  const totalCharacters = useMemo(
+    () => messageList.reduce((sum, msg) => sum + (msg.content?.length || 0), 0),
+    [messageList]
+  );
+  const averageLength = messageList.length ? Math.round(totalCharacters / messageList.length) : 0;
+  const totalReactions = useMemo(
+    () => messageList.reduce((sum, msg) => sum + (msg.reactions?.length || 0), 0),
+    [messageList]
+  );
+  const newestMessageAt = messageList[0]?.created_at;
+  const oldestMessageAt = messageList[messageList.length - 1]?.created_at;
+  const messageSpanDays = useMemo(() => {
+    if (!newestMessageAt || !oldestMessageAt) return 0;
+    const start = new Date(oldestMessageAt).getTime();
+    const end = new Date(newestMessageAt).getTime();
+    return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+  }, [newestMessageAt, oldestMessageAt]);
 
   const mediaItems = useMemo(
     () => messageList.filter((msg) => Boolean(msg.file_url) || msg.type !== 'text'),
@@ -189,6 +211,38 @@ export default function ChatSettingsScreen() {
           <Text style={styles.metricValue}>{linkItems.length}</Text>
           <Text style={styles.metricHint}>Shared URLs</Text>
         </View>
+        <View style={[styles.metricCard, styles.metricCardRose]}>
+          <View style={styles.metricHeader}>
+            <Ionicons name="bookmark-outline" size={16} color="#f59e0b" />
+            <Text style={styles.metricLabel}>Kept</Text>
+          </View>
+          <Text style={styles.metricValue}>{savedItems.length}</Text>
+          <Text style={styles.metricHint}>Saved moments</Text>
+        </View>
+        <View style={[styles.metricCard, styles.metricCardIndigo]}>
+          <View style={styles.metricHeader}>
+            <Ionicons name="happy-outline" size={16} color="#38bdf8" />
+            <Text style={styles.metricLabel}>Reactions</Text>
+          </View>
+          <Text style={styles.metricValue}>{totalReactions}</Text>
+          <Text style={styles.metricHint}>Emoji count</Text>
+        </View>
+        <View style={[styles.metricCard, styles.metricCardAmber]}>
+          <View style={styles.metricHeader}>
+            <Ionicons name="text-outline" size={16} color="#fbbf24" />
+            <Text style={styles.metricLabel}>Avg length</Text>
+          </View>
+          <Text style={styles.metricValue}>{averageLength}</Text>
+          <Text style={styles.metricHint}>Characters</Text>
+        </View>
+        <View style={[styles.metricCard, styles.metricCardTeal]}>
+          <View style={styles.metricHeader}>
+            <Ionicons name="calendar-outline" size={16} color="#14b8a6" />
+            <Text style={styles.metricLabel}>Span</Text>
+          </View>
+          <Text style={styles.metricValue}>{messageSpanDays}d</Text>
+          <Text style={styles.metricHint}>Conversation age</Text>
+        </View>
       </View>
 
       <View style={styles.analyticsCard}>
@@ -204,6 +258,31 @@ export default function ChatSettingsScreen() {
           <View style={styles.analyticsPill}>
             <Ionicons name="speedometer-outline" size={14} color="#f59e0b" />
             <Text style={styles.analyticsPillText}>Fast overview</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.timelineCard}>
+        <Text style={styles.analyticsTitle}>Timeline Highlights</Text>
+        <View style={styles.timelineRow}>
+          <Ionicons name="time-outline" size={16} color="#22d3ee" />
+          <View style={styles.timelineMeta}>
+            <Text style={styles.timelineLabel}>Newest message</Text>
+            <Text style={styles.timelineValue}>{newestMessageAt ? new Date(newestMessageAt).toLocaleString() : '—'}</Text>
+          </View>
+        </View>
+        <View style={styles.timelineRow}>
+          <Ionicons name="hourglass-outline" size={16} color="#a855f7" />
+          <View style={styles.timelineMeta}>
+            <Text style={styles.timelineLabel}>Oldest loaded</Text>
+            <Text style={styles.timelineValue}>{oldestMessageAt ? new Date(oldestMessageAt).toLocaleString() : '—'}</Text>
+          </View>
+        </View>
+        <View style={styles.timelineRow}>
+          <Ionicons name="pin-outline" size={16} color="#f43f5e" />
+          <View style={styles.timelineMeta}>
+            <Text style={styles.timelineLabel}>Pinned</Text>
+            <Text style={styles.timelineValue}>{pinnedMessage ? 'Pinned message ready' : 'No pin yet'}</Text>
           </View>
         </View>
       </View>
@@ -418,6 +497,36 @@ export default function ChatSettingsScreen() {
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Background Library</Text>
+      <View style={styles.backgroundGrid}>
+        {CHAT_BACKGROUNDS.map((preset) => {
+          const isActive = preset.id === backgroundId;
+          return (
+            <TouchableOpacity
+              key={preset.id}
+              style={[styles.backgroundCard, isActive && styles.backgroundCardActive]}
+              onPress={() => setBackgroundId(preset.id)}
+            >
+              {preset.type === 'image' && preset.image ? (
+                <ImageBackground source={preset.image} style={styles.backgroundPreview} imageStyle={styles.backgroundPreviewImage}>
+                  <View
+                    style={[
+                      styles.backgroundOverlay,
+                      { backgroundColor: preset.overlayColor, opacity: preset.overlayOpacity },
+                    ]}
+                  />
+                </ImageBackground>
+              ) : (
+                <View style={[styles.backgroundPreview, { backgroundColor: preset.color || theme.colors.base }]} />
+              )}
+              <Text style={[styles.backgroundLabel, isActive && styles.backgroundLabelActive]}>
+                {preset.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <Text style={styles.sectionTitle}>Density</Text>
       <View style={styles.sectionCard}>
         <Text style={styles.settingHint}>{densityOption.description}</Text>
@@ -469,66 +578,366 @@ export default function ChatSettingsScreen() {
       <View style={styles.sectionCard}>
         {[
           {
+            icon: 'checkmark-done-outline',
+            iconColor: '#22d3ee',
             label: 'Read receipts',
             hint: 'Let others know when you read messages',
             value: settings.readReceipts,
             onToggle: (value: boolean) => setConversationSettings(conversationId, { readReceipts: value }),
           },
           {
+            icon: 'chatbubble-ellipses-outline',
+            iconColor: '#a855f7',
             label: 'Typing indicators',
             hint: 'Show when you are typing',
             value: settings.typingIndicators,
             onToggle: (value: boolean) => setConversationSettings(conversationId, { typingIndicators: value }),
           },
           {
+            icon: 'notifications-outline',
+            iconColor: '#f97316',
             label: 'Mute notifications',
             hint: 'Silence alerts from this chat',
             value: settings.muteNotifications,
             onToggle: (value: boolean) => setConversationSettings(conversationId, { muteNotifications: value }),
           },
           {
+            icon: 'pin-outline',
+            iconColor: '#f43f5e',
             label: 'Pin conversation',
             hint: 'Keep this chat at the top of your inbox',
             value: settings.pinned,
             onToggle: (value: boolean) => setConversationSettings(conversationId, { pinned: value }),
           },
+          {
+            icon: 'at-outline',
+            iconColor: '#38bdf8',
+            label: 'Mention alerts',
+            hint: 'Notify only when you are mentioned',
+            value: settings.mentionAlerts,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { mentionAlerts: value }),
+          },
+          {
+            icon: 'sparkles-outline',
+            iconColor: '#34d399',
+            label: 'Haptic feedback',
+            hint: 'Subtle tap feedback on send and reactions',
+            value: settings.hapticFeedback,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { hapticFeedback: value }),
+          },
         ].map((item) => (
-          <View key={item.label} style={styles.settingRow}
-          >
-            <View>
-              <Text style={styles.settingLabel}>{item.label}</Text>
-              <Text style={styles.settingHint}>{item.hint}</Text>
+          <View key={item.label} style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: `${item.iconColor}1f` }]}>
+                <Ionicons name={item.icon as any} size={16} color={item.iconColor} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
             </View>
+            <View style={styles.settingRight}>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionTitle}>Automation & Intelligence</Text>
+      <View style={styles.sectionCard}>
+        {[
+          {
+            icon: 'bulb-outline',
+            iconColor: '#f59e0b',
+            label: 'Smart replies',
+            hint: 'Suggested responses based on conversation tone',
+            value: settings.smartReplies,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { smartReplies: value }),
+          },
+          {
+            icon: 'language-outline',
+            iconColor: '#22d3ee',
+            label: 'Auto translate',
+            hint: 'Instantly translate messages into your language',
+            value: settings.autoTranslate,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { autoTranslate: value }),
+          },
+          {
+            icon: 'link-outline',
+            iconColor: '#f97316',
+            label: 'Link previews',
+            hint: 'Show rich previews for shared links',
+            value: settings.linkPreviews,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { linkPreviews: value }),
+          },
+          {
+            icon: 'document-text-outline',
+            iconColor: '#a855f7',
+            label: 'Auto summaries',
+            hint: 'Generate quick summaries for long chats',
+            value: settings.autoSummaries,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { autoSummaries: value }),
+          },
+        ].map((item) => (
+          <View key={item.label} style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: `${item.iconColor}1f` }]}>
+                <Ionicons name={item.icon as any} size={16} color={item.iconColor} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
+            </View>
+            <View style={styles.settingRight}>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionTitle}>Retention & History</Text>
+      <View style={styles.sectionCard}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingLeft}>
+            <View style={[styles.settingIcon, { backgroundColor: 'rgba(249, 115, 22, 0.18)' }]}>
+              <Ionicons name="time-outline" size={16} color="#f97316" />
+            </View>
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Auto delete</Text>
+              <Text style={styles.settingHint}>Remove messages after a set time</Text>
+            </View>
+          </View>
+          <View style={styles.settingRight}>
             <Switch
-              value={item.value}
-              onValueChange={item.onToggle}
+              value={settings.autoDeleteEnabled}
+              onValueChange={(value) => setConversationSettings(conversationId, { autoDeleteEnabled: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
+          </View>
+        </View>
+        <View style={styles.optionRow}>
+          {[1, 7, 30, 90].map((days) => {
+            const isActive = settings.autoDeleteDays === days;
+            return (
+              <TouchableOpacity
+                key={days}
+                style={[styles.optionChip, isActive && styles.optionChipActive]}
+                onPress={() => setConversationSettings(conversationId, { autoDeleteDays: days })}
+              >
+                <Text style={[styles.optionText, isActive && styles.optionTextActive]}>{days}d</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.optionDivider} />
+        <Text style={styles.settingLabel}>Message history</Text>
+        <View style={styles.optionRow}>
+          {(['forever', '1y', '6m', '30d'] as const).map((option) => {
+            const isActive = settings.messageHistory === option;
+            return (
+              <TouchableOpacity
+                key={option}
+                style={[styles.optionChip, isActive && styles.optionChipActive]}
+                onPress={() => setConversationSettings(conversationId, { messageHistory: option })}
+              >
+                <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
+                  {option === 'forever' ? 'Forever' : option.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Media & Storage</Text>
+      <View style={styles.sectionCard}>
+        {[
+          {
+            icon: 'download-outline',
+            iconColor: '#22d3ee',
+            label: 'Auto download media',
+            hint: 'Download photos and files on Wi-Fi',
+            value: settings.mediaAutoDownload,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { mediaAutoDownload: value }),
+          },
+          {
+            icon: 'cloud-upload-outline',
+            iconColor: '#34d399',
+            label: 'High-quality uploads',
+            hint: 'Send images without compression',
+            value: settings.highQualityUploads,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { highQualityUploads: value }),
+          },
+          {
+            icon: 'save-outline',
+            iconColor: '#f59e0b',
+            label: 'Auto save media',
+            hint: 'Save media to your library automatically',
+            value: settings.autoSaveMedia,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { autoSaveMedia: value }),
+          },
+          {
+            icon: 'leaf-outline',
+            iconColor: '#a855f7',
+            label: 'Compress images',
+            hint: 'Reduce file sizes for faster sending',
+            value: settings.compressImages,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { compressImages: value }),
+          },
+        ].map((item) => (
+          <View key={item.label} style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: `${item.iconColor}1f` }]}>
+                <Ionicons name={item.icon as any} size={16} color={item.iconColor} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
+            </View>
+            <View style={styles.settingRight}>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionTitle}>Privacy & Access</Text>
+      <View style={styles.sectionCard}>
+        {[
+          {
+            icon: 'shield-outline',
+            iconColor: '#22c55e',
+            label: 'Message requests',
+            hint: 'Require approval before new participants message',
+            value: settings.messageRequests,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { messageRequests: value }),
+          },
+          {
+            icon: 'eye-off-outline',
+            iconColor: '#f97316',
+            label: 'Hide previews',
+            hint: 'Mask content in notifications',
+            value: settings.hidePreviews,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { hidePreviews: value }),
+          },
+          {
+            icon: 'warning-outline',
+            iconColor: '#f43f5e',
+            label: 'Screenshot alerts',
+            hint: 'Notify when someone screenshots',
+            value: settings.screenshotAlerts,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { screenshotAlerts: value }),
+          },
+          {
+            icon: 'link-outline',
+            iconColor: '#38bdf8',
+            label: 'Block unknown links',
+            hint: 'Warn on links from unknown senders',
+            value: settings.blockUnknownLinks,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { blockUnknownLinks: value }),
+          },
+        ].map((item) => (
+          <View key={item.label} style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: `${item.iconColor}1f` }]}>
+                <Ionicons name={item.icon as any} size={16} color={item.iconColor} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
+            </View>
+            <View style={styles.settingRight}>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
           </View>
         ))}
       </View>
 
       <Text style={styles.sectionTitle}>Calls & Safety</Text>
       <View style={styles.sectionCard}>
-        <View style={styles.settingRow}>
-          <View>
-            <Text style={styles.settingLabel}>Header call buttons</Text>
-            <Text style={styles.settingHint}>Hide voice and video buttons if they distract</Text>
+        {[
+          {
+            icon: 'call-outline',
+            iconColor: '#22d3ee',
+            label: 'Header call buttons',
+            hint: 'Hide voice and video buttons if they distract',
+            value: callControlsEnabled,
+            onToggle: (value: boolean) => setCallControls(conversationId, value),
+          },
+          {
+            icon: 'moon-outline',
+            iconColor: '#a855f7',
+            label: 'Focus mode',
+            hint: 'Silence non-essential notifications',
+            value: settings.focusMode,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { focusMode: value }),
+          },
+          {
+            icon: 'time-outline',
+            iconColor: '#f59e0b',
+            label: 'Quiet hours',
+            hint: 'Pause alerts overnight',
+            value: settings.quietHours,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { quietHours: value }),
+          },
+          {
+            icon: 'hand-right-outline',
+            iconColor: '#f43f5e',
+            label: 'Call confirmation',
+            hint: 'Require a tap to confirm calls',
+            value: settings.callConfirm,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { callConfirm: value }),
+          },
+        ].map((item) => (
+          <View key={item.label} style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: `${item.iconColor}1f` }]}>
+                <Ionicons name={item.icon as any} size={16} color={item.iconColor} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
+            </View>
+            <View style={styles.settingRight}>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
           </View>
-          <Switch
-            value={callControlsEnabled}
-            onValueChange={(value) => setCallControls(conversationId, value)}
-            trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
-            thumbColor={theme.colors.white}
-          />
-        </View>
+        ))}
         <TouchableOpacity
           style={styles.actionRow}
           onPress={() => Alert.alert('Safety Center', 'Safety tools are coming next.')}
         >
-          <View style={[styles.listIcon, { backgroundColor: 'rgba(34, 211, 238, 0.18)' }]}
-          >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(34, 211, 238, 0.18)' }]}>
             <Ionicons name="shield-checkmark-outline" size={18} color="#22d3ee" />
           </View>
           <View style={styles.listMeta}>
@@ -541,13 +950,64 @@ export default function ChatSettingsScreen() {
           style={styles.actionRow}
           onPress={() => Alert.alert('Notifications', 'Notification rules are on the way.')}
         >
-          <View style={[styles.listIcon, { backgroundColor: 'rgba(248, 113, 113, 0.18)' }]}
-          >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(248, 113, 113, 0.18)' }]}>
             <Ionicons name="notifications-outline" size={18} color="#f87171" />
           </View>
           <View style={styles.listMeta}>
             <Text style={styles.listTitle}>Notification rules</Text>
             <Text style={styles.listSubtitle}>Quiet hours, mentions, alerts</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert('Export chat', 'Export tools are coming soon.')}
+        >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(34, 197, 94, 0.18)' }]}>
+            <Ionicons name="cloud-download-outline" size={18} color="#22c55e" />
+          </View>
+          <View style={styles.listMeta}>
+            <Text style={styles.listTitle}>Export chat</Text>
+            <Text style={styles.listSubtitle}>Download a secure archive</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert('Clear history', 'Clear chat history is coming next.')}
+        >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(248, 113, 113, 0.18)' }]}>
+            <Ionicons name="trash-outline" size={18} color="#f87171" />
+          </View>
+          <View style={styles.listMeta}>
+            <Text style={styles.listTitle}>Clear history</Text>
+            <Text style={styles.listSubtitle}>Remove local chat cache</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert('Archive chat', 'Archive options are coming next.')}
+        >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(59, 130, 246, 0.18)' }]}>
+            <Ionicons name="archive-outline" size={18} color="#3b82f6" />
+          </View>
+          <View style={styles.listMeta}>
+            <Text style={styles.listTitle}>Archive chat</Text>
+            <Text style={styles.listSubtitle}>Move this conversation out of the inbox</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert('Block user', 'Blocking is coming soon.')}
+        >
+          <View style={[styles.listIcon, { backgroundColor: 'rgba(147, 51, 234, 0.18)' }]}>
+            <Ionicons name="person-remove-outline" size={18} color="#9333ea" />
+          </View>
+          <View style={styles.listMeta}>
+            <Text style={styles.listTitle}>Block user</Text>
+            <Text style={styles.listSubtitle}>Stop messages and calls from this contact</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
         </TouchableOpacity>
@@ -878,6 +1338,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(249, 115, 22, 0.2)',
   },
+  metricCardRose: {
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  metricCardIndigo: {
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.2)',
+  },
+  metricCardAmber: {
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.2)',
+  },
+  metricCardTeal: {
+    borderWidth: 1,
+    borderColor: 'rgba(20, 184, 166, 0.2)',
+  },
   metricHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -933,6 +1409,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     fontWeight: '600',
+  },
+  timelineCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  timelineMeta: {
+    flex: 1,
+  },
+  timelineLabel: {
+    fontSize: 12,
+    color: theme.colors.textSubtle,
+    fontWeight: '600',
+  },
+  timelineValue: {
+    fontSize: 12,
+    color: theme.colors.textPrimary,
+    marginTop: 4,
   },
   emptyPanel: {
     alignItems: 'center',
@@ -1051,21 +1551,77 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  optionChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  optionChipActive: {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.accent,
+  },
+  optionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textSubtle,
+  },
+  optionTextActive: {
+    color: theme.colors.textPrimary,
+  },
+  optionDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 8,
+  },
   settingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
+  },
+  settingLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginRight: 12,
+  },
+  settingText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  settingRight: {
+    alignSelf: 'center',
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+  settingIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   settingHint: {
     fontSize: 12,
     color: theme.colors.textSubtle,
     marginTop: 2,
+    flexShrink: 1,
   },
   actionRow: {
     flexDirection: 'row',
@@ -1089,6 +1645,42 @@ const styles = StyleSheet.create({
   },
   accentSwatchActive: {
     transform: [{ scale: 1.05 }],
+  },
+  backgroundGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  backgroundCard: {
+    width: '48%',
+    padding: 10,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  backgroundCardActive: {
+    borderColor: theme.colors.accent,
+  },
+  backgroundPreview: {
+    height: 80,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  backgroundPreviewImage: {
+    resizeMode: 'cover',
+  },
+  backgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundLabel: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSubtle,
+  },
+  backgroundLabelActive: {
+    color: theme.colors.textPrimary,
   },
   densityRow: {
     flexDirection: 'row',

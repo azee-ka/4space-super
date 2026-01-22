@@ -6,6 +6,26 @@ interface ConversationSettings {
   typingIndicators: boolean;
   muteNotifications: boolean;
   pinned: boolean;
+  mentionAlerts: boolean;
+  hapticFeedback: boolean;
+  autoDeleteEnabled: boolean;
+  autoDeleteDays: number;
+  messageHistory: 'forever' | '1y' | '6m' | '30d';
+  linkPreviews: boolean;
+  smartReplies: boolean;
+  autoSummaries: boolean;
+  autoTranslate: boolean;
+  mediaAutoDownload: boolean;
+  highQualityUploads: boolean;
+  autoSaveMedia: boolean;
+  compressImages: boolean;
+  focusMode: boolean;
+  quietHours: boolean;
+  callConfirm: boolean;
+  blockUnknownLinks: boolean;
+  messageRequests: boolean;
+  hidePreviews: boolean;
+  screenshotAlerts: boolean;
 }
 
 export const DEFAULT_CONVERSATION_SETTINGS: ConversationSettings = {
@@ -13,6 +33,26 @@ export const DEFAULT_CONVERSATION_SETTINGS: ConversationSettings = {
   typingIndicators: true,
   muteNotifications: false,
   pinned: false,
+  mentionAlerts: true,
+  hapticFeedback: true,
+  autoDeleteEnabled: false,
+  autoDeleteDays: 30,
+  messageHistory: 'forever',
+  linkPreviews: true,
+  smartReplies: true,
+  autoSummaries: false,
+  autoTranslate: false,
+  mediaAutoDownload: true,
+  highQualityUploads: true,
+  autoSaveMedia: false,
+  compressImages: false,
+  focusMode: false,
+  quietHours: false,
+  callConfirm: false,
+  blockUnknownLinks: false,
+  messageRequests: true,
+  hidePreviews: false,
+  screenshotAlerts: false,
 };
 
 interface ChatState {
