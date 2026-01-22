@@ -5,11 +5,12 @@ import { theme } from '../../src/styles/theme';
 
 export default function TabsLayout() {
   const tabColors = {
-    dashboard: { base: '#22d3ee', active: '#06b6d4' },
-    messages: { base: '#f472b6', active: '#ec4899' },
-    spaces: { base: '#34d399', active: '#10b981' },
-    settings: { base: '#fbbf24', active: '#f59e0b' },
+    dashboard: { active: '#06b6d4' },
+    messages: { active: '#ec4899' },
+    spaces: { active: '#10b981' },
+    settings: { active: '#a855f7' },
   };
+  const inactiveColor = theme.colors.textSubtle;
 
   return (
     <Tabs
@@ -19,8 +20,8 @@ export default function TabsLayout() {
           backgroundColor: theme.colors.base,
           borderTopColor: theme.colors.base,
           borderTopWidth: 0,
-          height: 74,
-          paddingBottom: 16,
+          height: 86,
+          paddingBottom: 26,
           paddingTop: 8,
         },
         tabBarItemStyle: {
@@ -33,7 +34,7 @@ export default function TabsLayout() {
         options={{
           title: 'Dashboard',
           tabBarLabel: ({ focused }) => (
-            <Text style={{ fontSize: 11, color: focused ? tabColors.dashboard.active : tabColors.dashboard.base }}>
+            <Text style={{ fontSize: 11, color: focused ? tabColors.dashboard.active : inactiveColor }}>
               Home
             </Text>
           ),
@@ -41,7 +42,7 @@ export default function TabsLayout() {
             <Ionicons
               name="grid-outline"
               size={size}
-              color={focused ? tabColors.dashboard.active : tabColors.dashboard.base}
+              color={focused ? tabColors.dashboard.active : inactiveColor}
             />
           ),
         }}
@@ -51,7 +52,7 @@ export default function TabsLayout() {
         options={{
           title: 'Messages',
           tabBarLabel: ({ focused }) => (
-            <Text style={{ fontSize: 11, color: focused ? tabColors.messages.active : tabColors.messages.base }}>
+            <Text style={{ fontSize: 11, color: focused ? tabColors.messages.active : inactiveColor }}>
               Messages
             </Text>
           ),
@@ -59,7 +60,7 @@ export default function TabsLayout() {
             <Ionicons
               name="chatbubbles-outline"
               size={size}
-              color={focused ? tabColors.messages.active : tabColors.messages.base}
+              color={focused ? tabColors.messages.active : inactiveColor}
             />
           ),
         }}
@@ -69,7 +70,7 @@ export default function TabsLayout() {
         options={{
           title: 'Spaces',
           tabBarLabel: ({ focused }) => (
-            <Text style={{ fontSize: 11, color: focused ? tabColors.spaces.active : tabColors.spaces.base }}>
+            <Text style={{ fontSize: 11, color: focused ? tabColors.spaces.active : inactiveColor }}>
               Spaces
             </Text>
           ),
@@ -77,7 +78,7 @@ export default function TabsLayout() {
             <Ionicons
               name="apps-outline"
               size={size}
-              color={focused ? tabColors.spaces.active : tabColors.spaces.base}
+              color={focused ? tabColors.spaces.active : inactiveColor}
             />
           ),
         }}
@@ -87,7 +88,7 @@ export default function TabsLayout() {
         options={{
           title: 'Settings',
           tabBarLabel: ({ focused }) => (
-            <Text style={{ fontSize: 11, color: focused ? tabColors.settings.active : tabColors.settings.base }}>
+            <Text style={{ fontSize: 11, color: focused ? tabColors.settings.active : inactiveColor }}>
               Settings
             </Text>
           ),
@@ -95,7 +96,7 @@ export default function TabsLayout() {
             <Ionicons
               name="settings-outline"
               size={size}
-              color={focused ? tabColors.settings.active : tabColors.settings.base}
+              color={focused ? tabColors.settings.active : inactiveColor}
             />
           ),
         }}
@@ -113,6 +114,22 @@ export default function TabsLayout() {
         options={{
           href: null,
           title: 'Chat Settings',
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="spaces/[id]"
+        options={{
+          href: null,
+          title: 'Space',
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="settings/profile"
+        options={{
+          href: null,
+          title: 'Profile',
           tabBarStyle: { display: 'none' },
         }}
       />
