@@ -473,18 +473,25 @@ export default function ChatScreen() {
   return (
     <ChatBackground>
       <View style={[styles.themeLayer, { backgroundColor: chatTheme.backgroundColor }]} />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
-          keyboardVerticalOffset={100}
+          keyboardVerticalOffset={50}
         >
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={22} color={theme.colors.textPrimary} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.headerInfo}>
+            <TouchableOpacity
+              style={styles.headerInfo}
+              onPress={() => {
+                if (conversationId) {
+                  router.push(`/messages/${conversationId}/settings` as any);
+                }
+              }}
+            >
               <Avatar
                 uri={isGroup ? conversation?.avatar_url : otherUser?.avatar_url}
                 name={headerTitle}
@@ -497,9 +504,6 @@ export default function ChatScreen() {
             </TouchableOpacity>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerAction} onPress={() => setSearchOpen(!searchOpen)}>
-                <Ionicons name="search" size={18} color="#22d3ee" />
-              </TouchableOpacity>
               {showCallControls && (
                 <>
                   <TouchableOpacity style={styles.headerAction}>
@@ -510,16 +514,6 @@ export default function ChatScreen() {
                   </TouchableOpacity>
                 </>
               )}
-              <TouchableOpacity
-                style={styles.headerAction}
-                onPress={() => {
-                  if (conversationId) {
-                    router.push(`/messages/${conversationId}/settings` as any);
-                  }
-                }}
-              >
-                <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -1032,7 +1026,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 12,
     paddingHorizontal: 14,
-    maxWidth: '100%',
+    maxWidth: 280,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

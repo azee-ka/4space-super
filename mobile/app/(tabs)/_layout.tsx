@@ -1,6 +1,6 @@
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { theme } from '../../src/styles/theme';
 
 export default function TabsLayout() {
