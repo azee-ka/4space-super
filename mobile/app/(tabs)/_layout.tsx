@@ -1,6 +1,6 @@
 import { router, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text } from 'react-native';
 import { theme } from '../../src/styles/theme';
 
 export default function TabsLayout() {
@@ -11,19 +11,20 @@ export default function TabsLayout() {
     settings: { active: '#a855f7' },
   };
   const inactiveColor = theme.colors.textSubtle;
+  const baseTabBarStyle = {
+    backgroundColor: theme.colors.base,
+    borderTopColor: theme.colors.base,
+    borderTopWidth: 0,
+    height: 92,
+    paddingBottom: 32,
+    paddingTop: 10,
+  };
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: theme.colors.base,
-          borderTopColor: theme.colors.base,
-          borderTopWidth: 0,
-          height: 92,
-          paddingBottom: 32,
-          paddingTop: 10,
-        },
+        tabBarStyle: baseTabBarStyle,
         tabBarItemStyle: {
           paddingTop: 4,
         },

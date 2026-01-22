@@ -1,4 +1,4 @@
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -37,7 +37,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" backgroundColor={theme.colors.base} />
-        <Slot />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="messages/[id]" />
+          <Stack.Screen name="messages/[id]/settings" />
+          <Stack.Screen name="messages/new" />
+        </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

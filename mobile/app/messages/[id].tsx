@@ -17,24 +17,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../../../src/store/authStore';
-import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../../src/store/chatStore';
-import { useMessagePreferencesStore } from '../../../src/store/messagePreferencesStore';
-import { useThemeStore } from '../../../src/store/themeStore';
-import { getAccentColorHex } from '../../../src/utils/themeUtils';
-import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../../src/hooks/useConversations';
-import { ChatBackground, TypingIndicator, BackgroundPicker } from '../../../src/components/chat';
-import { LoadingSpinner, Avatar } from '../../../src/components/ui';
-import { supabase } from '../../../src/lib/supabase';
-import { Message } from '../../../src/types';
+import { useAuthStore } from '../../src/store/authStore';
+import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../src/store/chatStore';
+import { useMessagePreferencesStore } from '../../src/store/messagePreferencesStore';
+import { useThemeStore } from '../../src/store/themeStore';
+import { getAccentColorHex } from '../../src/utils/themeUtils';
+import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
+import { ChatBackground, TypingIndicator, BackgroundPicker } from '../../src/components/chat';
+import { LoadingSpinner, Avatar } from '../../src/components/ui';
+import { supabase } from '../../src/lib/supabase';
+import { Message } from '../../src/types';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { theme } from '../../../src/styles/theme';
-import { useChatCustomizationStore } from '../../../src/store/chatCustomizationStore';
-import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../../src/styles/chatThemes';
+import { theme } from '../../src/styles/theme';
+import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
+import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
 
 const EMOJI_CATEGORIES = [
   {
@@ -63,7 +62,6 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const conversationId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
-  const navigation = useNavigation();
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, addTypingUser, typingUsers, conversationSettings } = useChatStore();
   const { pinnedMessages, savedMessages, setPinnedMessage, toggleSavedMessage } = useMessagePreferencesStore();
@@ -156,26 +154,6 @@ export default function ChatScreen() {
     }
   }, [messages?.length]);
 
-  useFocusEffect(
-    useCallback(() => {
-      const parent = navigation.getParent();
-      parent?.setOptions({
-        tabBarStyle: { display: 'none' },
-      });
-      return () => {
-        parent?.setOptions({
-          tabBarStyle: {
-            backgroundColor: theme.colors.base,
-            borderTopColor: theme.colors.base,
-            borderTopWidth: 0,
-            height: 92,
-            paddingBottom: 32,
-            paddingTop: 10,
-          },
-        });
-      };
-    }, [navigation])
-  );
 
   useEffect(() => {
     if (!conversationId || !user) return;

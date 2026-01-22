@@ -12,11 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '../../../src/store/authStore';
-import { useConversations } from '../../../src/hooks/useConversations';
-import { Avatar } from '../../../src/components/ui';
-import { supabase } from '../../../src/lib/supabase';
-import { theme } from '../../../src/styles/theme';
+import { useAuthStore } from '../../src/store/authStore';
+import { useConversations } from '../../src/hooks/useConversations';
+import { Avatar } from '../../src/components/ui';
+import { supabase } from '../../src/lib/supabase';
+import { theme } from '../../src/styles/theme';
 
 interface ProfileResult {
   id: string;

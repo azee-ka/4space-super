@@ -9,18 +9,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../../../src/store/authStore';
-import { useConversation } from '../../../../src/hooks/useConversations';
-import { Avatar } from '../../../../src/components/ui';
-import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../../../src/store/chatStore';
-import { useThemeStore } from '../../../../src/store/themeStore';
-import { ACCENT_OPTIONS, getAccentColorHex } from '../../../../src/utils/themeUtils';
-import { theme } from '../../../../src/styles/theme';
-import { BackgroundPicker } from '../../../../src/components/chat';
-import { CHAT_THEME_PRESETS, DEFAULT_CHAT_THEME, getChatThemeById } from '../../../../src/styles/chatThemes';
-import { useChatCustomizationStore } from '../../../../src/store/chatCustomizationStore';
+import { useAuthStore } from '../../../src/store/authStore';
+import { useConversation } from '../../../src/hooks/useConversations';
+import { Avatar } from '../../../src/components/ui';
+import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../../src/store/chatStore';
+import { useThemeStore } from '../../../src/store/themeStore';
+import { ACCENT_OPTIONS, getAccentColorHex } from '../../../src/utils/themeUtils';
+import { theme } from '../../../src/styles/theme';
+import { BackgroundPicker } from '../../../src/components/chat';
+import { CHAT_THEME_PRESETS, DEFAULT_CHAT_THEME, getChatThemeById } from '../../../src/styles/chatThemes';
+import { useChatCustomizationStore } from '../../../src/store/chatCustomizationStore';
 
 const DENSITY_OPTIONS: { id: 'compact' | 'cozy' | 'spacious'; label: string; description: string }[] = [
   { id: 'compact', label: 'Compact', description: 'Tight spacing for commanders and pros' },
@@ -30,7 +29,6 @@ const DENSITY_OPTIONS: { id: 'compact' | 'cozy' | 'spacious'; label: string; des
 
 export default function ChatSettingsScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const conversationId = Array.isArray(id) ? id[0] : id;
   const { user } = useAuthStore();
@@ -89,26 +87,6 @@ export default function ChatSettingsScreen() {
     return null;
   }
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const parent = navigation.getParent();
-      parent?.setOptions({
-        tabBarStyle: { display: 'none' },
-      });
-      return () => {
-        parent?.setOptions({
-          tabBarStyle: {
-            backgroundColor: theme.colors.base,
-            borderTopColor: theme.colors.base,
-            borderTopWidth: 0,
-            height: 92,
-            paddingBottom: 32,
-            paddingTop: 10,
-          },
-        });
-      };
-    }, [navigation])
-  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
