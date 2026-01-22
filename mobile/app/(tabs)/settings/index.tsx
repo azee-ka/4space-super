@@ -59,6 +59,7 @@ export default function SettingsScreen() {
             <Avatar
               uri={user?.avatar_url}
               name={user?.display_name || user?.username}
+              seed={user?.id}
               size="xl"
             />
             <View style={styles.profileMeta}>

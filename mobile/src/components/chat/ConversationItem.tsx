@@ -115,12 +115,12 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   avatarRing: {
-    padding: 2,
+    padding: 0,
     borderRadius: 24,
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: 'transparent',
   },
   avatarRingUnread: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,

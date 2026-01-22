@@ -128,6 +128,7 @@ export default function SpaceDetailScreen() {
                 key={member.id}
                 uri={member.user?.avatar_url}
                 name={member.user?.display_name || member.user?.email || 'User'}
+                seed={member.user?.id || member.id}
                 size="sm"
               />
             ))}

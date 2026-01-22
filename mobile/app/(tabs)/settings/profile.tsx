@@ -96,6 +96,7 @@ export default function ProfileSettingsScreen() {
           <Avatar
             uri={user?.avatar_url}
             name={user?.display_name || user?.username}
+            seed={user?.id}
             size="xl"
           />
           <Text style={styles.displayName}>{user?.display_name || user?.username}</Text>
@@ -167,6 +168,7 @@ export default function ProfileSettingsScreen() {
               <Avatar
                 uri={user?.avatar_url}
                 name={displayName || username}
+                seed={user?.id}
                 size="md"
               />
             </View>
