@@ -13,6 +13,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Share,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ import { useMessagePreferencesStore } from '../../../src/store/messagePreference
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../../src/hooks/useConversations';
-import { ChatBackground, TypingIndicator } from '../../../src/components/chat';
+import { ChatBackground, TypingIndicator, BackgroundPicker } from '../../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../../src/components/ui';
 import { supabase } from '../../../src/lib/supabase';
 import { Message } from '../../../src/types';
@@ -32,6 +33,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { theme } from '../../../src/styles/theme';
 import { useChatCustomizationStore } from '../../../src/store/chatCustomizationStore';
+import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../../src/styles/chatThemes';
 
 const EMOJI_CATEGORIES = [
   {
@@ -94,12 +96,23 @@ export default function ChatScreen() {
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
-  const chatTheme = useChatCustomizationStore((state) =>
-    state.getConversationTheme(conversationId)
-  );
-  const showCallControls = useChatCustomizationStore((state) =>
-    state.areCallControlsEnabled(conversationId)
-  );
+
+  // Select raw data instead of computed methods to avoid infinite loops
+  const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
+  const chatTheme = useMemo(() => {
+    if (!conversationId) {
+      return { ...DEFAULT_CHAT_THEME, density: 'cozy' as const };
+    }
+    const customization = conversationCustomizations[conversationId];
+    const base = getChatThemeById(customization?.themeId);
+    return { ...base, density: customization?.density || base.density || 'cozy' as const };
+  }, [conversationId, conversationCustomizations]);
+
+  const showCallControls = useMemo(() => {
+    if (!conversationId) return true;
+    const customization = conversationCustomizations[conversationId];
+    return customization?.enableCallControls !== false;
+  }, [conversationId, conversationCustomizations]);
   const messageSpacing =
     chatTheme.density === 'compact'
       ? 6

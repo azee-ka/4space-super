@@ -102,27 +102,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="messages/[id]"
-        options={{
-          tabBarStyle: { display: 'none' },
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="messages/[id]/settings"
-        options={{
-          tabBarStyle: { display: 'none' },
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="messages/new"
-        options={{
-          tabBarStyle: { display: 'none' },
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
         name="spaces/[id]"
         options={{
           tabBarStyle: { display: 'none' },

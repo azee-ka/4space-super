@@ -18,7 +18,7 @@ import { useThemeStore } from '../../../../src/store/themeStore';
 import { ACCENT_OPTIONS, getAccentColorHex } from '../../../../src/utils/themeUtils';
 import { theme } from '../../../../src/styles/theme';
 import { BackgroundPicker } from '../../../../src/components/chat';
-import { CHAT_THEME_PRESETS } from '../../../../src/styles/chatThemes';
+import { CHAT_THEME_PRESETS, DEFAULT_CHAT_THEME, getChatThemeById } from '../../../../src/styles/chatThemes';
 import { useChatCustomizationStore } from '../../../../src/store/chatCustomizationStore';
 
 const DENSITY_OPTIONS: { id: 'compact' | 'cozy' | 'spacious'; label: string; description: string }[] = [
@@ -44,12 +44,22 @@ export default function ChatSettingsScreen() {
   );
   const setConversationSettings = useChatStore((state) => state.setConversationSettings);
 
-  const chatTheme = useChatCustomizationStore((state) =>
-    state.getConversationTheme(conversationId)
-  );
-  const callControlsEnabled = useChatCustomizationStore((state) =>
-    state.areCallControlsEnabled(conversationId)
-  );
+  // Select raw data instead of computed methods to avoid infinite loops
+  const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
+  const chatTheme = useMemo(() => {
+    if (!conversationId) {
+      return { ...DEFAULT_CHAT_THEME, density: 'cozy' as const };
+    }
+    const customization = conversationCustomizations[conversationId];
+    const base = getChatThemeById(customization?.themeId);
+    return { ...base, density: customization?.density || base.density || 'cozy' as const };
+  }, [conversationId, conversationCustomizations]);
+
+  const callControlsEnabled = useMemo(() => {
+    if (!conversationId) return true;
+    const customization = conversationCustomizations[conversationId];
+    return customization?.enableCallControls !== false;
+  }, [conversationId, conversationCustomizations]);
   const setCallControls = useChatCustomizationStore((state) => state.setCallControls);
   const setConversationTheme = useChatCustomizationStore((state) => state.setConversationTheme);
   const setConversationDensity = useChatCustomizationStore((state) =>
