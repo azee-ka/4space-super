@@ -20,9 +20,9 @@ export default function TabsLayout() {
           backgroundColor: theme.colors.base,
           borderTopColor: theme.colors.base,
           borderTopWidth: 0,
-          height: 86,
-          paddingBottom: 26,
-          paddingTop: 8,
+          height: 92,
+          paddingBottom: 32,
+          paddingTop: 10,
         },
         tabBarItemStyle: {
           paddingTop: 4,
@@ -48,7 +48,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="messages/index"
+        name="messages"
         options={{
           title: 'Messages',
           tabBarLabel: ({ focused }) => (
@@ -104,25 +104,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="messages/[id]"
         options={{
-          href: null,
-          title: 'Chat',
           tabBarStyle: { display: 'none' },
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="messages/[id]/settings"
         options={{
-          href: null,
-          title: 'Chat Settings',
           tabBarStyle: { display: 'none' },
+          tabBarButton: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="messages/new"
+        options={{
+          tabBarStyle: { display: 'none' },
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="spaces/[id]"
         options={{
-          href: null,
-          title: 'Space',
           tabBarStyle: { display: 'none' },
+          tabBarButton: () => null,
         }}
       />
     </Tabs>

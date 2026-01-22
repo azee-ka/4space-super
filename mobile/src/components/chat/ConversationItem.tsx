@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Conversation } from '../../types';
 import { Avatar } from '../ui';
@@ -7,9 +8,19 @@ import { theme } from '../../styles/theme';
 
 interface ConversationItemProps {
   conversation: Conversation;
+  isPinned?: boolean;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  onLongPress?: () => void;
 }
 
-export const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => {
+export const ConversationItem: React.FC<ConversationItemProps> = ({
+  conversation,
+  isPinned = false,
+  isMuted = false,
+  isArchived = false,
+  onLongPress,
+}) => {
   const router = useRouter();
 
   const getConversationName = () => {
@@ -38,22 +49,36 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({ conversation
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  const unreadCount = conversation.unread_count || 0;
+  const hasUnread = unreadCount > 0;
+
   return (
     <TouchableOpacity
       onPress={() => router.push('/messages/' + conversation.id)}
+      onLongPress={onLongPress}
       style={styles.container}
     >
-      <Avatar uri={getConversationAvatar()} name={getConversationName()} size="lg" />
+      <View style={[styles.avatarRing, hasUnread && styles.avatarRingUnread]}>
+        <Avatar uri={getConversationAvatar()} name={getConversationName()} size="lg" />
+      </View>
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.name} numberOfLines={1}>
-            {getConversationName()}
-          </Text>
-          {conversation.last_message && (
-            <Text style={styles.time}>
-              {formatTime(conversation.last_message.created_at)}
+          <View style={styles.titleRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {getConversationName()}
             </Text>
+            {conversation.type === 'group' && (
+              <View style={styles.groupPill}>
+                <Text style={styles.groupPillText}>Group</Text>
+              </View>
+            )}
+            {isPinned && <Ionicons name="pin" size={14} color="#f97316" />}
+            {isMuted && <Ionicons name="volume-mute" size={14} color="#94a3b8" />}
+            {isArchived && <Ionicons name="archive-outline" size={14} color="#64748b" />}
+          </View>
+          {conversation.last_message && (
+            <Text style={styles.time}>{formatTime(conversation.last_message.created_at)}</Text>
           )}
         </View>
 
@@ -61,11 +86,9 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({ conversation
           <Text style={styles.message} numberOfLines={1}>
             {conversation.last_message?.content || 'No messages yet'}
           </Text>
-          {conversation.unread_count > 0 && (
+          {hasUnread && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
-              </Text>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
             </View>
           )}
         </View>
@@ -79,10 +102,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     backgroundColor: theme.colors.base,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
+  },
+  avatarRing: {
+    padding: 2,
+    borderRadius: 24,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
+  avatarRingUnread: {
+    backgroundColor: theme.colors.accent,
   },
   content: {
     flex: 1,
@@ -92,14 +123,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
   },
   name: {
     color: theme.colors.textPrimary,
     fontWeight: '600',
     fontSize: 16,
     letterSpacing: 0.2,
-    flex: 1,
+    maxWidth: '70%',
+  },
+  groupPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 999,
+  },
+  groupPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.textSubtle,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   time: {
     color: theme.colors.textMuted,
@@ -117,17 +167,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge: {
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: theme.colors.accent,
     borderRadius: theme.radii.pill,
-    minWidth: 24,
-    height: 24,
+    minWidth: 22,
+    height: 22,
     paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
   },
   badgeText: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.base,
     fontSize: 11,
     fontWeight: 'bold',
   },

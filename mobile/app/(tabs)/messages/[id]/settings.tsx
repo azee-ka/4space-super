@@ -1,23 +1,30 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Switch,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BackgroundPicker } from '../../../../src/components/chat';
-import { Avatar } from '../../../../src/components/ui';
-import { useConversation } from '../../../../src/hooks/useConversations';
 import { useAuthStore } from '../../../../src/store/authStore';
+import { useConversation } from '../../../../src/hooks/useConversations';
+import { Avatar } from '../../../../src/components/ui';
 import { DEFAULT_CONVERSATION_SETTINGS, useChatStore } from '../../../../src/store/chatStore';
 import { useThemeStore } from '../../../../src/store/themeStore';
 import { ACCENT_OPTIONS, getAccentColorHex } from '../../../../src/utils/themeUtils';
 import { theme } from '../../../../src/styles/theme';
+import { BackgroundPicker } from '../../../../src/components/chat';
+import { CHAT_THEME_PRESETS } from '../../../../src/styles/chatThemes';
+import { useChatCustomizationStore } from '../../../../src/store/chatCustomizationStore';
 
-const TABS = [
-  { id: 'media', label: 'Media', icon: 'images-outline' as const },
-  { id: 'links', label: 'Links', icon: 'link-outline' as const },
-  { id: 'kept', label: 'Kept', icon: 'bookmark-outline' as const },
-  { id: 'shared', label: 'Shared', icon: 'share-social-outline' as const },
-  { id: 'pinned', label: 'Pinned', icon: 'pin-outline' as const },
+const DENSITY_OPTIONS: { id: 'compact' | 'cozy' | 'spacious'; label: string; description: string }[] = [
+  { id: 'compact', label: 'Compact', description: 'Tight spacing for commanders and pros' },
+  { id: 'cozy', label: 'Cozy', description: 'Balanced spacing for daily use' },
+  { id: 'spacious', label: 'Spacious', description: 'Airy layout with lots of breathing room' },
 ];
 
 export default function ChatSettingsScreen() {
@@ -28,14 +35,26 @@ export default function ChatSettingsScreen() {
   const { data: conversation } = useConversation(conversationId || '', user?.id || '');
   const { accentColor, setAccentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
-
-  const [activeTab, setActiveTab] = useState(TABS[0].id);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
 
   const settings = useChatStore((state) =>
-    conversationId ? state.conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS : DEFAULT_CONVERSATION_SETTINGS
+    conversationId
+      ? state.conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
+      : DEFAULT_CONVERSATION_SETTINGS
   );
   const setConversationSettings = useChatStore((state) => state.setConversationSettings);
+
+  const chatTheme = useChatCustomizationStore((state) =>
+    state.getConversationTheme(conversationId)
+  );
+  const callControlsEnabled = useChatCustomizationStore((state) =>
+    state.areCallControlsEnabled(conversationId)
+  );
+  const setCallControls = useChatCustomizationStore((state) => state.setCallControls);
+  const setConversationTheme = useChatCustomizationStore((state) => state.setConversationTheme);
+  const setConversationDensity = useChatCustomizationStore((state) =>
+    state.setConversationDensity
+  );
 
   const { headerTitle, avatarUri } = useMemo(() => {
     if (!conversation) {
@@ -51,16 +70,17 @@ export default function ChatSettingsScreen() {
     };
   }, [conversation]);
 
+  const densityOption = DENSITY_OPTIONS.find((option) => option.id === chatTheme.density) ||
+    DENSITY_OPTIONS[1];
+
   if (!conversationId) {
     return null;
   }
 
-  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || 'items';
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+        <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color={theme.colors.textPrimary} />
           </TouchableOpacity>
@@ -72,127 +92,142 @@ export default function ChatSettingsScreen() {
           <Avatar uri={avatarUri} name={headerTitle} size="lg" />
           <View style={styles.profileText}>
             <Text style={styles.profileName}>{headerTitle}</Text>
-            <Text style={styles.profileSub}>Conversation details & shared items</Text>
+            <Text style={styles.profileSub}>Customize the vibe of this chat</Text>
           </View>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabRow}
-        >
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[styles.tabButton, isActive && { backgroundColor: theme.colors.surface }]}
-                onPress={() => setActiveTab(tab.id)}
-              >
-                <Ionicons
-                  name={tab.icon}
-                  size={16}
-                  color={isActive ? accentHex : theme.colors.textSubtle}
-                />
-                <Text style={[styles.tabLabel, isActive && { color: theme.colors.textPrimary }]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <View style={styles.tabContent}>
-          <Ionicons name="file-tray-outline" size={28} color={theme.colors.textSubtle} />
-          <Text style={styles.tabContentTitle}>No {activeTabLabel} yet</Text>
-          <Text style={styles.tabContentSubtitle}>
-            Items shared in this chat will appear here.
-          </Text>
         </View>
 
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.section}>
+          {[
+            {
+              label: 'Read receipts',
+              hint: 'Let others know when you read their messages',
+              value: settings.readReceipts,
+              onToggle: (value: boolean) => setConversationSettings(conversationId, { readReceipts: value }),
+            },
+            {
+              label: 'Typing indicators',
+              hint: 'Show when you are typing',
+              value: settings.typingIndicators,
+              onToggle: (value: boolean) => setConversationSettings(conversationId, { typingIndicators: value }),
+            },
+            {
+              label: 'Mute notifications',
+              hint: 'Silence alerts from this chat',
+              value: settings.muteNotifications,
+              onToggle: (value: boolean) => setConversationSettings(conversationId, { muteNotifications: value }),
+            },
+            {
+              label: 'Pin conversation',
+              hint: 'Keep this chat at the top of your inbox',
+              value: settings.pinned,
+              onToggle: (value: boolean) => setConversationSettings(conversationId, { pinned: value }),
+            },
+          ].map((item) => (
+            <View key={item.label} style={styles.settingRow}>
+              <View>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingHint}>{item.hint}</Text>
+              </View>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                thumbColor={theme.colors.white}
+              />
+            </View>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Call & Media Controls</Text>
+        <View style={styles.section}>
           <View style={styles.settingRow}>
             <View>
-              <Text style={styles.settingLabel}>Read Receipts</Text>
-              <Text style={styles.settingHint}>Control read indicators for this chat</Text>
+              <Text style={styles.settingLabel}>Header call buttons</Text>
+              <Text style={styles.settingHint}>Hide the voice + video icons to avoid accidental taps</Text>
             </View>
             <Switch
-              value={settings.readReceipts}
-              onValueChange={(value) => setConversationSettings(conversationId, { readReceipts: value })}
-              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
-              thumbColor={theme.colors.white}
-            />
-          </View>
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>Typing Indicators</Text>
-              <Text style={styles.settingHint}>Show when you are typing</Text>
-            </View>
-            <Switch
-              value={settings.typingIndicators}
-              onValueChange={(value) => setConversationSettings(conversationId, { typingIndicators: value })}
-              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
-              thumbColor={theme.colors.white}
-            />
-          </View>
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>Mute Notifications</Text>
-              <Text style={styles.settingHint}>Silence alerts from this chat</Text>
-            </View>
-            <Switch
-              value={settings.muteNotifications}
-              onValueChange={(value) => setConversationSettings(conversationId, { muteNotifications: value })}
-              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
-              thumbColor={theme.colors.white}
-            />
-          </View>
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>Pin Conversation</Text>
-              <Text style={styles.settingHint}>Keep this chat at the top</Text>
-            </View>
-            <Switch
-              value={settings.pinned}
-              onValueChange={(value) => setConversationSettings(conversationId, { pinned: value })}
+              value={callControlsEnabled}
+              onValueChange={(value) => setCallControls(conversationId, value)}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Customization</Text>
+        <Text style={styles.sectionTitle}>Layout Density</Text>
+        <View style={styles.section}>
+          <Text style={styles.settingHint}>{densityOption.description}</Text>
+          <View style={styles.densityRow}>
+            {DENSITY_OPTIONS.map((option) => {
+              const isActive = option.id === chatTheme.density;
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[styles.densityChip, isActive && styles.densityChipActive]}
+                  onPress={() => setConversationDensity(conversationId, option.id)}
+                >
+                  <Text style={[styles.densityLabel, isActive && styles.densityLabelActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Theme Presets</Text>
+        <View style={styles.section}>
+          <View style={styles.presetGrid}>
+            {CHAT_THEME_PRESETS.map((preset) => {
+              const isActive = preset.id === chatTheme.id;
+              return (
+                <TouchableOpacity
+                  key={preset.id}
+                  style={[styles.presetCard, isActive && styles.presetCardActive]}
+                  onPress={() => setConversationTheme(conversationId, preset.id)}
+                >
+                  <View style={[styles.presetSwatch, { backgroundColor: preset.backgroundColor }]} />
+                  <View style={styles.presetBubbleRow}>
+                    <View style={[styles.presetBubble, { backgroundColor: preset.sentBubbleColor }]} />
+                    <View style={[styles.presetBubble, { backgroundColor: preset.receivedBubbleColor }]} />
+                  </View>
+                  <Text style={styles.presetTitle}>{preset.name}</Text>
+                  <Text style={styles.presetSubtitle}>{preset.description}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Background & Accent</Text>
         <View style={styles.section}>
           <TouchableOpacity style={styles.settingRow} onPress={() => setShowBackgroundPicker(true)}>
             <View>
-              <Text style={styles.settingLabel}>Chat Background</Text>
-              <Text style={styles.settingHint}>Change the chat wallpaper</Text>
+              <Text style={styles.settingLabel}>Chat background</Text>
+              <Text style={styles.settingHint}>Swap wallpapers, gradients, and textures</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textSubtle} />
           </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Accent Color</Text>
-        <View style={styles.accentRow}>
-          {ACCENT_OPTIONS.map((option) => {
-            const isActive = option.value === accentColor;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.accentSwatch,
-                  { backgroundColor: option.hex },
-                  isActive && styles.accentSwatchActive,
-                ]}
-                onPress={() => setAccentColor(option.value)}
-              >
-                {isActive && (
-                  <Ionicons name="checkmark" size={14} color={theme.colors.base} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          <Text style={[styles.settingHint, { marginBottom: 12 }]}>Accent color affects the composer and actions.</Text>
+          <View style={styles.accentRow}>
+            {ACCENT_OPTIONS.map((option) => {
+              const isActive = option.value === accentColor;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.accentSwatch,
+                    { backgroundColor: option.hex },
+                    isActive && styles.accentSwatchActive,
+                  ]}
+                  onPress={() => setAccentColor(option.value)}
+                >
+                  {isActive && <Ionicons name="checkmark" size={14} color={theme.colors.base} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
@@ -210,37 +245,36 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.base,
   },
   content: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   headerSpacer: {
-    width: 40,
+    width: 36,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 24,
   },
   profileText: {
     flex: 1,
@@ -251,45 +285,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   profileSub: {
-    fontSize: 12,
-    color: theme.colors.textSubtle,
-    marginTop: 4,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingBottom: 8,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: theme.colors.surfaceSubtle,
-  },
-  tabLabel: {
-    fontSize: 12,
-    color: theme.colors.textSubtle,
-    fontWeight: '600',
-  },
-  tabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  tabContentTitle: {
-    marginTop: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  tabContentSubtitle: {
     marginTop: 4,
     fontSize: 12,
     color: theme.colors.textSubtle,
@@ -298,21 +293,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textSubtle,
+    marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   section: {
     backgroundColor: theme.colors.surface,
     borderRadius: 16,
-    marginBottom: 22,
+    marginBottom: 18,
     paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   settingLabel: {
     fontSize: 14,
@@ -320,15 +316,84 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   settingHint: {
+    fontSize: 12,
+    color: theme.colors.textSubtle,
+    marginTop: 2,
+  },
+  densityRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  densityChip: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: 'center',
+  },
+  densityChipActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+  },
+  densityLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSubtle,
+  },
+  densityLabelActive: {
+    color: theme.colors.textPrimary,
+  },
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  presetCard: {
+    width: '48%',
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  presetCardActive: {
+    borderColor: theme.colors.accent,
+  },
+  presetSwatch: {
+    width: '100%',
+    height: 60,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  presetBubbleRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  presetBubble: {
+    flex: 1,
+    height: 20,
+    borderRadius: 10,
+  },
+  presetTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  presetSubtitle: {
     fontSize: 11,
     color: theme.colors.textSubtle,
-    marginTop: 4,
   },
   accentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 12,
+    marginTop: 8,
+    marginBottom: 8,
   },
   accentSwatch: {
     width: 34,
