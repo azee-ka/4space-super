@@ -430,17 +430,22 @@ export default function ChatSettingsScreen() {
   const setMessageTextSize = useChatCustomizationStore((state) => state.setMessageTextSize);
   const resetBubbleStyle = useChatCustomizationStore((state) => state.resetBubbleStyle);
 
-  const { headerTitle, avatarUri } = useMemo(() => {
+  const { headerTitle, avatarUri, avatarSeed } = useMemo(() => {
     if (!conversation) {
-      return { headerTitle: 'Chat Settings', avatarUri: undefined };
+      return { headerTitle: 'Chat Settings', avatarUri: undefined, avatarSeed: 'chat-settings' };
     }
     if (conversation.type === 'group') {
-      return { headerTitle: conversation.name || 'Group Chat', avatarUri: conversation.avatar_url };
+      return {
+        headerTitle: conversation.name || 'Group Chat',
+        avatarUri: conversation.avatar_url,
+        avatarSeed: conversation.id,
+      };
     }
     const other = conversation.participants?.[0];
     return {
       headerTitle: other?.display_name || other?.username || 'Chat',
       avatarUri: other?.avatar_url,
+      avatarSeed: other?.id || conversation.id,
     };
   }, [conversation]);
 
@@ -2118,7 +2123,7 @@ export default function ChatSettingsScreen() {
       </View>
 
       <View style={styles.profileRow}>
-        <Avatar uri={avatarUri} name={headerTitle} size="lg" />
+        <Avatar uri={avatarUri} name={headerTitle} seed={avatarSeed} size="lg" />
         <View style={styles.profileText}>
           <Text style={styles.profileName}>{headerTitle}</Text>
           <Text style={styles.profileSub}>Personalize, measure, and tune this chat</Text>
@@ -2345,9 +2350,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.base,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    // backgroundColor: theme.colors.base,
+    borderWidth: 0,
   },
   sideTabLabel: {
     fontSize: 12,

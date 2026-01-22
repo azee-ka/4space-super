@@ -56,7 +56,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       <View style={[styles.messageRow, isOwnMessage && styles.messageRowReverse]}>
         {showAvatar && !isOwnMessage && (
           <View style={styles.avatarContainer}>
-            <Avatar uri={message.sender.avatar_url} name={message.sender.display_name || message.sender.username} size="sm" />
+            <Avatar
+              uri={message.sender.avatar_url}
+              name={message.sender.display_name || message.sender.username}
+              seed={message.sender.id}
+              size="sm"
+            />
           </View>
         )}
 

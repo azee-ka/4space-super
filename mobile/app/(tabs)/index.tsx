@@ -31,7 +31,7 @@ export default function DashboardScreen() {
               {user?.display_name || user?.username}
             </Text>
           </View>
-          <Avatar uri={user?.avatar_url} name={user?.display_name || user?.username} size="lg" />
+          <Avatar uri={user?.avatar_url} name={user?.display_name || user?.username} seed={user?.id} size="lg" />
         </View>
 
         <View style={styles.actionsRow}>

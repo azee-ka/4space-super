@@ -140,7 +140,12 @@ export default function NewMessageScreen() {
                   style={styles.profileCard}
                   onPress={() => handleStartChat(profile)}
                 >
-                  <Avatar uri={profile.avatar_url} name={profile.display_name || profile.username} size="lg" />
+                  <Avatar
+                    uri={profile.avatar_url}
+                    name={profile.display_name || profile.username}
+                    seed={profile.id}
+                    size="lg"
+                  />
                   <Text style={styles.profileName} numberOfLines={1}>
                     {profile.display_name || profile.username}
                   </Text>
@@ -167,7 +172,12 @@ export default function NewMessageScreen() {
                   style={styles.resultRow}
                   onPress={() => handleStartChat(profile)}
                 >
-                  <Avatar uri={profile.avatar_url} name={profile.display_name || profile.username} size="md" />
+                  <Avatar
+                    uri={profile.avatar_url}
+                    name={profile.display_name || profile.username}
+                    seed={profile.id}
+                    size="md"
+                  />
                   <View style={styles.resultMeta}>
                     <Text style={styles.resultName}>
                       {profile.display_name || profile.username}

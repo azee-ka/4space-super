@@ -764,6 +764,7 @@ export default function ChatScreen() {
                 <Avatar
                   uri={item.sender.avatar_url}
                   name={item.sender.display_name || item.sender.username}
+                  seed={item.sender.id}
                   size="sm"
                 />
               ) : (
@@ -801,7 +802,7 @@ export default function ChatScreen() {
                 ]}
               >
                 {!isOwn && showAvatar && (
-                  <Text style={styles.senderName}>
+                  <Text style={[styles.senderName, { color: bubbleTextColor, opacity: 0.8 }]}>
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
@@ -853,7 +854,7 @@ export default function ChatScreen() {
                 ]}
               >
                 {!isOwn && showAvatar && (
-                  <Text style={styles.senderName}>
+                  <Text style={[styles.senderName, { color: bubbleTextColor, opacity: 0.8 }]}>
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
@@ -966,6 +967,7 @@ export default function ChatScreen() {
               <Avatar
                 uri={isGroup ? conversation?.avatar_url : otherUser?.avatar_url}
                 name={headerTitle}
+                seed={isGroup ? conversationId : otherUser?.id}
                 size="md"
               />
               <View style={styles.headerText}>
@@ -1095,8 +1097,8 @@ export default function ChatScreen() {
           )}
 
           {showJump && (
-            <TouchableOpacity style={styles.jumpButton} onPress={scrollToBottom}>
-              <Ionicons name="chevron-down" size={18} color={theme.colors.base} />
+            <TouchableOpacity style={[styles.jumpButton, { backgroundColor: accentHex }]} onPress={scrollToBottom}>
+              <Ionicons name="chevron-down" size={18} color="#ffffff" />
             </TouchableOpacity>
           )}
 

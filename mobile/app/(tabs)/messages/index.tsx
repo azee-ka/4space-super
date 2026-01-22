@@ -284,6 +284,10 @@ export default function MessagesScreen() {
                   conversation.type === 'group'
                     ? conversation.name
                     : conversation.participants[0]?.display_name || conversation.participants[0]?.username;
+                const seed =
+                  conversation.type === 'group'
+                    ? conversation.id
+                    : conversation.participants[0]?.id || conversation.id;
                 return (
                   <TouchableOpacity
                     key={conversation.id}
@@ -294,6 +298,7 @@ export default function MessagesScreen() {
                       <Avatar
                         uri={conversation.type === 'group' ? conversation.avatar_url : conversation.participants[0]?.avatar_url}
                         name={name || 'Pinned'}
+                        seed={seed}
                         size="sm"
                       />
                     </View>

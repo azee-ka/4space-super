@@ -38,6 +38,13 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     return conversation.participants[0]?.avatar_url;
   };
 
+  const getConversationSeed = () => {
+    if (conversation.type === 'group') {
+      return conversation.id;
+    }
+    return conversation.participants[0]?.id || conversation.id;
+  };
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -59,7 +66,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
       style={styles.container}
     >
       <View style={[styles.avatarRing, hasUnread && styles.avatarRingUnread]}>
-        <Avatar uri={getConversationAvatar()} name={getConversationName()} size="lg" />
+        <Avatar uri={getConversationAvatar()} name={getConversationName()} seed={getConversationSeed()} size="lg" />
       </View>
 
       <View style={styles.content}>
