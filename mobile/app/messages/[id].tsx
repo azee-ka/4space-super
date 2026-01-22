@@ -15,6 +15,8 @@ import {
   Share,
   ScrollView,
   ActivityIndicator,
+  Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,38 +29,17 @@ import { useMessagePreferencesStore } from '../../src/store/messagePreferencesSt
 import { useThemeStore } from '../../src/store/themeStore';
 import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
-import { ChatBackground, TypingIndicator, BackgroundPicker } from '../../src/components/chat';
+import { TypingIndicator, BackgroundPicker } from '../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
 import { Message } from '../../src/types';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { theme } from '../../src/styles/theme';
 import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
 import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
 
-const EMOJI_CATEGORIES = [
-  {
-    id: 'smileys',
-    label: 'Smileys',
-    emojis: ['😀', '😃', '😅', '😂', '🤣', '😊', '😍', '🤩', '😘', '😎'],
-  },
-  {
-    id: 'gestures',
-    label: 'Gestures',
-    emojis: ['👍', '👏', '🙏', '🤝', '👌', '✌️', '🤟', '🤘', '🤙', '👋'],
-  },
-  {
-    id: 'hearts',
-    label: 'Hearts',
-    emojis: ['❤️', '💛', '💚', '💙', '💜', '🧡', '🤎', '💖', '💘', '💗'],
-  },
-  {
-    id: 'symbols',
-    label: 'Symbols',
-    emojis: ['✨', '🔥', '⚡', '🌟', '🎉', '💥', '🌀', '🎯', '🌈', '💫'],
-  },
-];
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -79,7 +60,7 @@ export default function ChatScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useMessages(conversationId || '', 50);
+  } = useMessages(conversationId || '');
   const sendMessageMutation = useSendMessage();
   const addReactionMutation = useAddReaction();
   const flatListRef = useRef<FlatList>(null);
@@ -88,13 +69,12 @@ export default function ChatScreen() {
   const [showActions, setShowActions] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [activeEmojiCategory, setActiveEmojiCategory] = useState(EMOJI_CATEGORIES[0].id);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
-  const [showComposerTools, setShowComposerTools] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showJump, setShowJump] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentSettings = conversationId
@@ -148,14 +128,6 @@ export default function ChatScreen() {
     [messagePages]
   );
 
-  // Dev-only: log counts to verify Supabase is returning more than one row
-  useEffect(() => {
-    if (__DEV__) {
-      const pageCounts = messagePages?.pages.map((p) => p.length) || [];
-      console.log('[ChatScreen] pages', pageCounts, 'total', messages.length, 'hasNext', hasNextPage);
-    }
-  }, [messagePages, messages.length, hasNextPage]);
-
   const displayMessages = useMemo(() => {
     if (!messages.length) return [];
     const query = searchQuery.trim().toLowerCase();
@@ -167,12 +139,8 @@ export default function ChatScreen() {
     });
   }, [messages, searchOpen, searchQuery]);
 
-  // Oldest → newest; we scroll to end so latest is visible
   const renderedMessages = useMemo(
-    () =>
-      [...displayMessages].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      ),
+    () => displayMessages,
     [displayMessages]
   );
 
@@ -206,96 +174,8 @@ export default function ChatScreen() {
           table: 'messages',
           filter: 'conversation_id=eq.' + conversationId,
         },
-        async (payload) => {
-          // Instead of invalidating the entire messages query (which breaks pagination),
-          // fetch just the new message and prepend it to the existing data
-          const { data: newMessage, error } = await supabase
-            .from('messages')
-            .select(
-              '*, sender:profiles(id, username, display_name, avatar_url), reactions:message_reactions(id, message_id, emoji, user_id, created_at)'
-            )
-            .eq('id', payload.new.id)
-            .single();
-
-          if (!error && newMessage) {
-            queryClient.setQueryData(['messages', conversationId], (oldData: any) => {
-              if (!oldData?.pages?.[0]) return oldData;
-
-              // Normalize the new message
-              const normalizedMessage = {
-                id: newMessage.id,
-                conversation_id: newMessage.conversation_id,
-                sender_id: newMessage.sender_id,
-                sender: {
-                  id: newMessage.sender?.id || newMessage.sender_id,
-                  username: newMessage.sender?.username || newMessage.sender?.display_name || 'User',
-                  display_name: newMessage.sender?.display_name || newMessage.sender?.username || 'User',
-                  avatar_url: newMessage.sender?.avatar_url,
-                },
-                content: newMessage.content,
-                type: newMessage.message_type || newMessage.type || 'text',
-                metadata: newMessage.metadata ?? null,
-                encrypted_content: newMessage.encrypted_content ?? null,
-                reply_to: newMessage.reply_to
-                  ? {
-                      id: newMessage.reply_to.id,
-                      conversation_id: newMessage.reply_to.conversation_id || newMessage.conversation_id,
-                      sender_id: newMessage.reply_to.sender_id,
-                      sender: {
-                        id: newMessage.reply_to.sender?.id || newMessage.reply_to.sender_id,
-                        username: newMessage.reply_to.sender?.username || newMessage.reply_to.sender?.display_name || 'User',
-                        display_name: newMessage.reply_to.sender?.display_name || newMessage.reply_to.sender?.username || 'User',
-                        avatar_url: newMessage.reply_to.sender?.avatar_url,
-                      },
-                      content: newMessage.reply_to.content,
-                      type: newMessage.reply_to.message_type || newMessage.reply_to.type || 'text',
-                      reply_to: undefined,
-                      reactions: [],
-                      read_by: [],
-                      created_at: newMessage.reply_to.created_at,
-                      updated_at: newMessage.reply_to.updated_at || newMessage.reply_to.created_at,
-                      is_edited: Boolean(newMessage.reply_to.is_edited || newMessage.reply_to.edited_at),
-                      is_deleted: Boolean(newMessage.reply_to.is_deleted || newMessage.reply_to.deleted_at),
-                      file_url: newMessage.reply_to.file_url,
-                      file_name: newMessage.reply_to.file_name,
-                      file_size: newMessage.reply_to.file_size,
-                    }
-                  : undefined,
-                reactions: (newMessage.reactions || []).map((reaction: any) => ({
-                  id: reaction.id,
-                  message_id: reaction.message_id || newMessage.id,
-                  user_id: reaction.user_id,
-                  user: reaction.user ? {
-                    id: reaction.user.id || reaction.user_id,
-                    username: reaction.user.username || reaction.user.display_name || 'User',
-                    display_name: reaction.user.display_name || reaction.user.username || 'User',
-                    avatar_url: reaction.user.avatar_url,
-                  } : undefined,
-                  emoji: reaction.emoji,
-                  created_at: reaction.created_at,
-                })),
-                read_by: newMessage.read_by || (newMessage.read_receipts || []).map((receipt: any) => receipt.user_id) || [],
-                created_at: newMessage.created_at,
-                updated_at: newMessage.updated_at || newMessage.created_at,
-                is_edited: Boolean(newMessage.is_edited || newMessage.edited_at),
-                is_deleted: Boolean(newMessage.is_deleted || newMessage.deleted_at),
-                file_url: newMessage.file_url,
-                file_name: newMessage.file_name,
-                file_size: newMessage.file_size,
-              };
-
-              // Create new pages array with the new message prepended to the first page
-              const newPages = [...oldData.pages];
-              newPages[0] = [normalizedMessage, ...newPages[0]];
-
-              return {
-                ...oldData,
-                pages: newPages,
-              };
-            });
-          }
-
-          // Still invalidate conversations for updated counts/timestamps
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
           queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
         }
@@ -313,6 +193,7 @@ export default function ChatScreen() {
     console.error('Messages fetch error:', messagesError);
     Alert.alert('Messages error', 'Failed to load messages. Pull to refresh or try again.');
   }, [messagesError]);
+
 
   const handleSendMessage = useCallback(async () => {
     if (!messageText.trim() || !user || !conversationId) return;
@@ -371,20 +252,19 @@ export default function ChatScreen() {
   }, [user, conversationId, typingIndicatorsEnabled]);
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
-    if (!user || !conversationId) return;
+    if (!user) return;
 
     try {
       await addReactionMutation.mutateAsync({
         messageId,
         userId: user.id,
         emoji,
-        conversationId,
       });
       setShowActions(false);
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
-  }, [user, conversationId, addReactionMutation]);
+  }, [user, addReactionMutation]);
 
   const handlePickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -394,17 +274,93 @@ export default function ChatScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      Alert.alert('Image ready', 'Image upload is coming soon.');
+      const asset = result.assets[0];
+      try {
+        // Upload to Supabase storage
+        const fileExt = asset.uri.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `chat-images/${conversationId}/${fileName}`;
+
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('chat-media')
+          .upload(filePath, blob, {
+            contentType: asset.type || 'image/jpeg',
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('chat-media')
+          .getPublicUrl(filePath);
+
+        // Send message with image
+        await sendMessageMutation.mutateAsync({
+          conversationId: conversationId!,
+          content: asset.fileName || 'Image',
+          senderId: user!.id,
+          fileUrl: urlData.publicUrl,
+          fileName: asset.fileName || fileName,
+          fileType: 'image',
+        });
+
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      } catch (error) {
+        console.error('Image upload error:', error);
+        Alert.alert('Upload failed', 'Failed to upload image. Please try again.');
+      }
     }
-  }, []);
+  }, [conversationId, user, sendMessageMutation]);
 
   const handlePickFile = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({});
 
     if (result.type === 'success') {
-      Alert.alert('File ready', 'File sharing is coming soon.');
+      try {
+        // Upload file to Supabase storage
+        const fileName = result.name;
+        const filePath = `chat-files/${conversationId}/${Date.now()}_${fileName}`;
+
+        const response = await fetch(result.uri);
+        const blob = await response.blob();
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('chat-media')
+          .upload(filePath, blob, {
+            contentType: result.mimeType || 'application/octet-stream',
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('chat-media')
+          .getPublicUrl(filePath);
+
+        // Send message with file
+        await sendMessageMutation.mutateAsync({
+          conversationId: conversationId!,
+          content: fileName,
+          senderId: user!.id,
+          fileUrl: urlData.publicUrl,
+          fileName: fileName,
+          fileType: 'file',
+        });
+
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      } catch (error) {
+        console.error('File upload error:', error);
+        Alert.alert('Upload failed', 'Failed to upload file. Please try again.');
+      }
     }
-  }, []);
+  }, [conversationId, user, sendMessageMutation]);
 
   const handleShareMessage = useCallback(async (message: Message) => {
     if (!message.content) return;
@@ -416,28 +372,13 @@ export default function ChatScreen() {
   }, []);
 
   const handleDeleteMessage = useCallback(async (message: Message) => {
-    if (!conversationId) return;
-
     try {
       await supabase
         .from('messages')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', message.id);
 
-      // Manually remove the deleted message from the query data instead of invalidating
-      queryClient.setQueryData(['messages', conversationId], (oldData: any) => {
-        if (!oldData?.pages) return oldData;
-
-        const newPages = oldData.pages.map((page: any[]) =>
-          page.filter((msg: Message) => msg.id !== message.id)
-        );
-
-        return {
-          ...oldData,
-          pages: newPages,
-        };
-      });
-
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       setShowActions(false);
     } catch (error) {
       Alert.alert('Delete failed', 'Could not delete the message.');
@@ -453,7 +394,7 @@ export default function ChatScreen() {
   };
 
   const scrollToBottom = () => {
-    flatListRef.current?.scrollToEnd({ animated: true });
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   const scrollToPinned = () => {
@@ -464,37 +405,24 @@ export default function ChatScreen() {
     flatListRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
   };
 
+  const hasVisibleText = (value: string) =>
+    value.replace(/[\s\u200B-\u200D\uFEFF]/g, '').length > 0;
+
   const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
-    if (__DEV__ && index < 5) { // Log first 5 messages to verify rendering
-      console.log(`[renderMessage] rendering message ${index}:`, item.id, item.content?.substring(0, 50));
-    }
     const isOwn = item.sender_id === user?.id;
-    const prevMessage = renderedMessages && index > 0 ? renderedMessages[index - 1] : null;
+    const prevMessage = renderedMessages ? renderedMessages[index + 1] : null;
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
-    const resolvedContent =
-      displayContent && displayContent.trim().length > 0
-        ? displayContent
-        : item.file_name
-          ? item.file_name
-          : item.type && item.type !== 'text'
-            ? item.type.toUpperCase()
-            : 'Unsupported message';
     const isSaved = savedMessageIds.includes(item.id);
     const isPinned = pinnedMessageId === item.id;
     const bubbleColorStyle = { backgroundColor: isOwn ? chatTheme.sentBubbleColor : chatTheme.receivedBubbleColor };
-    const bubbleTextColor =
-      (isOwn ? chatTheme.sentTextColor : chatTheme.receivedTextColor) ||
-      (isOwn ? '#f8fafc' : theme.colors.textPrimary);
+    const bubbleTextColor = isOwn ? chatTheme.sentTextColor : chatTheme.receivedTextColor;
     const bubbleGradient = isOwn ? chatTheme.sentBubbleGradient : chatTheme.receivedBubbleGradient;
     const useGradient =
       chatTheme.bubbleStyle === 'gradient' &&
       Array.isArray(bubbleGradient) &&
       bubbleGradient.length === 2;
-    const showSenderName = !isOwn && showAvatar && isGroup;
-    const readCount = item.read_by?.length || 0;
-    const isSeen = readCount > 1;
 
     const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
     const currentDate = new Date(item.created_at);
@@ -517,28 +445,19 @@ export default function ChatScreen() {
             setSelectedMessage(item);
             setShowActions(true);
           }}
-          style={[
-            styles.messageContainer,
-            { marginBottom: messageSpacing },
-            isOwn && styles.messageContainerOwn,
-          ]}
+          style={[styles.messageContainer, { marginBottom: messageSpacing }, isOwn && styles.messageContainerOwn]}
         >
-          <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
-            {!isOwn && showAvatar && (
-              <View style={styles.senderHeader}>
-                <Avatar
-                  uri={item.sender.avatar_url}
-                  name={item.sender.display_name || item.sender.username}
-                  size="xs"
-                />
-                {showSenderName && (
-                  <Text style={styles.senderLabel}>
-                    {item.sender.display_name || item.sender.username}
-                  </Text>
-                )}
-              </View>
-            )}
+          {!isOwn && showAvatar && (
+            <View style={styles.avatarRow}>
+              <Avatar
+                uri={item.sender.avatar_url}
+                name={item.sender.display_name || item.sender.username}
+                size="sm"
+              />
+            </View>
+          )}
 
+          <View style={styles.messageRow}>
             <View style={[styles.messageBubbleContainer, isOwn && styles.messageBubbleContainerOwn]}>
               {item.reply_to && (
                 <View style={styles.replyPreview}>
@@ -565,34 +484,38 @@ export default function ChatScreen() {
                   { borderRadius: chatTheme.bubbleRadius },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.messageText,
-                    {
-                      color: bubbleTextColor,
-                      fontSize: messageFontSize,
-                      lineHeight: messageLineHeight,
-                    },
-                  ]}
-                >
-                  {resolvedContent}
-                </Text>
-                <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
-                  <View style={styles.messageFlags}>
-                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
-                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
-                  </View>
-                  <Text style={[styles.timestamp, isOwn && styles.timestampOwn]}>
-                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {!isOwn && showAvatar && (
+                  <Text style={styles.senderName}>
+                    {item.sender.display_name || item.sender.username}
                   </Text>
-                  {isOwn && readReceiptsEnabled && (
-                    <Ionicons
-                      name={isSeen ? 'checkmark-done' : 'checkmark'}
-                      size={14}
-                      color={isSeen ? '#38bdf8' : theme.colors.textMuted}
+                )}
+                {item.type === 'image' && item.attachments && item.attachments[0] && (
+                  <TouchableOpacity onPress={() => setSelectedImage(item.attachments[0]?.url ?? null)}>
+                    <Image
+                      source={{ uri: item.attachments[0]?.url ?? null }}
+                      style={styles.messageImage}
+                      contentFit="cover"
+                      transition={200}
                     />
-                  )}
-                </View>
+                  </TouchableOpacity>
+                )}
+                {item.type === 'file' && item.attachments && item.attachments[0] && (
+                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(item.attachments[0].url)}>
+                    <Ionicons name="document-outline" size={24} color={bubbleTextColor} />
+                    <View style={styles.fileInfo}>
+                      <Text style={[styles.fileName, { color: bubbleTextColor }]} numberOfLines={1}>
+                        {item.attachments[0].name}
+                      </Text>
+                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>File</Text>
+                    </View>
+                    <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
+                  </TouchableOpacity>
+                )}
+                {item.type === 'text' && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
+                    {displayContent}
+                  </Text>
+                )}
               </LinearGradient>
             ) : (
               <View
@@ -603,36 +526,67 @@ export default function ChatScreen() {
                   { borderRadius: chatTheme.bubbleRadius },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.messageText,
-                    {
-                      color: bubbleTextColor,
-                      fontSize: messageFontSize,
-                      lineHeight: messageLineHeight,
-                    },
-                  ]}
-                >
-                  {resolvedContent}
-                </Text>
-                <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
-                  <View style={styles.messageFlags}>
-                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
-                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
-                  </View>
-                  <Text style={[styles.timestamp, isOwn && styles.timestampOwn]}>
-                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {!isOwn && showAvatar && (
+                  <Text style={styles.senderName}>
+                    {item.sender.display_name || item.sender.username}
                   </Text>
-                  {isOwn && readReceiptsEnabled && (
+                )}
+                {item.type === 'image' && item.attachments && item.attachments[0] && (
+                  <TouchableOpacity onPress={() => setSelectedImage(item.attachments[0].url)}>
+                    <Image
+                      source={{ uri: item.attachments[0].url }}
+                      style={styles.messageImage}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  </TouchableOpacity>
+                )}
+                {item.type === 'file' && item.attachments && item.attachments[0] && (
+                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(item.attachments[0].url)}>
+                    <Ionicons name="document-outline" size={24} color={bubbleTextColor} />
+                    <View style={styles.fileInfo}>
+                      <Text style={[styles.fileName, { color: bubbleTextColor }]} numberOfLines={1}>
+                        {item.attachments[0].name}
+                      </Text>
+                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>File</Text>
+                    </View>
+                    <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
+                  </TouchableOpacity>
+                )}
+                {item.type === 'text' && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
+                    {displayContent}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
+              <View style={styles.messageFlags}>
+                {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
+                {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+              </View>
+              <Text style={[styles.timestamp, isOwn && styles.timestampOwn]}>
+                {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              {isOwn && readReceiptsEnabled && (
+                <View style={styles.readReceipts}>
+                  <Ionicons
+                    name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                    size={12}
+                    color={item.read_by.length > 1 ? '#34d399' : theme.colors.textMuted}
+                  />
+                  {item.read_by.length > 1 && (
                     <Ionicons
-                      name={isSeen ? 'checkmark-done' : 'checkmark'}
-                      size={14}
-                      color={isSeen ? '#38bdf8' : theme.colors.textMuted}
+                      name="checkmark-done"
+                      size={12}
+                      color="#34d399"
+                      style={{ marginLeft: -6 }}
                     />
                   )}
                 </View>
-              </View>
-            )}
+              )}
+            </View>
 
               {hasReactions && (
                 <View style={styles.reactionsContainer}>
@@ -658,18 +612,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [
-    user,
-    renderedMessages,
-    handleReaction,
-    readReceiptsEnabled,
-    pinnedMessageId,
-    savedMessageIds,
-    messageFontSize,
-    messageLineHeight,
-    messageSpacing,
-    chatTheme,
-  ]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -690,14 +633,12 @@ export default function ChatScreen() {
       : 'Online';
 
   return (
-    <ChatBackground>
-      <View style={[styles.themeLayer, { backgroundColor: chatTheme.backgroundColor }]} />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.container}
-          keyboardVerticalOffset={50}
-        >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? -20 : 0}
+      >
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={22} color={theme.colors.textPrimary} />
@@ -723,6 +664,11 @@ export default function ChatScreen() {
             </TouchableOpacity>
 
             <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerAction} onPress={() => {
+                Alert.alert('Extensions', 'Chat extensions and settings - coming soon!');
+              }}>
+                <Ionicons name="grid-outline" size={18} color={theme.colors.textMuted} />
+              </TouchableOpacity>
               {showCallControls && (
                 <>
                   <TouchableOpacity style={styles.headerAction}>
@@ -785,25 +731,13 @@ export default function ChatScreen() {
             data={renderedMessages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
-            style={styles.list}
-            contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() => {
-              // keep view pinned to latest
-              if (__DEV__) {
-                console.log('[FlatList] onContentSizeChange, scrolling to end. Messages count:', renderedMessages.length);
-              }
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 12 }}
+            style={{ flex: 1 }}
+            inverted
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onEndReached={() => {
-              if (__DEV__) {
-                console.log('[FlatList] onEndReached called, hasNextPage:', hasNextPage, 'isFetchingNextPage:', isFetchingNextPage, 'messages:', renderedMessages.length);
-              }
               if (hasNextPage && !isFetchingNextPage) {
-                if (__DEV__) {
-                  console.log('[FlatList] calling fetchNextPage');
-                }
                 fetchNextPage();
               }
             }}
@@ -851,47 +785,15 @@ export default function ChatScreen() {
           )}
 
           <View style={styles.inputContainer}>
-            {showComposerTools && (
-              <View style={styles.toolsRow}>
-                <TouchableOpacity style={styles.toolButton} onPress={handlePickImage}>
-                  <Ionicons name="image-outline" size={20} color="#22d3ee" />
-                  <Text style={styles.toolText}>Photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.toolButton} onPress={handlePickFile}>
-                  <Ionicons name="attach-outline" size={20} color="#f97316" />
-                  <Text style={styles.toolText}>File</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.toolButton}
-                  onPress={() => Alert.alert('Location', 'Location sharing is coming soon.')}
-                >
-                  <Ionicons name="location-outline" size={20} color="#34d399" />
-                  <Text style={styles.toolText}>Location</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.toolButton}
-                  onPress={() => Alert.alert('Poll', 'Polls are coming soon.')}
-                >
-                  <Ionicons name="bar-chart-outline" size={20} color="#a855f7" />
-                  <Text style={styles.toolText}>Poll</Text>
-                </TouchableOpacity>
-              </View>
-            )}
 
             <View style={styles.inputRow}>
               <TouchableOpacity
-                onPress={() => setShowComposerTools((prev) => !prev)}
+                onPress={() => setShowPlusMenu(true)}
                 style={styles.inputAction}
               >
-                <Ionicons name={showComposerTools ? 'close' : 'add'} size={22} color={theme.colors.textMuted} />
+                <Ionicons name="add" size={22} color={theme.colors.textMuted} />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={styles.inputAction}
-              >
-                <Ionicons name="happy-outline" size={22} color={theme.colors.textMuted} />
-              </TouchableOpacity>
 
               <View style={styles.textInputWrapper}>
                 <TextInput
@@ -923,177 +825,36 @@ export default function ChatScreen() {
 
           </View>
 
-          <Modal
-            visible={showEmojiPicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowEmojiPicker(false)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => setShowEmojiPicker(false)}
-              style={styles.modalOverlay}
-            >
-              <View style={styles.emojiModal}>
-                <View style={styles.emojiModalHeader}>
-                  <Text style={styles.emojiModalTitle}>Emoji picker</Text>
-                  <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
-                    <Ionicons name="close" size={20} color={theme.colors.textMuted} />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.emojiCategories}
-                >
-                  {EMOJI_CATEGORIES.map((category) => {
-                    const isActive = category.id === activeEmojiCategory;
-                    return (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[styles.emojiCategory, isActive && styles.emojiCategoryActive]}
-                        onPress={() => setActiveEmojiCategory(category.id)}
-                      >
-                        <Text
-                          style={[
-                            styles.emojiCategoryLabel,
-                            isActive && styles.emojiCategoryLabelActive,
-                          ]}
-                        >
-                          {category.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-                <ScrollView contentContainerStyle={styles.emojiGrid}>
-                  {(EMOJI_CATEGORIES.find((cat) => cat.id === activeEmojiCategory)?.emojis || []).map(
-                    (emoji) => (
-                      <TouchableOpacity
-                        key={emoji}
-                        style={styles.emojiButton}
-                        onPress={() => {
-                          setMessageText((prev) => prev + emoji);
-                          setShowEmojiPicker(false);
-                        }}
-                      >
-                        <Text style={styles.emojiText}>{emoji}</Text>
-                      </TouchableOpacity>
-                    )
-                  )}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
-
-          <Modal
-            visible={showActions}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowActions(false)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => setShowActions(false)}
-              style={styles.modalOverlay}
-            >
-              <View style={styles.actionsModal}>
-                <View style={styles.quickReactionsContainer}>
-                  {reactionEmojis.map((emoji) => (
-                    <TouchableOpacity
-                      key={emoji}
-                      onPress={() => {
-                        if (selectedMessage) {
-                          handleReaction(selectedMessage.id, emoji);
-                        }
-                      }}
-                      style={styles.quickReaction}
-                    >
-                      <Text style={styles.quickReactionEmoji}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <View style={styles.actionsContainer}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setReplyingTo(selectedMessage);
-                      setShowActions(false);
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <Ionicons name="arrow-undo" size={22} color={accentHex} />
-                    <Text style={styles.actionText}>Reply</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedMessage && conversationId) {
-                        const nextPinned = selectedMessage.id === pinnedMessageId ? null : selectedMessage.id;
-                        setPinnedMessage(conversationId, nextPinned);
-                      }
-                      setShowActions(false);
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <Ionicons name="pin" size={22} color="#f97316" />
-                    <Text style={styles.actionText}>
-                      {selectedMessage?.id === pinnedMessageId ? 'Unpin' : 'Pin'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedMessage && conversationId) {
-                        toggleSavedMessage(conversationId, selectedMessage.id);
-                      }
-                      setShowActions(false);
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <Ionicons name="bookmark" size={22} color="#22d3ee" />
-                    <Text style={styles.actionText}>
-                      {selectedMessage && savedMessageIds.includes(selectedMessage.id) ? 'Unsave' : 'Save'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedMessage) {
-                        handleShareMessage(selectedMessage);
-                      }
-                      setShowActions(false);
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <Ionicons name="share-outline" size={22} color={theme.colors.textMuted} />
-                    <Text style={styles.actionText}>Share</Text>
-                  </TouchableOpacity>
-
-                  {selectedMessage?.sender_id === user?.id && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (selectedMessage) {
-                          handleDeleteMessage(selectedMessage);
-                        }
-                      }}
-                      style={styles.actionButton}
-                    >
-                      <Ionicons name="trash-outline" size={22} color={theme.colors.danger} />
-                      <Text style={styles.actionText}>Delete</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          </Modal>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-      <BackgroundPicker
+
+    <BackgroundPicker
         visible={showBackgroundPicker}
         onClose={() => setShowBackgroundPicker(false)}
       />
-    </ChatBackground>
+
+
+      <Modal
+        visible={!!selectedImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}
+      >
+        <View style={styles.imageViewerContainer}>
+          <TouchableOpacity
+            style={styles.imageViewerClose}
+            onPress={() => setSelectedImage(null)}
+          >
+            <Ionicons name="close" size={28} color="white" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: selectedImage! }}
+            style={styles.imageViewerImage}
+            contentFit="contain"
+            transition={200}
+          />
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -1226,30 +987,19 @@ const styles = StyleSheet.create({
   messageContainer: {
     marginBottom: 0,
     maxWidth: '85%',
-    alignSelf: 'flex-start',
   },
   messageContainerOwn: {
     alignSelf: 'flex-end',
   },
-  list: {
-    flex: 1,
-  },
   messageRow: {
-    gap: 6,
-  },
-  messageRowOwn: {
-    alignItems: 'flex-end',
-  },
-  senderHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 4,
   },
-  senderLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
+  avatarRow: {
+    marginBottom: 4,
+    alignItems: 'flex-start',
+  },
+  avatarSpacer: {
+    width: 40,
   },
   messageBubbleContainer: {
     flex: 1,
@@ -1289,19 +1039,64 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 12,
     paddingHorizontal: 14,
-    minWidth: 60,
+    maxWidth: 280,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   messageBubbleOwn: {
-    borderBottomRightRadius: 10,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 4,
   },
   messageBubbleOther: {
-    borderBottomLeftRadius: 10,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+  },
+  senderName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    marginBottom: 4,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 20,
-    includeFontPadding: false,
-    textAlign: 'left',
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  messageFile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 8,
+    padding: 12,
+    gap: 12,
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  fileSize: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  debugText: {
+    fontSize: 12,
+    color: theme.colors.warning,
   },
   debugText: {
     fontSize: 12,
@@ -1311,11 +1106,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
-    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginHorizontal: 12,
   },
   messageFooterOwn: {
-    alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
   },
   messageFlags: {
     flexDirection: 'row',
@@ -1328,6 +1123,10 @@ const styles = StyleSheet.create({
   },
   timestampOwn: {
     color: 'rgba(248, 250, 252, 0.8)',
+  },
+  readReceipts: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reactionsContainer: {
     flexDirection: 'row',
@@ -1389,28 +1188,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.base,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 12,
-  },
-  toolsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    gap: 12,
-  },
-  toolButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: theme.colors.surfaceSubtle,
-  },
-  toolText: {
-    color: theme.colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '600',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
   },
   inputRow: {
     flexDirection: 'row',
@@ -1449,66 +1227,6 @@ const styles = StyleSheet.create({
   },
   sendButtonInactive: {
     backgroundColor: theme.colors.surfaceSubtle,
-  },
-  emojiModal: {
-    backgroundColor: theme.colors.base,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    maxHeight: '70%',
-  },
-  emojiModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  emojiModalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  emojiCategories: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  emojiCategory: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: theme.colors.surfaceSubtle,
-  },
-  emojiCategoryActive: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-  },
-  emojiCategoryLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSubtle,
-  },
-  emojiCategoryLabelActive: {
-    color: theme.colors.textPrimary,
-  },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    paddingBottom: 20,
-    gap: 8,
-  },
-  emojiButton: {
-    padding: 6,
-  },
-  emojiText: {
-    fontSize: 26,
   },
   modalOverlay: {
     flex: 1,
@@ -1555,5 +1273,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
     fontWeight: '500',
+  },
+  plusMenu: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusMenuContent: {
+    backgroundColor: theme.colors.base,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  plusMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 16,
+    borderRadius: 12,
+  },
+  plusMenuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusMenuText: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 10,
+  },
+  imageViewerImage: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 12,
   },
 });

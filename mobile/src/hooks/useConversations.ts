@@ -114,6 +114,7 @@ const normalizeMessage = (msg: any): Message => {
     file_url: msg.file_url,
     file_name: msg.file_name,
     file_size: msg.file_size,
+    attachments: msg.attachments,
   };
 };
 
@@ -354,6 +355,7 @@ export const useSendMessage = () => {
       fileName?: string;
       fileType?: string;
     }) => {
+      const attachments = fileUrl ? [{ url: fileUrl, name: fileName, type: fileType }] : undefined;
       const metadata = content ? { content, text: content } : undefined;
       const { data, error } = await supabase
         .from('messages')
@@ -363,6 +365,7 @@ export const useSendMessage = () => {
           content,
           reply_to_id: replyToId,
           message_type: fileType || 'text',
+          ...(attachments ? { attachments } : {}),
           ...(metadata ? { metadata } : {}),
         })
         .select(

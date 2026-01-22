@@ -40,6 +40,7 @@ export interface Message {
   file_url?: string;
   file_name?: string;
   file_size?: number;
+  attachments?: any[];
 }
 
 export interface Reaction {
