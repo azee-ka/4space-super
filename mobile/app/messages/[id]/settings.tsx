@@ -1620,6 +1620,14 @@ export default function ChatSettingsScreen() {
             onToggle: (value: boolean) => setConversationSettings(conversationId, { typingIndicators: value }),
           },
           {
+            icon: 'time-outline',
+            iconColor: '#38bdf8',
+            label: 'Show timestamps',
+            hint: 'Display sent times inside bubbles',
+            value: settings.showTimestamps,
+            onToggle: (value: boolean) => setConversationSettings(conversationId, { showTimestamps: value }),
+          },
+          {
             icon: 'notifications-outline',
             iconColor: '#f97316',
             label: 'Mute notifications',

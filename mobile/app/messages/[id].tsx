@@ -81,13 +81,14 @@ export default function ChatScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.82, 360);
+  const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
 
   const currentSettings = conversationId
     ? conversationSettings[conversationId] || DEFAULT_CONVERSATION_SETTINGS
     : DEFAULT_CONVERSATION_SETTINGS;
   const readReceiptsEnabled = currentSettings.readReceipts;
   const typingIndicatorsEnabled = currentSettings.typingIndicators;
+  const showTimestamps = currentSettings.showTimestamps !== false;
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
@@ -99,7 +100,7 @@ export default function ChatScreen() {
       return { ...DEFAULT_CHAT_THEME, density: 'cozy' as const };
     }
     const customization = conversationCustomizations[conversationId];
-    const base = getChatThemeById(customization?.themeId);
+    const base = getChatThemeById(customization?.themeId) || DEFAULT_CHAT_THEME;
     return {
       ...base,
       sentBubbleColor: customization?.sentBubbleColor || base.sentBubbleColor,
@@ -119,12 +120,19 @@ export default function ChatScreen() {
   }, [conversationId, conversationCustomizations]);
   const messageSpacing =
     chatTheme.density === 'compact'
-      ? 6
+      ? 4
       : chatTheme.density === 'spacious'
-        ? 18
-        : 12;
+        ? 14
+        : 9;
   const messageFontSize = chatTheme.messageTextSize ?? 15;
   const messageLineHeight = Math.round(messageFontSize * 1.35);
+  const bubbleCornerLarge = chatTheme?.bubbleRadius ?? DEFAULT_CHAT_THEME.bubbleRadius;
+  // Tighter corners used when messages cluster into a block (older→newer inside a few minutes).
+  // Slightly sharper than before so the block effect is obvious on small radii, but never squared off.
+  const bubbleCornerTight = Math.max(
+    3,
+    Math.min(12, Math.round((chatTheme?.bubbleRadius ?? DEFAULT_CHAT_THEME.bubbleRadius) * 0.28))
+  );
 
   const pinnedMessageId = conversationId ? pinnedMessages[conversationId] : null;
   const savedMessageIds = conversationId ? savedMessages[conversationId] || [] : [];
@@ -454,16 +462,22 @@ export default function ChatScreen() {
     const prevMessage = renderedMessages ? renderedMessages[index + 1] : null;
     const nextMessage = renderedMessages ? renderedMessages[index - 1] : null;
 
-    const withinCluster = (a?: Message | null, b?: Message | null) => {
-      if (!a || !b) return false;
-      const diff = Math.abs(new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      return diff < 6 * 60 * 1000; // 6 minutes cluster window
-    };
+    const closeGapMs = 5 * 60 * 1000; // <5 minutes: treat as tight stack
+    const blockGapMs = 30 * 60 * 1000; // >=30 minutes: show separator
+    const longGapMs = 12 * 60 * 1000; // avatar re-appears after this gap
+    const prevGap = prevMessage
+      ? Math.abs(new Date(item.created_at).getTime() - new Date(prevMessage.created_at).getTime())
+      : Infinity;
+    const nextGap = nextMessage
+      ? Math.abs(new Date(item.created_at).getTime() - new Date(nextMessage.created_at).getTime())
+      : Infinity;
 
-    const groupedWithPrev = prevMessage && prevMessage.sender_id === item.sender_id && withinCluster(prevMessage, item);
-    const groupedWithNext = nextMessage && nextMessage.sender_id === item.sender_id && withinCluster(nextMessage, item);
+    const groupedWithPrev =
+      prevMessage && prevMessage.sender_id === item.sender_id && prevGap < closeGapMs;
+    const groupedWithNext =
+      nextMessage && nextMessage.sender_id === item.sender_id && nextGap < closeGapMs;
 
-    const showAvatar = !groupedWithPrev && !isOwn;
+    const showAvatar = !isOwn && (!groupedWithPrev || prevGap > longGapMs);
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
     const isSaved = savedMessageIds.includes(item.id);
@@ -478,7 +492,10 @@ export default function ChatScreen() {
 
     const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
     const currentDate = new Date(item.created_at);
-    const showDateSeparator = !prevDate || prevDate.toDateString() !== currentDate.toDateString();
+    const showDateSeparator =
+      !prevDate ||
+      prevDate.toDateString() !== currentDate.toDateString() ||
+      prevGap >= blockGapMs;
     const isToday = (() => {
       const today = new Date();
       return currentDate.toDateString() === today.toDateString();
@@ -493,32 +510,99 @@ export default function ChatScreen() {
       ? 'Today'
       : isYesterday
         ? 'Yesterday'
-        : currentDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: currentDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined });
+        : currentDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: currentDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+          });
     const timeLabel = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const separatorLabel = `${dateLabel} · ${timeLabel}`;
 
-    const baseRadius = chatTheme.bubbleRadius;
-    const bubbleRadius = isOwn
-      ? {
-          borderTopLeftRadius: baseRadius,
-          borderTopRightRadius: groupedWithPrev ? 6 : baseRadius,
-          borderBottomLeftRadius: groupedWithNext ? 6 : baseRadius,
-          borderBottomRightRadius: baseRadius,
-        }
-      : {
-          borderTopLeftRadius: groupedWithPrev ? 6 : baseRadius,
-          borderTopRightRadius: baseRadius,
-          borderBottomLeftRadius: baseRadius,
-          borderBottomRightRadius: groupedWithNext ? 6 : baseRadius,
+    // Corner tightening is applied independently per side, only when the neighboring
+    // message from the same sender is within the 5-minute window.
+    const bubbleRadius = (() => {
+      if (isOwn) {
+        return {
+          borderTopLeftRadius: bubbleCornerLarge,
+          borderBottomLeftRadius: bubbleCornerLarge,
+          borderTopRightRadius: groupedWithPrev ? bubbleCornerTight : bubbleCornerLarge,
+          borderBottomRightRadius: groupedWithNext ? bubbleCornerTight : bubbleCornerLarge,
         };
+      }
 
-    const containerMargin = groupedWithPrev ? messageSpacing / 3 : messageSpacing;
+      // Received bubbles: tighten the left edge when stacked.
+      return {
+        borderTopRightRadius: bubbleCornerLarge,
+        borderBottomRightRadius: bubbleCornerLarge,
+        borderTopLeftRadius: groupedWithPrev ? bubbleCornerTight : bubbleCornerLarge,
+        borderBottomLeftRadius: groupedWithNext ? bubbleCornerTight : bubbleCornerLarge,
+      };
+    })();
+
+    // Give clustered bubbles a bit of breathing room; solo bubbles a touch more
+    const containerMargin = (() => {
+      // With an inverted list, marginBottom visually separates the current bubble from the newer one.
+      const adjacencyGap = nextMessage
+        ? nextGap
+        : prevMessage
+          ? prevGap
+          : Infinity;
+
+      if (!Number.isFinite(adjacencyGap)) return messageSpacing * 1.2;
+      if (adjacencyGap < closeGapMs) return messageSpacing * 0.40; // slight gap for <5 min
+      if (adjacencyGap < blockGapMs) return messageSpacing * 1.35; // medium gap for 5–30 min
+      return messageSpacing * 1; // large break for 30+ min (separator also shows)
+    })();
+    const readCount = item.read_by?.length || 0;
+    const otherParticipantCount = conversation?.participants?.length || 0;
+    const seenByAll = readCount >= otherParticipantCount && otherParticipantCount > 0;
+    const delivered = readCount > 0;
+    const receiptColor = seenByAll
+      ? '#38bdf8'
+      : delivered
+        ? (isOwn ? 'rgba(255,255,255,0.85)' : theme.colors.textMuted)
+        : theme.colors.textMuted;
+
+    const shouldShowMeta = showTimestamps || isPinned || isSaved || (isOwn && readReceiptsEnabled);
+
+    const InlineMeta = () =>
+      shouldShowMeta ? (
+        <View style={[styles.inlineMeta, isOwn && styles.inlineMetaOwn]}>
+          {showTimestamps && (
+            <Text style={[styles.timestampInline, isOwn && styles.timestampInlineOwn]}>{timeLabel}</Text>
+          )}
+          {isOwn && readReceiptsEnabled && (
+            <View style={styles.readReceiptsInside}>
+              <Ionicons
+                name={delivered ? 'checkmark-done' : 'checkmark'}
+                size={12}
+                color={delivered ? (seenByAll ? '#38bdf8' : receiptColor) : theme.colors.textMuted}
+              />
+              {delivered && (
+                <Ionicons
+                  name="checkmark-done"
+                  size={12}
+                  color={seenByAll ? '#38bdf8' : receiptColor}
+                  style={{ marginLeft: -6 }}
+                />
+              )}
+            </View>
+          )}
+          {(isPinned || isSaved) && (
+            <View style={styles.messageFlagsInside}>
+              {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
+              {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+            </View>
+          )}
+        </View>
+      ) : null;
 
     return (
       <View>
         {showDateSeparator && (
           <View style={styles.dateSeparator}>
             <Text style={styles.dateSeparatorText}>
-              {dateLabel} · {timeLabel}
+              {separatorLabel}
             </Text>
           </View>
         )}
@@ -603,40 +687,20 @@ export default function ChatScreen() {
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'image' ? null : item.type === 'file' ? null : (
-                  <Text
-                    style={[
-                      styles.messageText,
-                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
-                    ]}
-                  >
-                    {displayContent}
-                  </Text>
-                )}
-                <View style={[styles.messageMeta, isOwn && styles.messageMetaOwn]}>
-                  <View style={styles.messageFlagsInside}>
-                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
-                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+                {item.type === 'image' || item.type === 'file' ? null : (
+                  <View style={styles.textAndMetaRow}>
+                    <Text
+                      style={[
+                        styles.messageText,
+                        { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                      ]}
+                    >
+                      {displayContent}
+                    </Text>
+                    <InlineMeta />
                   </View>
-                  <Text style={[styles.timestampInside, isOwn && styles.timestampInsideOwn]}>{timeLabel}</Text>
-                  {isOwn && readReceiptsEnabled && (
-                    <View style={styles.readReceiptsInside}>
-                      <Ionicons
-                        name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
-                        size={12}
-                        color={item.read_by.length > 1 ? '#38bdf8' : 'rgba(255,255,255,0.7)'}
-                      />
-                      {item.read_by.length > 1 && (
-                        <Ionicons
-                          name="checkmark-done"
-                          size={12}
-                          color="#38bdf8"
-                          style={{ marginLeft: -6 }}
-                        />
-                      )}
-                    </View>
-                  )}
-                </View>
+                )}
+                {item.type !== 'text' && <InlineMeta />}
               </LinearGradient>
             ) : (
               <View
@@ -675,40 +739,20 @@ export default function ChatScreen() {
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'image' ? null : item.type === 'file' ? null : (
-                  <Text
-                    style={[
-                      styles.messageText,
-                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
-                    ]}
-                  >
-                    {displayContent}
-                  </Text>
-                )}
-                <View style={[styles.messageMeta, isOwn && styles.messageMetaOwn]}>
-                  <View style={styles.messageFlagsInside}>
-                    {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
-                    {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
+                {item.type === 'image' || item.type === 'file' ? null : (
+                  <View style={styles.textAndMetaRow}>
+                    <Text
+                      style={[
+                        styles.messageText,
+                        { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                      ]}
+                    >
+                      {displayContent}
+                    </Text>
+                    <InlineMeta />
                   </View>
-                  <Text style={[styles.timestampInside, isOwn && styles.timestampInsideOwn]}>{timeLabel}</Text>
-                  {isOwn && readReceiptsEnabled && (
-                    <View style={styles.readReceiptsInside}>
-                      <Ionicons
-                        name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
-                        size={12}
-                        color={item.read_by.length > 1 ? '#38bdf8' : theme.colors.textMuted}
-                      />
-                      {item.read_by.length > 1 && (
-                        <Ionicons
-                          name="checkmark-done"
-                          size={12}
-                          color="#38bdf8"
-                          style={{ marginLeft: -6 }}
-                        />
-                      )}
-                    </View>
-                  )}
-                </View>
+                )}
+                {item.type !== 'text' && <InlineMeta />}
               </View>
             )}
 
@@ -853,7 +897,7 @@ export default function ChatScreen() {
             renderItem={renderMessage}
             contentContainerStyle={{
               padding: 16,
-              paddingTop: listInputSpacer + Math.max(10, keyboardHeight - 14),
+              paddingTop: listInputSpacer + Math.max(12, keyboardHeight - 10), // slight gap above input
               paddingBottom: 16,
             }}
             style={{ flex: 1 }}
@@ -1100,18 +1144,24 @@ const styles = StyleSheet.create({
   },
   dateSeparator: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 18,
+    marginBottom: 18,
+    paddingVertical: 6,
   },
   dateSeparatorText: {
     color: theme.colors.textSubtle,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 999,
   },
   messageContainer: {
     marginBottom: 0,
-    maxWidth: '85%',
+    maxWidth: '90%',
   },
   messageContainerOwn: {
     alignSelf: 'flex-end',
@@ -1129,7 +1179,7 @@ const styles = StyleSheet.create({
   },
   messageBubbleContainer: {
     flexShrink: 1,
-    maxWidth: '90%',
+    maxWidth: '100%',
   },
   messageBubbleContainerOwn: {
     alignItems: 'flex-end',
@@ -1169,7 +1219,7 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     borderRadius: 18,
-    padding: 12,
+    padding: 10,
     paddingHorizontal: 14,
     maxWidth: 320,
   },
@@ -1196,11 +1246,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     flexShrink: 1,
   },
+  textAndMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    flexShrink: 1,
+  },
   messageMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 4,
     alignSelf: 'flex-end',
   },
   messageMetaOwn: {
@@ -1217,6 +1273,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 2,
+  },
+  inlineMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: 'rgba(15,23,42,0.05)',
+  },
+  inlineMetaOwn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  timestampInline: {
+    fontSize: 11,
+    color: 'rgba(30,41,59,0.7)',
+  },
+  timestampInlineOwn: {
+    color: 'rgba(248,250,252,0.9)',
   },
   messageFlagsInside: {
     flexDirection: 'row',
@@ -1346,7 +1421,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: theme.colors.base,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: theme.colors.border,
     paddingBottom: Platform.OS === 'ios' ? 34 : 12,
   },

@@ -4,6 +4,7 @@ import { Conversation, Message, TypingIndicator } from '../types';
 interface ConversationSettings {
   readReceipts: boolean;
   typingIndicators: boolean;
+  showTimestamps: boolean;
   muteNotifications: boolean;
   pinned: boolean;
   mentionAlerts: boolean;
@@ -31,6 +32,7 @@ interface ConversationSettings {
 export const DEFAULT_CONVERSATION_SETTINGS: ConversationSettings = {
   readReceipts: true,
   typingIndicators: true,
+  showTimestamps: true,
   muteNotifications: false,
   pinned: false,
   mentionAlerts: true,
