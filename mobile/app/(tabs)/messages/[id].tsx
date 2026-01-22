@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
@@ -62,6 +63,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const conversationId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, addTypingUser, typingUsers, conversationSettings } = useChatStore();
   const { pinnedMessages, savedMessages, setPinnedMessage, toggleSavedMessage } = useMessagePreferencesStore();
@@ -75,6 +77,7 @@ export default function ChatScreen() {
   const addReactionMutation = useAddReaction();
   const flatListRef = useRef<FlatList>(null);
   const typingChannelRef = useRef<any>(null);
+  const didInitialScrollRef = useRef(false);
 
   const [showActions, setShowActions] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -140,12 +143,39 @@ export default function ChatScreen() {
   }, [messages, pinnedMessageId]);
 
   useEffect(() => {
-    if (messages && messages.length > 0) {
+    if (!conversationId) return;
+    didInitialScrollRef.current = false;
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (messages && messages.length > 0 && !didInitialScrollRef.current) {
+      didInitialScrollRef.current = true;
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 0);
     }
   }, [messages?.length]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const parent = navigation.getParent();
+      parent?.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+      return () => {
+        parent?.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.colors.base,
+            borderTopColor: theme.colors.base,
+            borderTopWidth: 0,
+            height: 92,
+            paddingBottom: 32,
+            paddingTop: 10,
+          },
+        });
+      };
+    }, [navigation])
+  );
 
   useEffect(() => {
     if (!conversationId || !user) return;
@@ -567,7 +597,6 @@ export default function ChatScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
             contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onScrollToIndexFailed={({ index }) => {
@@ -1128,6 +1157,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.base,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 12,
   },
   toolsRow: {
     flexDirection: 'row',
@@ -1188,15 +1218,58 @@ const styles = StyleSheet.create({
   sendButtonInactive: {
     backgroundColor: theme.colors.surfaceSubtle,
   },
-  emojiPickerContainer: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingVertical: 12,
+  emojiModal: {
+    backgroundColor: theme.colors.base,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    maxHeight: '70%',
   },
-  emojiPicker: {
+  emojiModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  emojiModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  emojiCategories: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  emojiCategory: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
+  emojiCategoryActive: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+  },
+  emojiCategoryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSubtle,
+  },
+  emojiCategoryLabelActive: {
+    color: theme.colors.textPrimary,
+  },
+  emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 12,
+    paddingBottom: 20,
     gap: 8,
   },
   emojiButton: {

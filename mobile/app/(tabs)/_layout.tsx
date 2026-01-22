@@ -50,10 +50,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: 'Inbox',
           tabBarLabel: ({ focused }) => (
             <Text style={{ fontSize: 11, color: focused ? tabColors.messages.active : inactiveColor }}>
-              Messages
+              Inbox
             </Text>
           ),
           tabBarIcon: ({ size, focused }) => (
@@ -63,6 +63,12 @@ export default function TabsLayout() {
               color={focused ? tabColors.messages.active : inactiveColor}
             />
           ),
+        }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/messages');
+          },
         }}
       />
       <Tabs.Screen
