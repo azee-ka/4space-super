@@ -84,7 +84,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="settings/index"
+        name="settings"
         options={{
           title: 'Settings',
           tabBarLabel: ({ focused }) => (
@@ -122,14 +122,6 @@ export default function TabsLayout() {
         options={{
           href: null,
           title: 'Space',
-          tabBarStyle: { display: 'none' },
-        }}
-      />
-      <Tabs.Screen
-        name="settings/profile"
-        options={{
-          href: null,
-          title: 'Profile',
           tabBarStyle: { display: 'none' },
         }}
       />
