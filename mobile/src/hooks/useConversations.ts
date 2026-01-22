@@ -296,6 +296,10 @@ export const useMessages = (conversationId: string, pageSize = 30) => {
   return useInfiniteQuery({
     queryKey: ['messages', conversationId],
     queryFn: async ({ pageParam }: { pageParam?: string }) => {
+      if (__DEV__) {
+        console.log('[useMessages] QUERY_FN called for conversation', conversationId, 'pageParam:', pageParam);
+      }
+
       let query = supabase
         .from('messages')
         .select(
@@ -304,7 +308,7 @@ export const useMessages = (conversationId: string, pageSize = 30) => {
         .eq('conversation_id', conversationId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(pageSize);
+        .range(0, pageSize - 1);
 
       if (pageParam) {
         query = query.lt('created_at', pageParam);
@@ -312,6 +316,10 @@ export const useMessages = (conversationId: string, pageSize = 30) => {
 
       const { data, error } = await query;
       if (error) throw error;
+
+      if (__DEV__) {
+        console.log('[useMessages] fetched', (data || []).length, 'for conversation', conversationId, 'pageParam:', pageParam);
+      }
 
       return (data || []).map((msg: any) => normalizeMessage(msg)) as Message[];
     },
@@ -380,7 +388,7 @@ export const useSendMessage = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] });
+      // Don't invalidate messages query here - the real-time subscription will handle it
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
     },
@@ -395,10 +403,12 @@ export const useAddReaction = () => {
       messageId,
       userId,
       emoji,
+      conversationId,
     }: {
       messageId: string;
       userId: string;
       emoji: string;
+      conversationId: string;
     }) => {
       const { data, error } = await supabase
         .from('message_reactions')
@@ -413,8 +423,9 @@ export const useAddReaction = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    onSuccess: (_, variables) => {
+      // Invalidate only the specific conversation's messages instead of all messages
+      queryClient.invalidateQueries({ queryKey: ['messages', variables.conversationId] });
     },
   });
 };

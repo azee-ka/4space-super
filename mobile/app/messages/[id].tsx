@@ -79,7 +79,7 @@ export default function ChatScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useMessages(conversationId || '');
+  } = useMessages(conversationId || '', 50);
   const sendMessageMutation = useSendMessage();
   const addReactionMutation = useAddReaction();
   const flatListRef = useRef<FlatList>(null);
@@ -148,6 +148,14 @@ export default function ChatScreen() {
     [messagePages]
   );
 
+  // Dev-only: log counts to verify Supabase is returning more than one row
+  useEffect(() => {
+    if (__DEV__) {
+      const pageCounts = messagePages?.pages.map((p) => p.length) || [];
+      console.log('[ChatScreen] pages', pageCounts, 'total', messages.length, 'hasNext', hasNextPage);
+    }
+  }, [messagePages, messages.length, hasNextPage]);
+
   const displayMessages = useMemo(() => {
     if (!messages.length) return [];
     const query = searchQuery.trim().toLowerCase();
@@ -159,8 +167,12 @@ export default function ChatScreen() {
     });
   }, [messages, searchOpen, searchQuery]);
 
+  // Oldest → newest; we scroll to end so latest is visible
   const renderedMessages = useMemo(
-    () => displayMessages,
+    () =>
+      [...displayMessages].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      ),
     [displayMessages]
   );
 
@@ -194,8 +206,96 @@ export default function ChatScreen() {
           table: 'messages',
           filter: 'conversation_id=eq.' + conversationId,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        async (payload) => {
+          // Instead of invalidating the entire messages query (which breaks pagination),
+          // fetch just the new message and prepend it to the existing data
+          const { data: newMessage, error } = await supabase
+            .from('messages')
+            .select(
+              '*, sender:profiles(id, username, display_name, avatar_url), reactions:message_reactions(id, message_id, emoji, user_id, created_at)'
+            )
+            .eq('id', payload.new.id)
+            .single();
+
+          if (!error && newMessage) {
+            queryClient.setQueryData(['messages', conversationId], (oldData: any) => {
+              if (!oldData?.pages?.[0]) return oldData;
+
+              // Normalize the new message
+              const normalizedMessage = {
+                id: newMessage.id,
+                conversation_id: newMessage.conversation_id,
+                sender_id: newMessage.sender_id,
+                sender: {
+                  id: newMessage.sender?.id || newMessage.sender_id,
+                  username: newMessage.sender?.username || newMessage.sender?.display_name || 'User',
+                  display_name: newMessage.sender?.display_name || newMessage.sender?.username || 'User',
+                  avatar_url: newMessage.sender?.avatar_url,
+                },
+                content: newMessage.content,
+                type: newMessage.message_type || newMessage.type || 'text',
+                metadata: newMessage.metadata ?? null,
+                encrypted_content: newMessage.encrypted_content ?? null,
+                reply_to: newMessage.reply_to
+                  ? {
+                      id: newMessage.reply_to.id,
+                      conversation_id: newMessage.reply_to.conversation_id || newMessage.conversation_id,
+                      sender_id: newMessage.reply_to.sender_id,
+                      sender: {
+                        id: newMessage.reply_to.sender?.id || newMessage.reply_to.sender_id,
+                        username: newMessage.reply_to.sender?.username || newMessage.reply_to.sender?.display_name || 'User',
+                        display_name: newMessage.reply_to.sender?.display_name || newMessage.reply_to.sender?.username || 'User',
+                        avatar_url: newMessage.reply_to.sender?.avatar_url,
+                      },
+                      content: newMessage.reply_to.content,
+                      type: newMessage.reply_to.message_type || newMessage.reply_to.type || 'text',
+                      reply_to: undefined,
+                      reactions: [],
+                      read_by: [],
+                      created_at: newMessage.reply_to.created_at,
+                      updated_at: newMessage.reply_to.updated_at || newMessage.reply_to.created_at,
+                      is_edited: Boolean(newMessage.reply_to.is_edited || newMessage.reply_to.edited_at),
+                      is_deleted: Boolean(newMessage.reply_to.is_deleted || newMessage.reply_to.deleted_at),
+                      file_url: newMessage.reply_to.file_url,
+                      file_name: newMessage.reply_to.file_name,
+                      file_size: newMessage.reply_to.file_size,
+                    }
+                  : undefined,
+                reactions: (newMessage.reactions || []).map((reaction: any) => ({
+                  id: reaction.id,
+                  message_id: reaction.message_id || newMessage.id,
+                  user_id: reaction.user_id,
+                  user: reaction.user ? {
+                    id: reaction.user.id || reaction.user_id,
+                    username: reaction.user.username || reaction.user.display_name || 'User',
+                    display_name: reaction.user.display_name || reaction.user.username || 'User',
+                    avatar_url: reaction.user.avatar_url,
+                  } : undefined,
+                  emoji: reaction.emoji,
+                  created_at: reaction.created_at,
+                })),
+                read_by: newMessage.read_by || (newMessage.read_receipts || []).map((receipt: any) => receipt.user_id) || [],
+                created_at: newMessage.created_at,
+                updated_at: newMessage.updated_at || newMessage.created_at,
+                is_edited: Boolean(newMessage.is_edited || newMessage.edited_at),
+                is_deleted: Boolean(newMessage.is_deleted || newMessage.deleted_at),
+                file_url: newMessage.file_url,
+                file_name: newMessage.file_name,
+                file_size: newMessage.file_size,
+              };
+
+              // Create new pages array with the new message prepended to the first page
+              const newPages = [...oldData.pages];
+              newPages[0] = [normalizedMessage, ...newPages[0]];
+
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            });
+          }
+
+          // Still invalidate conversations for updated counts/timestamps
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
           queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
         }
@@ -271,19 +371,20 @@ export default function ChatScreen() {
   }, [user, conversationId, typingIndicatorsEnabled]);
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
-    if (!user) return;
+    if (!user || !conversationId) return;
 
     try {
       await addReactionMutation.mutateAsync({
         messageId,
         userId: user.id,
         emoji,
+        conversationId,
       });
       setShowActions(false);
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
-  }, [user, addReactionMutation]);
+  }, [user, conversationId, addReactionMutation]);
 
   const handlePickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -315,13 +416,28 @@ export default function ChatScreen() {
   }, []);
 
   const handleDeleteMessage = useCallback(async (message: Message) => {
+    if (!conversationId) return;
+
     try {
       await supabase
         .from('messages')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', message.id);
 
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      // Manually remove the deleted message from the query data instead of invalidating
+      queryClient.setQueryData(['messages', conversationId], (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+
+        const newPages = oldData.pages.map((page: any[]) =>
+          page.filter((msg: Message) => msg.id !== message.id)
+        );
+
+        return {
+          ...oldData,
+          pages: newPages,
+        };
+      });
+
       setShowActions(false);
     } catch (error) {
       Alert.alert('Delete failed', 'Could not delete the message.');
@@ -337,7 +453,7 @@ export default function ChatScreen() {
   };
 
   const scrollToBottom = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    flatListRef.current?.scrollToEnd({ animated: true });
   };
 
   const scrollToPinned = () => {
@@ -348,25 +464,37 @@ export default function ChatScreen() {
     flatListRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
   };
 
-  const hasVisibleText = (value: string) =>
-    value.replace(/[\s\u200B-\u200D\uFEFF]/g, '').length > 0;
-
   const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
+    if (__DEV__ && index < 5) { // Log first 5 messages to verify rendering
+      console.log(`[renderMessage] rendering message ${index}:`, item.id, item.content?.substring(0, 50));
+    }
     const isOwn = item.sender_id === user?.id;
-    const prevMessage = renderedMessages ? renderedMessages[index + 1] : null;
+    const prevMessage = renderedMessages && index > 0 ? renderedMessages[index - 1] : null;
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
-    const showDebug = !hasVisibleText(displayContent);
+    const resolvedContent =
+      displayContent && displayContent.trim().length > 0
+        ? displayContent
+        : item.file_name
+          ? item.file_name
+          : item.type && item.type !== 'text'
+            ? item.type.toUpperCase()
+            : 'Unsupported message';
     const isSaved = savedMessageIds.includes(item.id);
     const isPinned = pinnedMessageId === item.id;
     const bubbleColorStyle = { backgroundColor: isOwn ? chatTheme.sentBubbleColor : chatTheme.receivedBubbleColor };
-    const bubbleTextColor = isOwn ? chatTheme.sentTextColor : chatTheme.receivedTextColor;
+    const bubbleTextColor =
+      (isOwn ? chatTheme.sentTextColor : chatTheme.receivedTextColor) ||
+      (isOwn ? '#f8fafc' : theme.colors.textPrimary);
     const bubbleGradient = isOwn ? chatTheme.sentBubbleGradient : chatTheme.receivedBubbleGradient;
     const useGradient =
       chatTheme.bubbleStyle === 'gradient' &&
       Array.isArray(bubbleGradient) &&
       bubbleGradient.length === 2;
+    const showSenderName = !isOwn && showAvatar && isGroup;
+    const readCount = item.read_by?.length || 0;
+    const isSeen = readCount > 1;
 
     const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
     const currentDate = new Date(item.created_at);
@@ -389,17 +517,27 @@ export default function ChatScreen() {
             setSelectedMessage(item);
             setShowActions(true);
           }}
-          style={[styles.messageContainer, { marginBottom: messageSpacing }, isOwn && styles.messageContainerOwn]}
+          style={[
+            styles.messageContainer,
+            { marginBottom: messageSpacing },
+            isOwn && styles.messageContainerOwn,
+          ]}
         >
-          <View style={styles.messageRow}>
+          <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
             {!isOwn && showAvatar && (
-              <Avatar
-                uri={item.sender.avatar_url}
-                name={item.sender.display_name || item.sender.username}
-                size="sm"
-              />
+              <View style={styles.senderHeader}>
+                <Avatar
+                  uri={item.sender.avatar_url}
+                  name={item.sender.display_name || item.sender.username}
+                  size="xs"
+                />
+                {showSenderName && (
+                  <Text style={styles.senderLabel}>
+                    {item.sender.display_name || item.sender.username}
+                  </Text>
+                )}
+              </View>
             )}
-            {!isOwn && !showAvatar && <View style={styles.avatarSpacer} />}
 
             <View style={[styles.messageBubbleContainer, isOwn && styles.messageBubbleContainerOwn]}>
               {item.reply_to && (
@@ -427,21 +565,19 @@ export default function ChatScreen() {
                   { borderRadius: chatTheme.bubbleRadius },
                 ]}
               >
-                {!isOwn && showAvatar && (
-                  <Text style={styles.senderName}>
-                    {item.sender.display_name || item.sender.username}
-                  </Text>
-                )}
-                {showDebug ? (
-                  <Text style={styles.debugText}>
-                    Unsupported content
-                  </Text>
-                ) : (
-                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
-                    {displayContent}
-                  </Text>
-                )}
-                <View style={styles.messageFooter}>
+                <Text
+                  style={[
+                    styles.messageText,
+                    {
+                      color: bubbleTextColor,
+                      fontSize: messageFontSize,
+                      lineHeight: messageLineHeight,
+                    },
+                  ]}
+                >
+                  {resolvedContent}
+                </Text>
+                <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
                   <View style={styles.messageFlags}>
                     {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
                     {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
@@ -451,9 +587,9 @@ export default function ChatScreen() {
                   </Text>
                   {isOwn && readReceiptsEnabled && (
                     <Ionicons
-                      name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                      name={isSeen ? 'checkmark-done' : 'checkmark'}
                       size={14}
-                      color={item.read_by.length > 1 ? theme.colors.accent : theme.colors.textMuted}
+                      color={isSeen ? '#38bdf8' : theme.colors.textMuted}
                     />
                   )}
                 </View>
@@ -467,21 +603,19 @@ export default function ChatScreen() {
                   { borderRadius: chatTheme.bubbleRadius },
                 ]}
               >
-                {!isOwn && showAvatar && (
-                  <Text style={styles.senderName}>
-                    {item.sender.display_name || item.sender.username}
-                  </Text>
-                )}
-                {showDebug ? (
-                  <Text style={styles.debugText}>
-                    Unsupported content
-                  </Text>
-                ) : (
-                  <Text style={[styles.messageText, { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight }]}>
-                    {displayContent}
-                  </Text>
-                )}
-                <View style={styles.messageFooter}>
+                <Text
+                  style={[
+                    styles.messageText,
+                    {
+                      color: bubbleTextColor,
+                      fontSize: messageFontSize,
+                      lineHeight: messageLineHeight,
+                    },
+                  ]}
+                >
+                  {resolvedContent}
+                </Text>
+                <View style={[styles.messageFooter, isOwn && styles.messageFooterOwn]}>
                   <View style={styles.messageFlags}>
                     {isPinned && <Ionicons name="pin" size={12} color="#f97316" />}
                     {isSaved && <Ionicons name="bookmark" size={12} color="#22d3ee" />}
@@ -491,9 +625,9 @@ export default function ChatScreen() {
                   </Text>
                   {isOwn && readReceiptsEnabled && (
                     <Ionicons
-                      name={item.read_by.length > 1 ? 'checkmark-done' : 'checkmark'}
+                      name={isSeen ? 'checkmark-done' : 'checkmark'}
                       size={14}
-                      color={item.read_by.length > 1 ? theme.colors.accent : theme.colors.textMuted}
+                      color={isSeen ? '#38bdf8' : theme.colors.textMuted}
                     />
                   )}
                 </View>
@@ -524,7 +658,18 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds]);
+  }, [
+    user,
+    renderedMessages,
+    handleReaction,
+    readReceiptsEnabled,
+    pinnedMessageId,
+    savedMessageIds,
+    messageFontSize,
+    messageLineHeight,
+    messageSpacing,
+    chatTheme,
+  ]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -640,12 +785,25 @@ export default function ChatScreen() {
             data={renderedMessages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
+            style={styles.list}
             contentContainerStyle={styles.messagesList}
-            inverted
+            onContentSizeChange={() => {
+              // keep view pinned to latest
+              if (__DEV__) {
+                console.log('[FlatList] onContentSizeChange, scrolling to end. Messages count:', renderedMessages.length);
+              }
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onEndReached={() => {
+              if (__DEV__) {
+                console.log('[FlatList] onEndReached called, hasNextPage:', hasNextPage, 'isFetchingNextPage:', isFetchingNextPage, 'messages:', renderedMessages.length);
+              }
               if (hasNextPage && !isFetchingNextPage) {
+                if (__DEV__) {
+                  console.log('[FlatList] calling fetchNextPage');
+                }
                 fetchNextPage();
               }
             }}
@@ -1068,16 +1226,30 @@ const styles = StyleSheet.create({
   messageContainer: {
     marginBottom: 0,
     maxWidth: '85%',
+    alignSelf: 'flex-start',
   },
   messageContainerOwn: {
     alignSelf: 'flex-end',
   },
-  messageRow: {
-    flexDirection: 'row',
-    gap: 8,
+  list: {
+    flex: 1,
   },
-  avatarSpacer: {
-    width: 40,
+  messageRow: {
+    gap: 6,
+  },
+  messageRowOwn: {
+    alignItems: 'flex-end',
+  },
+  senderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 4,
+  },
+  senderLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
   },
   messageBubbleContainer: {
     flex: 1,
@@ -1117,25 +1289,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 12,
     paddingHorizontal: 14,
-    maxWidth: 280,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    minWidth: 60,
   },
   messageBubbleOwn: {
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 10,
   },
   messageBubbleOther: {
-    borderBottomLeftRadius: 4,
-  },
-  senderName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.accent,
-    marginBottom: 4,
+    borderBottomLeftRadius: 10,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 20,
+    includeFontPadding: false,
+    textAlign: 'left',
   },
   debugText: {
     fontSize: 12,
@@ -1146,6 +1312,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  messageFooterOwn: {
+    alignSelf: 'flex-end',
   },
   messageFlags: {
     flexDirection: 'row',
