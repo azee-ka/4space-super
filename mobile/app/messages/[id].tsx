@@ -87,6 +87,7 @@ export default function ChatScreen() {
   const [inputHeight, setInputHeight] = useState(0);
   const plusMenuAnim = useRef(new Animated.Value(0)).current;
   const [plusMenuScrolled, setPlusMenuScrolled] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
   const screenHeight = Dimensions.get('window').height;
 
@@ -96,6 +97,7 @@ export default function ChatScreen() {
   const readReceiptsEnabled = currentSettings.readReceipts;
   const typingIndicatorsEnabled = currentSettings.typingIndicators;
   const showTimestamps = currentSettings.showTimestamps !== false;
+  const showOnlineStatus = currentSettings.showOnlineStatus !== false;
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
@@ -187,10 +189,29 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!conversationId || !user) return;
 
-    const channel = supabase.channel('room:' + conversationId);
+    const channel = supabase.channel('room:' + conversationId, {
+      config: {
+        presence: { key: user.id },
+      },
+    });
     typingChannelRef.current = channel;
 
     channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const ids = Object.keys(state || {});
+        setOnlineUserIds(ids);
+      })
+      .on('presence', { event: 'join' }, () => {
+        const state = channel.presenceState();
+        const ids = Object.keys(state || {});
+        setOnlineUserIds(ids);
+      })
+      .on('presence', { event: 'leave' }, () => {
+        const state = channel.presenceState();
+        const ids = Object.keys(state || {});
+        setOnlineUserIds(ids);
+      })
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.userId !== user.id) {
           addTypingUser(conversationId, {
@@ -214,7 +235,15 @@ export default function ChatScreen() {
           queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            await channel.track({ user_id: user.id });
+          } catch (error) {
+            console.warn('Presence track failed', error);
+          }
+        }
+      });
 
     return () => {
       typingChannelRef.current = null;
@@ -609,8 +638,8 @@ export default function ChatScreen() {
     })();
     const readCount = item.read_by?.length || 0;
     const otherParticipantCount = conversation?.participants?.length || 0;
-    const seenByAll = readCount >= otherParticipantCount && otherParticipantCount > 0;
-    const delivered = readCount > 0;
+    const seenByAll = isOwn && readCount >= otherParticipantCount && otherParticipantCount > 0;
+    const delivered = isOwn && otherParticipantCount > 0;
     const receiptColor = seenByAll
       ? '#38bdf8'
       : delivered
@@ -632,14 +661,6 @@ export default function ChatScreen() {
                 size={12}
                 color={delivered ? (seenByAll ? '#38bdf8' : receiptColor) : theme.colors.textMuted}
               />
-              {delivered && (
-                <Ionicons
-                  name="checkmark-done"
-                  size={12}
-                  color={seenByAll ? '#38bdf8' : receiptColor}
-                  style={{ marginLeft: -6 }}
-                />
-              )}
             </View>
           )}
           {(isPinned || isSaved) && (
@@ -848,11 +869,15 @@ export default function ChatScreen() {
   const headerTitle = isGroup
     ? conversation?.name || 'Group Chat'
     : otherUser?.display_name || otherUser?.username || 'Chat';
+  const onlineCount = onlineUserIds.filter((id) => id !== user.id).length;
+  const isOtherOnline = onlineUserIds.some((id) => id !== user.id);
   const headerSubtitle = conversationTypingUsers.length > 0
     ? 'typing...'
     : isGroup
-      ? `${memberCount} member${memberCount === 1 ? '' : 's'}`
-      : 'Online';
+      ? (showOnlineStatus ? `${onlineCount} online` : `${memberCount} member${memberCount === 1 ? '' : 's'}`)
+      : showOnlineStatus
+        ? (isOtherOnline ? 'Online' : 'Offline')
+        : '';
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
