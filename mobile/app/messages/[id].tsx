@@ -251,9 +251,10 @@ export default function ChatScreen() {
         replyToId: replyingTo?.id,
       });
 
+      // Always snap to the newest message after sending
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+        scrollToBottom();
+      }, 50);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send message';
       console.error('Error sending message:', error);
@@ -427,11 +428,9 @@ export default function ChatScreen() {
   }, [conversationId, queryClient]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const distanceFromBottom = contentOffset.y;
-    const distanceFromTop = contentSize.height - (contentOffset.y + layoutMeasurement.height);
-    const shouldShow = distanceFromBottom > 140 && distanceFromTop > 0;
-    setShowJump(shouldShow);
+    const { contentOffset } = event.nativeEvent;
+    // Inverted list: y=0 is bottom/newest. Show jump when we're away from bottom.
+    setShowJump(contentOffset.y > 120);
   };
 
   const scrollToBottom = () => {
@@ -775,6 +774,7 @@ export default function ChatScreen() {
             }}
             style={{ flex: 1 }}
             inverted
+            maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 80 }}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onEndReached={() => {
