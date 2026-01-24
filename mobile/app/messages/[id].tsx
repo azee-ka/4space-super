@@ -21,7 +21,6 @@ import {
   Easing,
   Keyboard,
   Pressable,
-  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -46,8 +45,6 @@ import { BlurView } from 'expo-blur';
 import { theme } from '../../src/styles/theme';
 import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
 import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
-import { useChatBackgroundStore } from '../../src/store/chatBackgroundStore';
-import { CHAT_BACKGROUNDS } from '../../src/styles/chatBackgrounds';
 
 
 export default function ChatScreen() {
@@ -89,8 +86,6 @@ export default function ChatScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
   const plusMenuAnim = useRef(new Animated.Value(0)).current;
-  const [plusMenuScrolled, setPlusMenuScrolled] = useState(false);
-  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
   const screenHeight = Dimensions.get('window').height;
 
@@ -100,7 +95,6 @@ export default function ChatScreen() {
   const readReceiptsEnabled = currentSettings.readReceipts;
   const typingIndicatorsEnabled = currentSettings.typingIndicators;
   const showTimestamps = currentSettings.showTimestamps !== false;
-  const showOnlineStatus = currentSettings.showOnlineStatus !== false;
 
   const conversationTypingUsers = typingUsers.get(conversationId || '') || [];
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
@@ -114,9 +108,10 @@ export default function ChatScreen() {
     { key: 'sticker', label: 'Sticker', icon: 'happy', tint: '#22d3ee' },
     { key: 'gif', label: 'GIF', icon: 'film', tint: '#fb7185' },
     { key: 'game', label: 'Games', icon: 'game-controller', tint: '#c084fc' },
-    { key: 'extension', label: 'Extensions', icon: 'extensions-puzzle', tint: '#38bdf8' },
+    { key: 'extension', label: 'Extensions', icon: 'puzzle', tint: '#38bdf8' },
   ];
 
+  // Select raw data instead of computed methods to avoid infinite loops
   const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
   const chatTheme = useMemo(() => {
     if (!conversationId) {
@@ -131,65 +126,16 @@ export default function ChatScreen() {
       sentTextColor: customization?.sentTextColor || base.sentTextColor,
       receivedTextColor: customization?.receivedTextColor || base.receivedTextColor,
       bubbleRadius: customization?.bubbleRadius ?? base.bubbleRadius,
-      bubbleStyle: customization?.bubbleStyle || base.bubbleStyle || 'solid',
-      sentBubbleGradient: customization?.sentBubbleGradient ?? base.sentBubbleGradient,
-      receivedBubbleGradient: customization?.receivedBubbleGradient ?? base.receivedBubbleGradient,
       messageTextSize: customization?.messageTextSize ?? 15,
       density: customization?.density || base.density || 'cozy' as const,
     };
   }, [conversationId, conversationCustomizations]);
+
   const showCallControls = useMemo(() => {
     if (!conversationId) return true;
     const customization = conversationCustomizations[conversationId];
     return customization?.enableCallControls !== false;
   }, [conversationId, conversationCustomizations]);
-  const { backgroundByConversation, customBackgroundUriByConversation } = useChatBackgroundStore();
-  const backgroundId = conversationId ? backgroundByConversation[conversationId] || 'void' : 'void';
-  const customBackgroundUri = conversationId ? customBackgroundUriByConversation[conversationId] : null;
-  const backgroundPreset = useMemo(
-    () => CHAT_BACKGROUNDS.find((preset) => preset.id === backgroundId),
-    [backgroundId]
-  );
-  const backgroundLayer = useMemo(() => {
-    const overlayStyle = backgroundPreset
-      ? { backgroundColor: backgroundPreset.overlayColor, opacity: backgroundPreset.overlayOpacity }
-      : undefined;
-
-    if (backgroundId === 'custom-photo' && customBackgroundUri) {
-      return (
-        <ImageBackground
-          source={{ uri: customBackgroundUri }}
-          style={styles.backgroundFill}
-          imageStyle={styles.backgroundImage}
-        >
-          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
-        </ImageBackground>
-      );
-    }
-
-    if (backgroundPreset?.type === 'image' && backgroundPreset.image) {
-      return (
-        <ImageBackground source={backgroundPreset.image} style={styles.backgroundFill} imageStyle={styles.backgroundImage}>
-          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
-        </ImageBackground>
-      );
-    }
-
-    if (backgroundPreset?.type === 'gradient' && backgroundPreset.colors) {
-      return (
-        <LinearGradient colors={backgroundPreset.colors} style={styles.backgroundFill}>
-          {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
-        </LinearGradient>
-      );
-    }
-
-    const solidColor = backgroundPreset?.color || chatTheme.backgroundColor;
-    return (
-      <View style={[styles.backgroundFill, { backgroundColor: solidColor }]}>
-        {overlayStyle && <View style={[styles.backgroundOverlay, overlayStyle]} />}
-      </View>
-    );
-  }, [backgroundId, backgroundPreset, customBackgroundUri, chatTheme.backgroundColor]);
   const messageSpacing =
     chatTheme.density === 'compact'
       ? 4
@@ -240,29 +186,10 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!conversationId || !user) return;
 
-    const channel = supabase.channel('room:' + conversationId, {
-      config: {
-        presence: { key: user.id },
-      },
-    });
+    const channel = supabase.channel('room:' + conversationId);
     typingChannelRef.current = channel;
 
     channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const ids = Object.keys(state || {});
-        setOnlineUserIds(ids);
-      })
-      .on('presence', { event: 'join' }, () => {
-        const state = channel.presenceState();
-        const ids = Object.keys(state || {});
-        setOnlineUserIds(ids);
-      })
-      .on('presence', { event: 'leave' }, () => {
-        const state = channel.presenceState();
-        const ids = Object.keys(state || {});
-        setOnlineUserIds(ids);
-      })
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.userId !== user.id) {
           addTypingUser(conversationId, {
@@ -286,15 +213,7 @@ export default function ChatScreen() {
           queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
         }
       )
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          try {
-            await channel.track({ user_id: user.id });
-          } catch (error) {
-            console.warn('Presence track failed', error);
-          }
-        }
-      });
+      .subscribe();
 
     return () => {
       typingChannelRef.current = null;
@@ -375,7 +294,6 @@ export default function ChatScreen() {
 
   const openPlusMenu = useCallback(() => {
     setShowPlusMenu(true);
-    setPlusMenuScrolled(false);
     plusMenuAnim.setValue(0);
     Animated.spring(plusMenuAnim, {
       toValue: 1,
@@ -689,8 +607,8 @@ export default function ChatScreen() {
     })();
     const readCount = item.read_by?.length || 0;
     const otherParticipantCount = conversation?.participants?.length || 0;
-    const seenByAll = isOwn && readCount >= otherParticipantCount && otherParticipantCount > 0;
-    const delivered = isOwn && otherParticipantCount > 0;
+    const seenByAll = readCount >= otherParticipantCount && otherParticipantCount > 0;
+    const delivered = readCount > 0;
     const receiptColor = seenByAll
       ? '#38bdf8'
       : delivered
@@ -699,25 +617,11 @@ export default function ChatScreen() {
 
     const shouldShowMeta = showTimestamps || isPinned || isSaved || (isOwn && readReceiptsEnabled);
 
-  const InlineMeta = () =>
-    shouldShowMeta ? (
-        <View
-          style={[
-            styles.inlineMeta,
-            isOwn && styles.inlineMetaOwn,
-            !isOwn && { backgroundColor: `${chatTheme.receivedBubbleColor}22` },
-          ]}
-        >
+    const InlineMeta = () =>
+      shouldShowMeta ? (
+        <View style={[styles.inlineMeta, isOwn && styles.inlineMetaOwn]}>
           {showTimestamps && (
-            <Text
-              style={[
-                styles.timestampInline,
-                isOwn && styles.timestampInlineOwn,
-                !isOwn && { color: bubbleTextColor, opacity: 0.7 },
-              ]}
-            >
-              {timeLabel}
-            </Text>
+            <Text style={[styles.timestampInline, isOwn && styles.timestampInlineOwn]}>{timeLabel}</Text>
           )}
           {isOwn && readReceiptsEnabled && (
             <View style={styles.readReceiptsInside}>
@@ -726,6 +630,14 @@ export default function ChatScreen() {
                 size={12}
                 color={delivered ? (seenByAll ? '#38bdf8' : receiptColor) : theme.colors.textMuted}
               />
+              {delivered && (
+                <Ionicons
+                  name="checkmark-done"
+                  size={12}
+                  color={seenByAll ? '#38bdf8' : receiptColor}
+                  style={{ marginLeft: -6 }}
+                />
+              )}
             </View>
           )}
           {(isPinned || isSaved) && (
@@ -764,7 +676,6 @@ export default function ChatScreen() {
                 <Avatar
                   uri={item.sender.avatar_url}
                   name={item.sender.display_name || item.sender.username}
-                  seed={item.sender.id}
                   size="sm"
                 />
               ) : (
@@ -802,7 +713,7 @@ export default function ChatScreen() {
                 ]}
               >
                 {!isOwn && showAvatar && (
-                  <Text style={[styles.senderName, { color: bubbleTextColor, opacity: 0.8 }]}>
+                  <Text style={styles.senderName}>
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
@@ -854,7 +765,7 @@ export default function ChatScreen() {
                 ]}
               >
                 {!isOwn && showAvatar && (
-                  <Text style={[styles.senderName, { color: bubbleTextColor, opacity: 0.8 }]}>
+                  <Text style={styles.senderName}>
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
@@ -935,21 +846,14 @@ export default function ChatScreen() {
   const headerTitle = isGroup
     ? conversation?.name || 'Group Chat'
     : otherUser?.display_name || otherUser?.username || 'Chat';
-  const onlineCount = onlineUserIds.filter((id) => id !== user.id).length;
-  const isOtherOnline = onlineUserIds.some((id) => id !== user.id);
   const headerSubtitle = conversationTypingUsers.length > 0
     ? 'typing...'
     : isGroup
-      ? (showOnlineStatus ? `${onlineCount} online` : `${memberCount} member${memberCount === 1 ? '' : 's'}`)
-      : showOnlineStatus
-        ? (isOtherOnline ? 'Online' : 'Offline')
-        : '';
+      ? `${memberCount} member${memberCount === 1 ? '' : 's'}`
+      : 'Online';
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: 'transparent' }]} edges={['top']}>
-        <View pointerEvents="none" style={styles.themeLayer}>
-          {backgroundLayer}
-        </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -967,7 +871,6 @@ export default function ChatScreen() {
               <Avatar
                 uri={isGroup ? conversation?.avatar_url : otherUser?.avatar_url}
                 name={headerTitle}
-                seed={isGroup ? conversationId : otherUser?.id}
                 size="md"
               />
               <View style={styles.headerText}>
@@ -1097,8 +1000,8 @@ export default function ChatScreen() {
           )}
 
           {showJump && (
-            <TouchableOpacity style={[styles.jumpButton, { backgroundColor: accentHex }]} onPress={scrollToBottom}>
-              <Ionicons name="chevron-down" size={18} color="#ffffff" />
+            <TouchableOpacity style={styles.jumpButton} onPress={scrollToBottom}>
+              <Ionicons name="chevron-down" size={18} color={theme.colors.base} />
             </TouchableOpacity>
           )}
 
@@ -1165,13 +1068,15 @@ export default function ChatScreen() {
         onRequestClose={closePlusMenu}
       >
         <View style={styles.plusMenuBackdrop}>
-          <BlurView intensity={45} tint="light" style={StyleSheet.absoluteFillObject} />
-          <View style={styles.plusMenuBlurTint} />
+          <BlurView intensity={60} style={StyleSheet.absoluteFillObject} />
+          {/* <View style={styles.plusMenuBlurTint} /> */}
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closePlusMenu} />
           <Animated.View
             style={[
               styles.plusMenuListContainer,
               {
                 top: 0,
+                paddingBottom: inputHeight + 12,
                 transform: [
                   {
                     translateY: plusMenuAnim.interpolate({
@@ -1197,10 +1102,6 @@ export default function ChatScreen() {
                 { paddingTop: screenHeight * 0.5 },
               ]}
               showsVerticalScrollIndicator={false}
-              onScroll={(event) => {
-                setPlusMenuScrolled(event.nativeEvent.contentOffset.y > 2);
-              }}
-              scrollEventThrottle={16}
             >
               {plusMenuItems.map((item) => (
                 <TouchableOpacity
@@ -1216,7 +1117,6 @@ export default function ChatScreen() {
                     style={styles.plusMenuIconGlyph}
                   />
                   <View style={styles.plusMenuTextWrap}>
-                    <Text style={styles.plusMenuTextGlow}>{item.label}</Text>
                     <Text style={styles.plusMenuText}>{item.label}</Text>
                   </View>
                 </TouchableOpacity>
@@ -1260,15 +1160,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   themeLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundFill: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundImage: {
-    resizeMode: 'cover',
-  },
-  backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
   header: {
@@ -1416,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   messageBubbleContainerOwn: {
     alignItems: 'flex-end',
-  },
+  }, 
   replyPreview: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceSubtle,
@@ -1671,16 +1562,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   textInputWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 12,
     minHeight: 40,
     justifyContent: 'center',
@@ -1690,6 +1581,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     maxHeight: 100,
     paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,1)',
   },
   sendButton: {
     width: 38,
@@ -1702,9 +1594,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   sendButtonInactive: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   modalOverlay: {
     flex: 1,
@@ -1758,7 +1650,7 @@ const styles = StyleSheet.create({
   },
   plusMenuBlurTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   plusMenuListContainer: {
     position: 'absolute',
@@ -1786,24 +1678,28 @@ const styles = StyleSheet.create({
   },
   plusMenuText: {
     fontSize: 22,
-    color: '#fff',
+    color: 'rgba(255,255,255)',
     fontWeight: '700',
+    boxShadow: '0 0 50px 3px rgba(255,255,255,0.5)',
   },
   plusMenuTextWrap: {
     position: 'relative',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   plusMenuTextGlow: {
     position: 'absolute',
     left: 0,
     right: 0,
-    color: 'rgba(255,255,255,0.02)',
-    fontSize: 22,
-    fontWeight: '700',
-    textShadowColor: 'rgba(255,255,255,0.9)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 22,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0)',
+    borderRadius: 999,
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 18,
+    elevation: 3,
   },
   imageViewerContainer: {
     flex: 1,

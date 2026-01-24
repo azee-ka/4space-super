@@ -7,9 +7,15 @@ import { queryClient } from '../src/lib/queryClient';
 import { useAuthStore } from '../src/store/authStore';
 import { LoadingSpinner } from '../src/components/ui';
 import { theme } from '../src/styles/theme';
+import { supabase } from '../src/lib/supabase';
+import { usePresenceStore } from '../src/store/presenceStore';
+import { usePrivacyStore } from '../src/store/privacyStore';
 
 export default function RootLayout() {
-  const { user, initialized, initialize } = useAuthStore();
+  const { user, session, initialized, initialize } = useAuthStore();
+  const setOnlineUserIds = usePresenceStore((state) => state.setOnlineUserIds);
+  const setLastSeen = usePresenceStore((state) => state.setLastSeen);
+  const onlineVisibility = usePrivacyStore((state) => state.onlineVisibility);
   const router = useRouter();
   const segments = useSegments();
 
@@ -28,6 +34,54 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     }
   }, [user, initialized, segments]);
+
+  useEffect(() => {
+    if (!user) {
+      supabase.realtime.setAuth('');
+      setOnlineUserIds([]);
+      return;
+    }
+
+    if (session?.access_token) {
+      supabase.realtime.setAuth(session.access_token);
+    }
+
+    const channel = supabase.channel('online', {
+      config: { presence: { key: user.id } },
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setOnlineUserIds(Object.keys(state || {}));
+      })
+      .on('presence', { event: 'join' }, () => {
+        const state = channel.presenceState();
+        setOnlineUserIds(Object.keys(state || {}));
+      })
+      .on('presence', { event: 'leave' }, (payload) => {
+        const state = channel.presenceState();
+        setOnlineUserIds(Object.keys(state || {}));
+        if (payload?.key) {
+          setLastSeen(payload.key, Date.now());
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            if (onlineVisibility === 'everyone') {
+              await channel.track({ user_id: user.id });
+            }
+          } catch (error) {
+            console.warn('Global presence track failed', error);
+          }
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user, session?.access_token, setOnlineUserIds, onlineVisibility, setLastSeen]);
 
   if (!initialized) {
     return <LoadingSpinner fullScreen />;

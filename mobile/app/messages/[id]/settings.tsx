@@ -1639,14 +1639,6 @@ export default function ChatSettingsScreen() {
             onToggle: (value: boolean) => setConversationSettings(conversationId, { typingIndicators: value }),
           },
           {
-            icon: 'radio-outline',
-            iconColor: '#22c55e',
-            label: 'Online status',
-            hint: 'Show when you are online in this chat',
-            value: settings.showOnlineStatus,
-            onToggle: (value: boolean) => setConversationSettings(conversationId, { showOnlineStatus: value }),
-          },
-          {
             icon: 'time-outline',
             iconColor: '#38bdf8',
             label: 'Show timestamps',
@@ -2750,6 +2742,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     marginTop: 2,
     flexShrink: 1,
+  },
+  settingValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
   },
   actionRow: {
     flexDirection: 'row',

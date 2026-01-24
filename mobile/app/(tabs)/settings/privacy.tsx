@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,20 +6,61 @@ import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { PrivacyVisibility, usePrivacyStore } from '../../../src/store/privacyStore';
 
 export default function PrivacySettingsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [onlineStatus, setOnlineStatus] = useState(true);
-  const [discoverable, setDiscoverable] = useState(true);
-  const [analyticsSharing, setAnalyticsSharing] = useState(false);
-  const [appLock, setAppLock] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [loginAlerts, setLoginAlerts] = useState(true);
-  const [sessionTimeout, setSessionTimeout] = useState('30 min');
-  const [screenshotsAllowed, setScreenshotsAllowed] = useState(true);
+  const {
+    lastSeenVisibility,
+    onlineVisibility,
+    excludedContactIds,
+    setLastSeenVisibility,
+    setOnlineVisibility,
+  } = usePrivacyStore();
+  const [discoverable, setDiscoverable] = React.useState(true);
+  const [analyticsSharing, setAnalyticsSharing] = React.useState(false);
+  const [appLock, setAppLock] = React.useState(false);
+  const [twoFactor, setTwoFactor] = React.useState(false);
+  const [loginAlerts, setLoginAlerts] = React.useState(true);
+  const [sessionTimeout, setSessionTimeout] = React.useState('30 min');
+  const [screenshotsAllowed, setScreenshotsAllowed] = React.useState(true);
+
+  const privacyOptions: Array<{ label: string; value: PrivacyVisibility }> = [
+    { label: 'Everyone', value: 'everyone' },
+    { label: 'My contacts', value: 'contacts' },
+    { label: 'My contacts except...', value: 'contacts_except' },
+    { label: 'Nobody', value: 'nobody' },
+  ];
+
+  const formatVisibility = (value: PrivacyVisibility) => {
+    switch (value) {
+      case 'everyone':
+        return 'Everyone';
+      case 'contacts':
+        return 'My contacts';
+      case 'contacts_except':
+        return 'Contacts except';
+      case 'nobody':
+        return 'Nobody';
+    }
+  };
+
+  const showPrivacyPicker = (
+    title: string,
+    current: PrivacyVisibility,
+    setter: (value: PrivacyVisibility) => void
+  ) => {
+    Alert.alert(title, '', [
+      ...privacyOptions.map((option) => ({
+        text: option.label,
+        onPress: () => setter(option.value),
+      })),
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
     Alert.alert(title, '', [
@@ -47,18 +88,59 @@ export default function PrivacySettingsScreen() {
                 <Ionicons name="eye-outline" size={20} color="#22d3ee" />
               </View>
               <View style={styles.menuItemTextGroup}>
-                <Text style={styles.menuItemText}>Online Status</Text>
-                <Text style={styles.menuItemSubtext}>Show when you are active</Text>
+                <Text style={styles.menuItemText}>Last seen</Text>
+                <Text style={styles.menuItemSubtext}>Who can see your last seen</Text>
               </View>
             </View>
-            <Switch
-              value={onlineStatus}
-              onValueChange={setOnlineStatus}
-              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
-              thumbColor={theme.colors.white}
-            />
+            <TouchableOpacity
+              style={styles.valueChip}
+              onPress={() => showPrivacyPicker('Last seen', lastSeenVisibility, setLastSeenVisibility)}
+            >
+              <Text style={styles.valueText}>{formatVisibility(lastSeenVisibility)}</Text>
+            </TouchableOpacity>
           </View>
 
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="radio-outline" size={20} color="#22c55e" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Online status</Text>
+                <Text style={styles.menuItemSubtext}>Who can see when you are online</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.valueChip}
+              onPress={() => showPrivacyPicker('Online status', onlineVisibility, setOnlineVisibility)}
+            >
+              <Text style={styles.valueText}>{formatVisibility(onlineVisibility)}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="person-remove-outline" size={20} color="#f97316" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Excluded contacts</Text>
+                <Text style={styles.menuItemSubtext}>
+                  {excludedContactIds.length > 0 ? `${excludedContactIds.length} excluded` : 'No exclusions'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.valueChip}
+              onPress={() => Alert.alert('Coming soon', 'Exclude contacts from seeing your status.')}
+            >
+              <Text style={styles.valueText}>Manage</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Privacy controls</Text>
+        <View style={styles.section}>
           <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -302,6 +384,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     fontSize: 12,
     marginTop: 2,
+  },
+  valueChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  valueText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   menuItemValue: {
     color: theme.colors.textMuted,
