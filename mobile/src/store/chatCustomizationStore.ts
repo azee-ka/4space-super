@@ -11,6 +11,8 @@ interface ConversationCustomization {
   receivedBubbleColor?: string;
   sentTextColor?: string;
   receivedTextColor?: string;
+  sentTimestampColor?: string;
+  receivedTimestampColor?: string;
   bubbleRadius?: number;
   bubbleStyle?: 'solid' | 'gradient';
   sentBubbleGradient?: [string, string];
@@ -25,6 +27,7 @@ interface ChatCustomizationState {
   setCallControls: (conversationId: string, enabled: boolean) => void;
   setBubbleColors: (conversationId: string, colors: { sent?: string; received?: string }) => void;
   setTextColors: (conversationId: string, colors: { sent?: string; received?: string }) => void;
+  setTimestampColors: (conversationId: string, colors: { sent?: string; received?: string }) => void;
   setBubbleRadius: (conversationId: string, radius: number) => void;
   setBubbleStyle: (conversationId: string, style: 'solid' | 'gradient') => void;
   setBubbleGradients: (conversationId: string, gradients: { sent?: [string, string]; received?: [string, string] }) => void;
@@ -94,6 +97,18 @@ export const useChatCustomizationStore = create<ChatCustomizationState>()(
               ...state.conversationCustomizations[conversationId],
               sentTextColor: colors.sent ?? state.conversationCustomizations[conversationId]?.sentTextColor,
               receivedTextColor: colors.received ?? state.conversationCustomizations[conversationId]?.receivedTextColor,
+            },
+          },
+        })),
+
+      setTimestampColors: (conversationId, colors) =>
+        set((state) => ({
+          conversationCustomizations: {
+            ...state.conversationCustomizations,
+            [conversationId]: {
+              ...state.conversationCustomizations[conversationId],
+              sentTimestampColor: colors.sent ?? state.conversationCustomizations[conversationId]?.sentTimestampColor,
+              receivedTimestampColor: colors.received ?? state.conversationCustomizations[conversationId]?.receivedTimestampColor,
             },
           },
         })),

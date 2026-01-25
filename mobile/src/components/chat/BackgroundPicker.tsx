@@ -17,10 +17,12 @@ import { theme } from '../../styles/theme';
 interface BackgroundPickerProps {
   visible: boolean;
   onClose: () => void;
+  conversationId?: string;
 }
 
-export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ visible, onClose }) => {
-  const { backgroundId, setBackgroundId } = useChatBackgroundStore();
+export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ visible, onClose, conversationId }) => {
+  const { backgroundByConversation, setBackgroundId } = useChatBackgroundStore();
+  const backgroundId = conversationId ? backgroundByConversation[conversationId] : undefined;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -47,7 +49,7 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ visible, onC
                 <TouchableOpacity
                   key={preset.id}
                   style={[styles.card, isActive && styles.cardActive]}
-                  onPress={() => setBackgroundId(preset.id)}
+                  onPress={() => conversationId && setBackgroundId(conversationId, preset.id)}
                 >
                   {preset.type === 'image' && preset.image ? (
                     <ImageBackground source={preset.image} style={styles.preview} imageStyle={styles.previewImage}>

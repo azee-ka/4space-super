@@ -33,7 +33,8 @@ import { useMessagePreferencesStore } from '../../src/store/messagePreferencesSt
 import { useThemeStore } from '../../src/store/themeStore';
 import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
-import { TypingIndicator, BackgroundPicker } from '../../src/components/chat';
+import { TypingIndicator, BackgroundPicker, PhotoEditor, GifPicker, PollCreator, LocationPicker, MessageOptionsModal } from '../../src/components/chat';
+import type { MessageOptions } from '../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
 import { Message } from '../../src/types';
@@ -45,6 +46,8 @@ import { BlurView } from 'expo-blur';
 import { theme } from '../../src/styles/theme';
 import { useChatCustomizationStore } from '../../src/store/chatCustomizationStore';
 import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatThemes';
+import { useChatBackgroundStore } from '../../src/store/chatBackgroundStore';
+import { getChatBackgroundById } from '../../src/styles/chatBackgrounds';
 
 
 export default function ChatScreen() {
@@ -86,6 +89,13 @@ export default function ChatScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
   const plusMenuAnim = useRef(new Animated.Value(0)).current;
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [photoToEdit, setPhotoToEdit] = useState<string | null>(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [showPollCreator, setShowPollCreator] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showMessageOptions, setShowMessageOptions] = useState(false);
+  const [messageOptions, setMessageOptions] = useState<MessageOptions>({ viewOnce: false, timedDuration: 0 });
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
   const screenHeight = Dimensions.get('window').height;
 
@@ -108,11 +118,13 @@ export default function ChatScreen() {
     { key: 'sticker', label: 'Sticker', icon: 'happy', tint: '#22d3ee' },
     { key: 'gif', label: 'GIF', icon: 'film', tint: '#fb7185' },
     { key: 'game', label: 'Games', icon: 'game-controller', tint: '#c084fc' },
-    { key: 'extension', label: 'Extensions', icon: 'puzzle', tint: '#38bdf8' },
+    { key: 'extension', label: 'Extensions', icon: 'code-slash', tint: '#38bdf8' },
   ];
 
   // Select raw data instead of computed methods to avoid infinite loops
   const conversationCustomizations = useChatCustomizationStore((state) => state.conversationCustomizations);
+  const { backgroundByConversation, customBackgroundUriByConversation } = useChatBackgroundStore();
+
   const chatTheme = useMemo(() => {
     if (!conversationId) {
       return { ...DEFAULT_CHAT_THEME, density: 'cozy' as const };
@@ -121,15 +133,34 @@ export default function ChatScreen() {
     const base = getChatThemeById(customization?.themeId) || DEFAULT_CHAT_THEME;
     return {
       ...base,
+      backgroundColor: base.backgroundColor,
       sentBubbleColor: customization?.sentBubbleColor || base.sentBubbleColor,
       receivedBubbleColor: customization?.receivedBubbleColor || base.receivedBubbleColor,
       sentTextColor: customization?.sentTextColor || base.sentTextColor,
       receivedTextColor: customization?.receivedTextColor || base.receivedTextColor,
+      sentTimestampColor: customization?.sentTimestampColor || base.sentTimestampColor || 'rgba(248,250,252,0.75)',
+      receivedTimestampColor: customization?.receivedTimestampColor || base.receivedTimestampColor || 'rgba(30,41,59,0.65)',
       bubbleRadius: customization?.bubbleRadius ?? base.bubbleRadius,
+      bubbleStyle: customization?.bubbleStyle || base.bubbleStyle || 'solid',
+      sentBubbleGradient: customization?.sentBubbleGradient || base.sentBubbleGradient,
+      receivedBubbleGradient: customization?.receivedBubbleGradient || base.receivedBubbleGradient,
       messageTextSize: customization?.messageTextSize ?? 15,
       density: customization?.density || base.density || 'cozy' as const,
     };
   }, [conversationId, conversationCustomizations]);
+
+  const chatBackground = useMemo(() => {
+    if (!conversationId) return getChatBackgroundById('void');
+    const bgId = backgroundByConversation[conversationId];
+    const customUri = customBackgroundUriByConversation[conversationId];
+    const bg = getChatBackgroundById(bgId);
+
+    // Override with custom URI if it's the custom-photo type and a URI is set
+    if (bg.id === 'custom-photo' && customUri) {
+      return { ...bg, image: { uri: customUri } };
+    }
+    return bg;
+  }, [conversationId, backgroundByConversation, customBackgroundUriByConversation]);
 
   const showCallControls = useMemo(() => {
     if (!conversationId) return true;
@@ -272,13 +303,24 @@ export default function ChatScreen() {
     setMessageText('');
     setReplyingTo(null);
 
+    // TODO: Add metadata support to backend for view-once and timed messages
+    // Store metadata in message for now
+    const hasSpecialOptions = messageOptions.viewOnce || (messageOptions.timedDuration && messageOptions.timedDuration > 0);
+
     try {
       await sendMessageMutation.mutateAsync({
         conversationId: conversationId,
         content,
         senderId: user.id,
         replyToId: replyingTo?.id,
-      });
+        // Note: metadata field needs to be added to backend schema
+        ...(hasSpecialOptions && {
+          fileType: messageOptions.viewOnce ? 'view-once' : 'timed-message',
+        }),
+      } as any);
+
+      // Reset message options after sending
+      setMessageOptions({ viewOnce: false, timedDuration: 0 });
 
       // Always snap to the newest message after sending
       setTimeout(() => {
@@ -290,7 +332,7 @@ export default function ChatScreen() {
       Alert.alert('Error', message);
       setMessageText(content);
     }
-  }, [messageText, user, conversationId, replyingTo, sendMessageMutation, setReplyingTo]);
+  }, [messageText, user, conversationId, replyingTo, messageOptions, sendMessageMutation, setReplyingTo]);
 
   const openPlusMenu = useCallback(() => {
     setShowPlusMenu(true);
@@ -366,72 +408,244 @@ export default function ChatScreen() {
   }, [user, addReactionMutation]);
 
   const handlePickImage = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to select images.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      try {
-        // Upload to Supabase storage
-        const fileExt = asset.uri.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `chat-images/${conversationId}/${fileName}`;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
 
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
+      if (!result.canceled && result.assets[0]) {
+        setPhotoToEdit(result.assets[0].uri);
+        setShowPhotoEditor(true);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to open photo library. Please try again.');
+    }
+  }, []);
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('chat-media')
-          .upload(filePath, blob, {
-            contentType: asset.type || 'image/jpeg',
-          });
+  const handleSavePhoto = useCallback(async (uri: string, caption?: string) => {
+    setShowPhotoEditor(false);
+    if (!user || !conversationId) return;
 
-        if (uploadError) throw uploadError;
+    try {
+      const fileExt = uri.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      // Path format: userId/conversationId/images/fileName (for RLS policy)
+      const filePath = `${user.id}/${conversationId}/images/${fileName}`;
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('chat-media')
-          .getPublicUrl(filePath);
+      const response = await fetch(uri);
+      const blob = await response.blob();
 
-        // Send message with image
-        await sendMessageMutation.mutateAsync({
-          conversationId: conversationId!,
-          content: asset.fileName || 'Image',
-          senderId: user!.id,
-          fileUrl: urlData.publicUrl,
-          fileName: asset.fileName || fileName,
-          fileType: 'image',
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('chat-media')
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg',
         });
 
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      } catch (error) {
-        console.error('Image upload error:', error);
-        Alert.alert('Upload failed', 'Failed to upload image. Please try again.');
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(filePath);
+
+      await sendMessageMutation.mutateAsync({
+        conversationId: conversationId,
+        content: caption || 'Image',
+        senderId: user.id,
+        fileUrl: urlData.publicUrl,
+        fileName: fileName,
+        fileType: 'image',
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Image upload error:', error);
+      Alert.alert('Upload failed', 'Failed to upload image. Please try again.');
+    }
+  }, [conversationId, user, sendMessageMutation]);
+
+  const handleTakePhoto = useCallback(async () => {
+    try {
+      // Request permission first
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow camera access to take photos.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoToEdit(result.assets[0].uri);
+        setShowPhotoEditor(true);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to open camera. Please try again.');
+    }
+  }, []);
+
+  const handleSelectGif = useCallback(async (gifUrl: string) => {
+    setShowGifPicker(false);
+    if (!user || !conversationId) return;
+
+    try {
+      await sendMessageMutation.mutateAsync({
+        conversationId: conversationId,
+        content: 'GIF',
+        senderId: user.id,
+        fileUrl: gifUrl,
+        fileName: 'animation.gif',
+        fileType: 'image',
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('GIF send error:', error);
+      Alert.alert('Error', 'Failed to send GIF. Please try again.');
+    }
+  }, [conversationId, user, sendMessageMutation]);
+
+  const handleCreatePoll = useCallback(async (poll: {
+    question: string;
+    options: string[];
+    allowMultiple: boolean;
+    anonymous: boolean;
+  }) => {
+    setShowPollCreator(false);
+    if (!user || !conversationId) return;
+
+    try {
+      // Store poll data as JSON in content
+      const pollData = {
+        type: 'poll',
+        question: poll.question,
+        options: poll.options.map(opt => ({ text: opt, votes: [] })),
+        allowMultiple: poll.allowMultiple,
+        anonymous: poll.anonymous,
+      };
+
+      await sendMessageMutation.mutateAsync({
+        conversationId: conversationId,
+        content: JSON.stringify(pollData),
+        senderId: user.id,
+        fileType: 'poll',
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Poll creation error:', error);
+      Alert.alert('Error', 'Failed to create poll. Please try again.');
+    }
+  }, [conversationId, user, sendMessageMutation]);
+
+  const handleSelectLocation = useCallback(async (location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  }) => {
+    setShowLocationPicker(false);
+    if (!user || !conversationId) return;
+
+    try {
+      const locationData = {
+        type: 'location',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        address: location.address,
+      };
+
+      await sendMessageMutation.mutateAsync({
+        conversationId: conversationId,
+        content: location.address || `Location: ${location.latitude}, ${location.longitude}`,
+        senderId: user.id,
+        fileType: 'location',
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Location send error:', error);
+      Alert.alert('Error', 'Failed to send location. Please try again.');
     }
   }, [conversationId, user, sendMessageMutation]);
 
   const handlePickFile = useCallback(async () => {
-    const result = await DocumentPicker.getDocumentAsync({});
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
 
-    if (result.type === 'success') {
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      if (!user || !conversationId) return;
+
       try {
         // Upload file to Supabase storage
-        const fileName = result.name;
-        const filePath = `chat-files/${conversationId}/${Date.now()}_${fileName}`;
+        const fileName = asset.name;
+        // Path format: userId/conversationId/files/fileName (for RLS policy)
+        const filePath = `${user.id}/${conversationId}/files/${Date.now()}_${fileName}`;
 
-        const response = await fetch(result.uri);
+        const response = await fetch(asset.uri);
         const blob = await response.blob();
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        // Determine proper mime type from file extension if mimeType is generic
+        let contentType = asset.mimeType || 'application/pdf';
+        if (!contentType || contentType === 'application/octet-stream') {
+          const ext = fileName.split('.').pop()?.toLowerCase();
+          const mimeMap: Record<string, string> = {
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls': 'application/vnd.ms-excel',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt': 'application/vnd.ms-powerpoint',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'txt': 'text/plain',
+            'zip': 'application/zip',
+            'rar': 'application/x-rar-compressed',
+            'mp3': 'audio/mpeg',
+            'wav': 'audio/wav',
+            'ogg': 'audio/ogg',
+          };
+          contentType = ext ? (mimeMap[ext] || 'application/pdf') : 'application/pdf';
+        }
+
+        const { error: uploadError } = await supabase.storage
           .from('chat-media')
           .upload(filePath, blob, {
-            contentType: result.mimeType || 'application/octet-stream',
+            contentType,
           });
 
         if (uploadError) throw uploadError;
@@ -443,21 +657,24 @@ export default function ChatScreen() {
 
         // Send message with file
         await sendMessageMutation.mutateAsync({
-          conversationId: conversationId!,
+          conversationId: conversationId,
           content: fileName,
-          senderId: user!.id,
+          senderId: user.id,
           fileUrl: urlData.publicUrl,
           fileName: fileName,
           fileType: 'file',
         });
 
         setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
         }, 100);
       } catch (error) {
         console.error('File upload error:', error);
         Alert.alert('Upload failed', 'Failed to upload file. Please try again.');
       }
+    } catch (error) {
+      console.error('File picker error:', error);
+      // User canceled or error occurred
     }
   }, [conversationId, user, sendMessageMutation]);
 
@@ -600,7 +817,12 @@ export default function ChatScreen() {
           ? prevGap
           : Infinity;
 
-      if (!Number.isFinite(adjacencyGap)) return messageSpacing * 1.2;
+      // Check if the next message is from a different sender
+      const senderChanged = nextMessage && nextMessage.sender_id !== item.sender_id;
+
+      if (!Number.isFinite(adjacencyGap)) return messageSpacing * 1.5;
+      // If sender changed, add more space regardless of time
+      if (senderChanged) return messageSpacing * 1.2;
       if (adjacencyGap < closeGapMs) return messageSpacing * 0.40; // slight gap for <5 min
       if (adjacencyGap < blockGapMs) return messageSpacing * 1.35; // medium gap for 5–30 min
       return messageSpacing * 1; // large break for 30+ min (separator also shows)
@@ -617,11 +839,25 @@ export default function ChatScreen() {
 
     const shouldShowMeta = showTimestamps || isPinned || isSaved || (isOwn && readReceiptsEnabled);
 
-    const InlineMeta = () =>
-      shouldShowMeta ? (
+    const timestampColor = isOwn ? chatTheme.sentTimestampColor : chatTheme.receivedTimestampColor;
+
+    const InlineMeta = ({ asTextComponent = false }: { asTextComponent?: boolean }) => {
+      if (!shouldShowMeta) return null;
+
+      if (asTextComponent && showTimestamps && !readReceiptsEnabled && !isPinned && !isSaved) {
+        // Render as nested Text for inline wrapping - stays on same line as content
+        return (
+          <Text style={[styles.timestampInline, { color: timestampColor }]}>
+            {'   '}{timeLabel}
+          </Text>
+        );
+      }
+
+      // Render as View for non-text content (images/files) or when receipts/flags are shown
+      return (
         <View style={[styles.inlineMeta, isOwn && styles.inlineMetaOwn]}>
           {showTimestamps && (
-            <Text style={[styles.timestampInline, isOwn && styles.timestampInlineOwn]}>{timeLabel}</Text>
+            <Text style={[styles.timestampInline, { color: timestampColor }]}>{timeLabel}</Text>
           )}
           {isOwn && readReceiptsEnabled && (
             <View style={styles.readReceiptsInside}>
@@ -647,7 +883,8 @@ export default function ChatScreen() {
             </View>
           )}
         </View>
-      ) : null;
+      );
+    };
 
     return (
       <View>
@@ -740,19 +977,23 @@ export default function ChatScreen() {
                   </TouchableOpacity>
                 )}
                 {item.type === 'image' || item.type === 'file' ? null : (
-                  <View style={styles.textAndMetaRow}>
-                    <Text
-                      style={[
-                        styles.messageText,
-                        { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
-                      ]}
-                    >
-                      {displayContent}
-                    </Text>
+                  <Text
+                    style={[
+                      styles.messageText,
+                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                    ]}
+                  >
+                    {displayContent}
+                    {showTimestamps && !readReceiptsEnabled && !isPinned && !isSaved && (
+                      <InlineMeta asTextComponent={true} />
+                    )}
+                  </Text>
+                )}
+                {(item.type !== 'text' || readReceiptsEnabled || isPinned || isSaved) && showTimestamps && (
+                  <View style={styles.metaBelowContent}>
                     <InlineMeta />
                   </View>
                 )}
-                {item.type !== 'text' && <InlineMeta />}
               </LinearGradient>
             ) : (
               <View
@@ -792,19 +1033,23 @@ export default function ChatScreen() {
                   </TouchableOpacity>
                 )}
                 {item.type === 'image' || item.type === 'file' ? null : (
-                  <View style={styles.textAndMetaRow}>
-                    <Text
-                      style={[
-                        styles.messageText,
-                        { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
-                      ]}
-                    >
-                      {displayContent}
-                    </Text>
+                  <Text
+                    style={[
+                      styles.messageText,
+                      { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
+                    ]}
+                  >
+                    {displayContent}
+                    {showTimestamps && !readReceiptsEnabled && !isPinned && !isSaved && (
+                      <InlineMeta asTextComponent={true} />
+                    )}
+                  </Text>
+                )}
+                {(item.type !== 'text' || readReceiptsEnabled || isPinned || isSaved) && showTimestamps && (
+                  <View style={styles.metaBelowContent}>
                     <InlineMeta />
                   </View>
                 )}
-                {item.type !== 'text' && <InlineMeta />}
               </View>
             )}
 
@@ -832,7 +1077,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth, chatTheme]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -852,8 +1097,61 @@ export default function ChatScreen() {
       ? `${memberCount} member${memberCount === 1 ? '' : 's'}`
       : 'Online';
 
+  const renderBackground = () => {
+    if (chatBackground.type === 'image' && chatBackground.image) {
+      return (
+        <>
+          <Image
+            source={chatBackground.image}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="cover"
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: chatBackground.overlayColor,
+                opacity: chatBackground.overlayOpacity,
+              },
+            ]}
+          />
+        </>
+      );
+    } else if (chatBackground.type === 'gradient' && chatBackground.colors) {
+      return (
+        <>
+          <LinearGradient
+            colors={chatBackground.colors}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: chatBackground.overlayColor,
+                opacity: chatBackground.overlayOpacity,
+              },
+            ]}
+          />
+        </>
+      );
+    } else {
+      // Solid color
+      return (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            { backgroundColor: chatBackground.color || chatTheme.backgroundColor },
+          ]}
+        />
+      );
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: chatTheme.backgroundColor }]} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {renderBackground()}
+      <View style={styles.headerTopFill} />
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -925,22 +1223,6 @@ export default function ChatScreen() {
               <Ionicons name="chevron-forward" size={14} color={theme.colors.textSubtle} />
             </TouchableOpacity>
           )}
-
-          <View style={styles.focusRow}>
-            {['Media', 'Links', 'Files', 'Pinned'].map((label) => (
-              <TouchableOpacity
-                key={label}
-                style={styles.focusChip}
-                onPress={() => {
-                  if (conversationId) {
-                    router.push(`/messages/${conversationId}/settings` as any);
-                  }
-                }}
-              >
-                <Text style={styles.focusChipText}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           <FlatList
             ref={flatListRef}
@@ -1040,6 +1322,21 @@ export default function ChatScreen() {
               </View>
 
               <TouchableOpacity
+                onPress={() => setShowMessageOptions(true)}
+                style={styles.inputAction}
+              >
+                <Ionicons
+                  name={messageOptions.viewOnce ? 'eye-off' : 'timer-outline'}
+                  size={20}
+                  color={
+                    messageOptions.viewOnce || (messageOptions.timedDuration && messageOptions.timedDuration > 0)
+                      ? theme.colors.accent
+                      : theme.colors.textMuted
+                  }
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={handleSendMessage}
                 disabled={!messageText.trim()}
                 style={[styles.sendButton, messageText.trim() ? styles.sendButtonActive : styles.sendButtonInactive]}
@@ -1059,6 +1356,7 @@ export default function ChatScreen() {
     <BackgroundPicker
         visible={showBackgroundPicker}
         onClose={() => setShowBackgroundPicker(false)}
+        conversationId={conversationId}
       />
 
       <Modal
@@ -1103,24 +1401,65 @@ export default function ChatScreen() {
               ]}
               showsVerticalScrollIndicator={false}
             >
-              {plusMenuItems.map((item) => (
-                <TouchableOpacity
-                  key={item.key}
-                  style={styles.plusMenuItem}
-                  activeOpacity={0.8}
-                  onPress={closePlusMenu}
-                >
-                  <Ionicons
-                    name={item.icon as any}
-                    size={30}
-                    color={item.tint}
-                    style={styles.plusMenuIconGlyph}
-                  />
-                  <View style={styles.plusMenuTextWrap}>
-                    <Text style={styles.plusMenuText}>{item.label}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {plusMenuItems.map((item) => {
+                const handlePress = () => {
+                  closePlusMenu();
+                  // Increased delay to ensure menu animation completes before opening native pickers
+                  setTimeout(() => {
+                    switch (item.key) {
+                      case 'photos':
+                        handlePickImage();
+                        break;
+                      case 'camera':
+                        handleTakePhoto();
+                        break;
+                      case 'file':
+                        handlePickFile();
+                        break;
+                      case 'poll':
+                        setShowPollCreator(true);
+                        break;
+                      case 'location':
+                        setShowLocationPicker(true);
+                        break;
+                      case 'gif':
+                        setShowGifPicker(true);
+                        break;
+                      case 'sticker':
+                        Alert.alert('Coming Soon', 'Sticker picker will be available soon!');
+                        break;
+                      case 'contact':
+                        Alert.alert('Coming Soon', 'Contact picker will be available soon!');
+                        break;
+                      case 'game':
+                        Alert.alert('Coming Soon', 'Games will be available soon!');
+                        break;
+                      case 'extension':
+                        Alert.alert('Coming Soon', 'Extensions will be available soon!');
+                        break;
+                    }
+                  }, 500);
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={styles.plusMenuItem}
+                    activeOpacity={0.8}
+                    onPress={handlePress}
+                  >
+                    <Ionicons
+                      name={item.icon as any}
+                      size={30}
+                      color={item.tint}
+                      style={styles.plusMenuIconGlyph}
+                    />
+                    <View style={styles.plusMenuTextWrap}>
+                      <Text style={styles.plusMenuText}>{item.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </Animated.View>
         </View>
@@ -1147,6 +1486,45 @@ export default function ChatScreen() {
           />
         </View>
       </Modal>
+
+      {photoToEdit && (
+        <PhotoEditor
+          visible={showPhotoEditor}
+          imageUri={photoToEdit}
+          onClose={() => {
+            setShowPhotoEditor(false);
+            setPhotoToEdit(null);
+          }}
+          onSave={handleSavePhoto}
+        />
+      )}
+
+      <GifPicker
+        visible={showGifPicker}
+        onClose={() => setShowGifPicker(false)}
+        onSelectGif={handleSelectGif}
+      />
+
+      <PollCreator
+        visible={showPollCreator}
+        onClose={() => setShowPollCreator(false)}
+        onCreatePoll={handleCreatePoll}
+      />
+
+      <LocationPicker
+        visible={showLocationPicker}
+        onClose={() => setShowLocationPicker(false)}
+        onSelectLocation={handleSelectLocation}
+      />
+
+      <MessageOptionsModal
+        visible={showMessageOptions}
+        onClose={() => setShowMessageOptions(false)}
+        onConfirm={(options) => {
+          setMessageOptions(options);
+          setShowMessageOptions(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -1162,13 +1540,21 @@ const styles = StyleSheet.create({
   themeLayer: {
     ...StyleSheet.absoluteFillObject,
   },
+  headerTopFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: theme.colors.base,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     paddingTop: 16,
     backgroundColor: theme.colors.base,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: theme.colors.border,
   },
   backButton: {
@@ -1376,6 +1762,10 @@ const styles = StyleSheet.create({
     gap: 8,
     flexShrink: 1,
   },
+  metaBelowContent: {
+    marginTop: 4,
+    alignSelf: 'flex-end',
+  },
   messageMeta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1411,11 +1801,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   timestampInline: {
-    fontSize: 11,
-    color: 'rgba(30,41,59,0.7)',
+    fontSize: 10,
+    color: 'rgba(30,41,59,0.65)',
+    fontWeight: '500',
   },
   timestampInlineOwn: {
-    color: 'rgba(248,250,252,0.9)',
+    color: 'rgba(248,250,252,0.75)',
   },
   messageFlagsInside: {
     flexDirection: 'row',
@@ -1562,13 +1953,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,1)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
   textInputWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,1)',
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
@@ -1581,7 +1972,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     maxHeight: 100,
     paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,1)',
+    backgroundColor: 'rgba(0,0,0,0)',
   },
   sendButton: {
     width: 38,
@@ -1594,7 +1985,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   sendButtonInactive: {
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,1)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -1680,7 +2071,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: 'rgba(255,255,255)',
     fontWeight: '700',
-    boxShadow: '0 0 50px 3px rgba(255,255,255,0.5)',
+    // boxShadow: '0 0 50px 3px rgba(255,255,255,0.5)',
   },
   plusMenuTextWrap: {
     position: 'relative',

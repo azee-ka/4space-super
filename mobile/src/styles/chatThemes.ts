@@ -9,6 +9,8 @@ export interface ChatThemePreset {
   receivedBubbleColor: string;
   sentTextColor: string;
   receivedTextColor: string;
+  sentTimestampColor?: string;
+  receivedTimestampColor?: string;
   bubbleRadius: number;
   density: Density;
   bubbleStyle?: 'solid' | 'gradient';

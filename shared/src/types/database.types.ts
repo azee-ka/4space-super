@@ -466,6 +466,75 @@ export type Database = {
           },
         ]
       }
+      live_locations: {
+        Row: {
+          accuracy: number | null
+          address: string | null
+          altitude: number | null
+          duration_seconds: number | null
+          expires_at: string | null
+          heading: number | null
+          id: string
+          is_live: boolean | null
+          last_updated_at: string | null
+          latitude: number
+          longitude: number
+          message_id: string | null
+          speed: number | null
+          started_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          address?: string | null
+          altitude?: number | null
+          duration_seconds?: number | null
+          expires_at?: string | null
+          heading?: number | null
+          id?: string
+          is_live?: boolean | null
+          last_updated_at?: string | null
+          latitude: number
+          longitude: number
+          message_id?: string | null
+          speed?: number | null
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          address?: string | null
+          altitude?: number | null
+          duration_seconds?: number | null
+          expires_at?: string | null
+          heading?: number | null
+          id?: string
+          is_live?: boolean | null
+          last_updated_at?: string | null
+          latitude?: number
+          longitude?: number
+          message_id?: string | null
+          speed?: number | null
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_locations_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_locations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_files: {
         Row: {
           created_at: string | null
@@ -895,6 +964,87 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_options: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_correct: boolean | null
+          option_order: number
+          option_text: string
+          poll_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          option_order: number
+          option_text: string
+          poll_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          option_order?: number
+          option_text?: string
+          poll_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_votes: {
+        Row: {
+          id: string
+          option_id: string | null
+          poll_id: string | null
+          user_id: string | null
+          voted_at: string | null
+        }
+        Insert: {
+          id?: string
+          option_id?: string | null
+          poll_id?: string | null
+          user_id?: string | null
+          voted_at?: string | null
+        }
+        Update: {
+          id?: string
+          option_id?: string | null
+          poll_id?: string | null
+          user_id?: string | null
+          voted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1817,6 +1967,8 @@ export type Database = {
         Returns: undefined
       }
       clean_old_typing_indicators: { Args: never; Returns: undefined }
+      cleanup_expired_live_locations: { Args: never; Returns: undefined }
+      cleanup_expired_timed_messages: { Args: never; Returns: undefined }
       create_notification: {
         Args: {
           p_action_required?: boolean
