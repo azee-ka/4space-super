@@ -42,6 +42,8 @@ import { Message } from '../../src/types';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../src/styles/theme';
@@ -50,6 +52,8 @@ import { DEFAULT_CHAT_THEME, getChatThemeById } from '../../src/styles/chatTheme
 import { useChatBackgroundStore } from '../../src/store/chatBackgroundStore';
 import { getChatBackgroundById } from '../../src/styles/chatBackgrounds';
 
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,6 +101,8 @@ export default function ChatScreen() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showMessageOptions, setShowMessageOptions] = useState(false);
   const [messageOptions, setMessageOptions] = useState<MessageOptions>({ viewOnce: false, timedDuration: 0 });
+  const [signedAttachmentUrls, setSignedAttachmentUrls] = useState<Record<string, string>>({});
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
   const screenHeight = Dimensions.get('window').height;
 
@@ -214,7 +220,6 @@ export default function ChatScreen() {
     return messages.find((msg) => msg.id === pinnedMessageId) || null;
   }, [messages, pinnedMessageId]);
 
-
   useEffect(() => {
     if (!conversationId || !user) return;
 
@@ -258,6 +263,96 @@ export default function ChatScreen() {
     console.error('Messages fetch error:', messagesError);
     Alert.alert('Messages error', 'Failed to load messages. Pull to refresh or try again.');
   }, [messagesError]);
+
+  useEffect(() => {
+    if (!renderedMessages.length) return;
+    let cancelled = false;
+
+    const resolveSignedUrls = async () => {
+      const updates: Record<string, string> = {};
+
+      await Promise.all(
+        renderedMessages.map(async (msg) => {
+          if (signedAttachmentUrls[msg.id]) return;
+          const rawMeta = msg.metadata;
+          const metadataValue = (() => {
+            if (!rawMeta) return null;
+            if (typeof rawMeta === 'string') {
+              try {
+                return JSON.parse(rawMeta);
+              } catch {
+                return null;
+              }
+            }
+            if (typeof rawMeta === 'object') return rawMeta;
+            return null;
+          })();
+
+          const attachments = (() => {
+            if (Array.isArray(msg.attachments)) return msg.attachments;
+            if (typeof msg.attachments === 'string') {
+              try {
+                const parsed = JSON.parse(msg.attachments);
+                if (Array.isArray(parsed)) return parsed;
+                if (parsed && typeof parsed === 'object') return [parsed];
+              } catch {
+                return undefined;
+              }
+            }
+            if (msg.attachments && typeof msg.attachments === 'object') {
+              return [msg.attachments];
+            }
+            const metaAttachment =
+              metadataValue?.attachments ??
+              metadataValue?.attachment ??
+              metadataValue?.file ??
+              metadataValue?.media;
+            if (Array.isArray(metaAttachment)) return metaAttachment;
+            if (metaAttachment && typeof metaAttachment === 'object') return [metaAttachment];
+            return undefined;
+          })();
+
+          const attachment = attachments?.[0];
+          const urlFromMeta =
+            metadataValue?.fileUrl ??
+            metadataValue?.file_url ??
+            metadataValue?.url ??
+            metadataValue?.publicUrl ??
+            metadataValue?.downloadUrl;
+          const urlFromAttachment =
+            attachment?.url ??
+            attachment?.file_url ??
+            attachment?.fileUrl ??
+            attachment?.publicUrl ??
+            attachment?.downloadUrl;
+          const fallbackUrl = msg.file_url ?? urlFromAttachment ?? urlFromMeta;
+          const parsed = parseSupabaseStorageUrl(fallbackUrl);
+          const bucket = attachment?.bucket ?? attachment?.bucket_id ?? metadataValue?.bucket ?? parsed?.bucket;
+          const path = attachment?.path ?? attachment?.storage_path ?? metadataValue?.path ?? metadataValue?.storage_path ?? parsed?.path;
+
+          if (!bucket || !path) return;
+
+          try {
+            const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
+            if (error || !data?.signedUrl) return;
+            updates[msg.id] = data.signedUrl;
+          } catch {
+            return;
+          }
+        })
+      );
+
+      if (!cancelled && Object.keys(updates).length) {
+        setSignedAttachmentUrls((prev) => ({ ...prev, ...updates }));
+      }
+    };
+
+    resolveSignedUrls();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [renderedMessages, signedAttachmentUrls]);
 
 
   useEffect(() => {
@@ -442,21 +537,53 @@ export default function ChatScreen() {
     if (!user || !conversationId) return;
 
     try {
-      const fileExt = uri.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      let normalizedUri = uri;
+      if (!normalizedUri.startsWith('file://')) {
+        try {
+          const manipResult = await ImageManipulator.manipulateAsync(
+            normalizedUri,
+            [],
+            { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          normalizedUri = manipResult.uri;
+        } catch (err) {
+          console.warn('[Chat] Image normalize failed, using original uri', err);
+        }
+      }
+      const initialResponse = await fetch(normalizedUri);
+      const initialBlob = await initialResponse.blob();
+
+      // Ensure content type is correctly determined
+      let contentType = initialBlob.type;
+      if (!contentType || contentType === 'application/octet-stream') {
+        const ext = normalizedUri.split('.').pop()?.toLowerCase() || 'jpg';
+        const mimeMap: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+          'heic': 'image/heic',
+          'heif': 'image/heif',
+        };
+        contentType = mimeMap[ext] || 'image/jpeg';
+      }
+      const resolvedSize = (await getFileSize(normalizedUri)) || initialBlob.size || 0;
+      const mimeExtMap: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/heic': 'heic',
+        'image/heif': 'heif',
+      };
+      const safeExt = mimeExtMap[contentType] || contentType.split('/')[1] || 'jpg';
+      const fileName = `${Date.now()}.${safeExt}`;
       // Path format: userId/conversationId/images/fileName (for RLS policy)
       const filePath = `${user.id}/${conversationId}/images/${fileName}`;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('chat-media')
-        .upload(filePath, blob, {
-          contentType: 'image/jpeg',
-        });
-
-      if (uploadError) throw uploadError;
+      const uploadedSize = await uploadToStorage(normalizedUri, contentType, filePath);
+      const finalSize = uploadedSize || resolvedSize;
 
       const { data: urlData } = supabase.storage
         .from('chat-media')
@@ -469,6 +596,14 @@ export default function ChatScreen() {
         fileUrl: urlData.publicUrl,
         fileName: fileName,
         fileType: 'image',
+        metadata: {
+          fileUrl: urlData.publicUrl,
+          fileName: fileName,
+          fileType: 'image',
+          fileSize: finalSize,
+          bucket: 'chat-media',
+          path: filePath,
+        },
       });
 
       setTimeout(() => {
@@ -624,9 +759,6 @@ export default function ChatScreen() {
         // Path format: userId/conversationId/files/fileName (for RLS policy)
         const filePath = `${user.id}/${conversationId}/files/${Date.now()}_${fileName}`;
 
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
-
         // Determine proper mime type from file extension if mimeType is generic
         let contentType = asset.mimeType || 'application/pdf';
         if (!contentType || contentType === 'application/octet-stream') {
@@ -648,14 +780,9 @@ export default function ChatScreen() {
           };
           contentType = ext ? (mimeMap[ext] || 'application/pdf') : 'application/pdf';
         }
-
-        const { error: uploadError } = await supabase.storage
-          .from('chat-media')
-          .upload(filePath, blob, {
-            contentType,
-          });
-
-        if (uploadError) throw uploadError;
+        const resolvedSize = await getFileSize(asset.uri);
+        const uploadedSize = await uploadToStorage(asset.uri, contentType, filePath);
+        const finalSize = uploadedSize || resolvedSize;
 
         // Get public URL
         const { data: urlData } = supabase.storage
@@ -670,6 +797,14 @@ export default function ChatScreen() {
           fileUrl: urlData.publicUrl,
           fileName: fileName,
           fileType: 'file',
+          metadata: {
+            fileUrl: urlData.publicUrl,
+            fileName: fileName,
+            fileType: 'file',
+            fileSize: finalSize,
+            bucket: 'chat-media',
+            path: filePath,
+          },
         });
 
         setTimeout(() => {
@@ -834,6 +969,55 @@ export default function ChatScreen() {
     if (parts.length < 2) return null;
     return parts[parts.length - 1]?.toUpperCase() || null;
   };
+  const decodeBase64ToArrayBuffer = (base64: string) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let bufferLength = base64.length * 0.75;
+    if (base64[base64.length - 1] === '=') bufferLength -= 1;
+    if (base64[base64.length - 2] === '=') bufferLength -= 1;
+    const arrayBuffer = new ArrayBuffer(bufferLength);
+    const bytes = new Uint8Array(arrayBuffer);
+    let p = 0;
+    for (let i = 0; i < base64.length; i += 4) {
+      const encoded1 = chars.indexOf(base64[i]);
+      const encoded2 = chars.indexOf(base64[i + 1]);
+      const encoded3 = chars.indexOf(base64[i + 2]);
+      const encoded4 = chars.indexOf(base64[i + 3]);
+      const chunk = (encoded1 << 18) | (encoded2 << 12) | (encoded3 << 6) | encoded4;
+      bytes[p++] = (chunk >> 16) & 255;
+      if (encoded3 !== 64) bytes[p++] = (chunk >> 8) & 255;
+      if (encoded4 !== 64) bytes[p++] = chunk & 255;
+    }
+    return arrayBuffer;
+  };
+  const parseSupabaseStorageUrl = (url?: string | null) => {
+    if (!url) return null;
+    const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/([^?]+)/);
+    if (!match) return null;
+    return {
+      bucket: decodeURIComponent(match[1]),
+      path: decodeURIComponent(match[2]),
+    };
+  };
+  const getFileSize = async (uri: string) => {
+    try {
+      const info = await LegacyFileSystem.getInfoAsync(uri);
+      return typeof info.size === 'number' ? info.size : 0;
+    } catch {
+      return 0;
+    }
+  };
+  const uploadToStorage = async (uri: string, contentType: string, filePath: string) => {
+    const base64 = await LegacyFileSystem.readAsStringAsync(uri, {
+      encoding: LegacyFileSystem.EncodingType.Base64,
+    });
+    const buffer = decodeBase64ToArrayBuffer(base64);
+    const byteArray = new Uint8Array(buffer);
+    const { error: uploadError } = await supabase.storage
+      .from('chat-media')
+      .upload(filePath, byteArray, { contentType });
+    if (uploadError) throw uploadError;
+    return byteArray.byteLength;
+  };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset } = event.nativeEvent;
@@ -932,7 +1116,7 @@ export default function ChatScreen() {
       contentUrl ??
       item.file_url ??
       undefined;
-    const attachmentUrl = (() => {
+    const attachmentUrlBase = (() => {
       if (attachmentUrlRaw) return attachmentUrlRaw;
       const path = attachment?.path ?? attachment?.storage_path ?? metadataValue?.path ?? metadataValue?.storage_path;
       if (!path) return undefined;
@@ -944,6 +1128,7 @@ export default function ChatScreen() {
         return undefined;
       }
     })();
+    const attachmentUrl = signedAttachmentUrls[item.id] ?? attachmentUrlBase;
     const attachmentName =
       attachment?.name ??
       attachment?.file_name ??
@@ -1192,12 +1377,36 @@ export default function ChatScreen() {
                 )}
                 {isImage && attachmentUrl && (
                   <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
-                    <Image
-                      source={{ uri: attachmentUrl }}
-                      style={styles.messageImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
+                    {imageLoadErrors[item.id] ? (
+                      <View style={styles.imageErrorFallback}>
+                        <Text style={[styles.messageText, { color: bubbleTextColor }]}>
+                          Image failed to load
+                        </Text>
+                        <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>
+                          Tap to open
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: attachmentUrl }}
+                        style={styles.messageImage}
+                        contentFit="cover"
+                        transition={200}
+                        onLoad={() => {
+                          if (imageLoadErrors[item.id]) {
+                            setImageLoadErrors((prev) => ({ ...prev, [item.id]: false }));
+                          }
+                        }}
+                        onError={(err) => {
+                          console.warn('[Chat] Image load error', {
+                            id: item.id,
+                            url: attachmentUrl,
+                            error: err?.error,
+                          });
+                          setImageLoadErrors((prev) => ({ ...prev, [item.id]: true }));
+                        }}
+                      />
+                    )}
                     {!!caption && (
                       <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
                     )}
@@ -1268,12 +1477,36 @@ export default function ChatScreen() {
                 )}
                 {isImage && attachmentUrl && (
                   <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
-                    <Image
-                      source={{ uri: attachmentUrl }}
-                      style={styles.messageImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
+                    {imageLoadErrors[item.id] ? (
+                      <View style={styles.imageErrorFallback}>
+                        <Text style={[styles.messageText, { color: bubbleTextColor }]}>
+                          Image failed to load
+                        </Text>
+                        <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>
+                          Tap to open
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: attachmentUrl }}
+                        style={styles.messageImage}
+                        contentFit="cover"
+                        transition={200}
+                        onLoad={() => {
+                          if (imageLoadErrors[item.id]) {
+                            setImageLoadErrors((prev) => ({ ...prev, [item.id]: false }));
+                          }
+                        }}
+                        onError={(err) => {
+                          console.warn('[Chat] Image load error', {
+                            id: item.id,
+                            url: attachmentUrl,
+                            error: err?.error,
+                          });
+                          setImageLoadErrors((prev) => ({ ...prev, [item.id]: true }));
+                        }}
+                      />
+                    )}
                     {!!caption && (
                       <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
                     )}
@@ -1352,7 +1585,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth, chatTheme]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth, chatTheme, signedAttachmentUrls, imageLoadErrors]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -2098,6 +2331,16 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 12,
+    marginBottom: 4,
+  },
+  imageErrorFallback: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.12)',
     marginBottom: 4,
   },
   mediaCaption: {

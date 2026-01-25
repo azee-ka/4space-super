@@ -806,6 +806,9 @@ export type Database = {
           deleted_at: string | null
           edited_at: string | null
           expires_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           forward_from_id: string | null
           id: string
           is_kept: boolean | null
@@ -833,6 +836,9 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           expires_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           forward_from_id?: string | null
           id?: string
           is_kept?: boolean | null
@@ -860,6 +866,9 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           expires_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           forward_from_id?: string | null
           id?: string
           is_kept?: boolean | null

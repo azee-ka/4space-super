@@ -346,6 +346,10 @@ export const useSendMessage = () => {
       fileUrl,
       fileName,
       fileType,
+      fileSize,
+      filePath,
+      fileBucket,
+      metadata,
     }: {
       conversationId: string;
       content: string;
@@ -354,9 +358,17 @@ export const useSendMessage = () => {
       fileUrl?: string;
       fileName?: string;
       fileType?: string;
+      fileSize?: number;
+      filePath?: string;
+      fileBucket?: string;
+      metadata?: Record<string, any>;
     }) => {
-      const attachments = fileUrl ? [{ url: fileUrl, name: fileName, type: fileType }] : undefined;
-      const metadata = content ? { content, text: content } : undefined;
+      const attachments = fileUrl
+        ? [{ url: fileUrl, name: fileName, type: fileType, path: filePath, bucket: fileBucket }]
+        : undefined;
+      const baseMetadata = content ? { content, text: content } : undefined;
+      const mergedMetadata =
+        metadata && baseMetadata ? { ...metadata, ...baseMetadata } : metadata || baseMetadata;
       const { data, error } = await supabase
         .from('messages')
         .insert({
@@ -366,7 +378,7 @@ export const useSendMessage = () => {
           reply_to_id: replyToId,
           message_type: fileType || 'text',
           ...(attachments ? { attachments } : {}),
-          ...(metadata ? { metadata } : {}),
+          ...(mergedMetadata ? { metadata: mergedMetadata } : {}),
         })
         .select(
           '*, sender:profiles(id, username, display_name, avatar_url), reactions:message_reactions(id, message_id, emoji, user_id, created_at)'
