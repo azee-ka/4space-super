@@ -34,6 +34,7 @@ import { useThemeStore } from '../../src/store/themeStore';
 import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
 import { TypingIndicator, BackgroundPicker, PhotoEditor, GifPicker, PollCreator, LocationPicker, MessageOptionsModal } from '../../src/components/chat';
+import { PollBubble } from '../../src/components/chat/PollBubble';
 import type { MessageOptions } from '../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
@@ -701,6 +702,125 @@ export default function ChatScreen() {
     }
   }, [conversationId, queryClient]);
 
+  const parsePollData = useCallback((message: Message) => {
+    const raw = message.metadata ?? message.content;
+    if (!raw) return null;
+    try {
+      if (typeof raw === 'object') {
+        if (raw.type === 'poll' && Array.isArray((raw as any).options)) return raw;
+        const nested = (raw as any).content ?? (raw as any).text;
+        if (typeof nested === 'string') {
+          const parsedNested = JSON.parse(nested);
+          if (parsedNested?.type === 'poll' && Array.isArray(parsedNested.options)) return parsedNested;
+        }
+        return null;
+      }
+      if (typeof raw === 'string') {
+        const parsed = JSON.parse(raw);
+        if (!parsed || parsed.type !== 'poll' || !Array.isArray(parsed.options)) return null;
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }, []);
+
+  const handlePollVote = useCallback(async (message: Message, optionIndex: number) => {
+    if (!user) return;
+    const pollData = parsePollData(message);
+    if (!pollData || !Array.isArray(pollData.options)) return;
+
+    const alreadyVoted = pollData.options.some((opt: any) =>
+      Array.isArray(opt?.votes) ? opt.votes.includes(user.id) : false
+    );
+    if (alreadyVoted) return;
+
+    const updatedPoll = {
+      ...pollData,
+      options: pollData.options.map((opt: any, idx: number) => {
+        if (idx !== optionIndex) return opt;
+        const votes = Array.isArray(opt.votes) ? opt.votes : [];
+        return { ...opt, votes: votes.includes(user.id) ? votes : [...votes, user.id] };
+      }),
+    };
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({
+          content: JSON.stringify(updatedPoll),
+          metadata: updatedPoll,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', message.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+    } catch (err) {
+      console.error('Poll vote error:', err);
+      Alert.alert('Vote failed', 'Could not submit your vote. Please try again.');
+    }
+  }, [user, parsePollData, queryClient, conversationId]);
+
+  const handlePollVoteMultiple = useCallback(async (message: Message, optionIndexes: number[]) => {
+    if (!user) return;
+    const pollData = parsePollData(message);
+    if (!pollData || !Array.isArray(pollData.options)) return;
+
+    const alreadyVoted = pollData.options.some((opt: any) =>
+      Array.isArray(opt?.votes) ? opt.votes.includes(user.id) : false
+    );
+    if (alreadyVoted) return;
+
+    const selectedSet = new Set(optionIndexes);
+    const updatedPoll = {
+      ...pollData,
+      options: pollData.options.map((opt: any, idx: number) => {
+        if (!selectedSet.has(idx)) return opt;
+        const votes = Array.isArray(opt.votes) ? opt.votes : [];
+        return { ...opt, votes: votes.includes(user.id) ? votes : [...votes, user.id] };
+      }),
+    };
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({
+          content: JSON.stringify(updatedPoll),
+          metadata: updatedPoll,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', message.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+    } catch (err) {
+      console.error('Poll vote error:', err);
+      Alert.alert('Vote failed', 'Could not submit your vote. Please try again.');
+    }
+  }, [user, parsePollData, queryClient, conversationId]);
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes || !Number.isFinite(bytes)) return null;
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let index = 0;
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index += 1;
+    }
+    const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+    return `${rounded} ${units[index]}`;
+  };
+
+  const getFileExtension = (name?: string) => {
+    if (!name) return null;
+    const parts = name.split('.');
+    if (parts.length < 2) return null;
+    return parts[parts.length - 1]?.toUpperCase() || null;
+  };
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset } = event.nativeEvent;
     // Inverted list: y=0 is bottom/newest. Show jump when we're away from bottom.
@@ -749,6 +869,35 @@ export default function ChatScreen() {
     const showAvatar = !isOwn && (!groupedWithPrev || prevGap > longGapMs);
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
+    const resolvedAttachments = (() => {
+      if (Array.isArray(item.attachments)) return item.attachments;
+      if (typeof item.attachments === 'string') {
+        try {
+          const parsed = JSON.parse(item.attachments);
+          return Array.isArray(parsed) ? parsed : undefined;
+        } catch {
+          return undefined;
+        }
+      }
+      return undefined;
+    })();
+    const attachment = resolvedAttachments?.[0];
+    const attachmentUrl =
+      attachment?.url ?? attachment?.file_url ?? attachment?.fileUrl ?? item.file_url ?? undefined;
+    const attachmentName =
+      attachment?.name ?? attachment?.file_name ?? attachment?.fileName ?? item.file_name ?? item.content ?? undefined;
+    const attachmentType = attachment?.type ?? attachment?.fileType ?? item.type;
+    const attachmentSize = attachment?.size ?? item.file_size ?? undefined;
+    const typeLower = typeof attachmentType === 'string' ? attachmentType.toLowerCase() : '';
+    const isImage = typeLower === 'image' || typeLower === 'gif' || typeLower.startsWith('image/');
+    const isPoll = typeLower === 'poll';
+    const isFile = typeLower === 'file' || (!!attachmentUrl && !isImage && !isPoll);
+    const pollData = isPoll ? parsePollData(item) : null;
+    const caption = isImage && item.content && item.content !== 'Image' && item.content !== 'GIF'
+      ? item.content
+      : null;
+    const fileExt = getFileExtension(attachmentName || '');
+    const fileSizeLabel = formatBytes(attachmentSize);
     const isSaved = savedMessageIds.includes(item.id);
     const isPinned = pinnedMessageId === item.id;
     const bubbleColorStyle = { backgroundColor: isOwn ? chatTheme.sentBubbleColor : chatTheme.receivedBubbleColor };
@@ -937,7 +1086,7 @@ export default function ChatScreen() {
                 </View>
               )}
 
-            {useGradient ? (
+            {useGradient && !isImage ? (
               <LinearGradient
                 colors={bubbleGradient as [string, string]}
                 start={{ x: 0, y: 0 }}
@@ -947,6 +1096,7 @@ export default function ChatScreen() {
                   isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
                   bubbleRadius,
                   { maxWidth: maxBubbleWidth },
+                  isImage && styles.mediaBubble,
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -954,36 +1104,52 @@ export default function ChatScreen() {
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
-                {item.type === 'image' && item.attachments && item.attachments[0] && (
-                  <TouchableOpacity onPress={() => setSelectedImage(item.attachments[0]?.url ?? null)}>
+                {isImage && attachmentUrl && (
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
                     <Image
-                      source={{ uri: item.attachments[0]?.url ?? null }}
+                      source={{ uri: attachmentUrl }}
                       style={styles.messageImage}
                       contentFit="cover"
                       transition={200}
                     />
+                    {!!caption && (
+                      <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
+                    )}
                   </TouchableOpacity>
                 )}
-                {item.type === 'file' && item.attachments && item.attachments[0] && (
-                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(item.attachments[0].url)}>
-                    <Ionicons name="document-outline" size={24} color={bubbleTextColor} />
+                {isImage && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>Image unavailable</Text>
+                )}
+                {isFile && attachmentUrl && (
+                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(attachmentUrl)}>
+                    <Ionicons name="document-text-outline" size={24} color={bubbleTextColor} />
                     <View style={styles.fileInfo}>
                       <Text style={[styles.fileName, { color: bubbleTextColor }]} numberOfLines={1}>
-                        {item.attachments[0].name}
+                        {attachmentName || 'File'}
                       </Text>
-                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>File</Text>
+                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>
+                        {(fileExt || 'File')}{fileSizeLabel ? ` · ${fileSizeLabel}` : ''}
+                      </Text>
                     </View>
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'image' || item.type === 'file' ? null : (
+                {isPoll && pollData ? (
+                  <PollBubble
+                    pollData={pollData}
+                    currentUserId={user?.id || ''}
+                    isOwn={isOwn}
+                    onVote={(optionIndex) => handlePollVote(item, optionIndex)}
+                    onVoteMultiple={(optionIndexes) => handlePollVoteMultiple(item, optionIndexes)}
+                  />
+                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) ? null : (
                   <Text
                     style={[
                       styles.messageText,
                       { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
                     ]}
                   >
-                    {displayContent}
+                    {isPoll ? 'Poll unavailable' : displayContent}
                     {showTimestamps && !readReceiptsEnabled && !isPinned && !isSaved && (
                       <InlineMeta asTextComponent={true} />
                     )}
@@ -1003,6 +1169,7 @@ export default function ChatScreen() {
                   bubbleColorStyle,
                   bubbleRadius,
                   { maxWidth: maxBubbleWidth },
+                  isImage && styles.mediaBubble,
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -1010,36 +1177,52 @@ export default function ChatScreen() {
                     {item.sender.display_name || item.sender.username}
                   </Text>
                 )}
-                {item.type === 'image' && item.attachments && item.attachments[0] && (
-                  <TouchableOpacity onPress={() => setSelectedImage(item.attachments[0].url)}>
+                {isImage && attachmentUrl && (
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
                     <Image
-                      source={{ uri: item.attachments[0].url }}
+                      source={{ uri: attachmentUrl }}
                       style={styles.messageImage}
                       contentFit="cover"
                       transition={200}
                     />
+                    {!!caption && (
+                      <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
+                    )}
                   </TouchableOpacity>
                 )}
-                {item.type === 'file' && item.attachments && item.attachments[0] && (
-                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(item.attachments[0].url)}>
-                    <Ionicons name="document-outline" size={24} color={bubbleTextColor} />
+                {isImage && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>Image unavailable</Text>
+                )}
+                {isFile && attachmentUrl && (
+                  <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(attachmentUrl)}>
+                    <Ionicons name="document-text-outline" size={24} color={bubbleTextColor} />
                     <View style={styles.fileInfo}>
                       <Text style={[styles.fileName, { color: bubbleTextColor }]} numberOfLines={1}>
-                        {item.attachments[0].name}
+                        {attachmentName || 'File'}
                       </Text>
-                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>File</Text>
+                      <Text style={[styles.fileSize, { color: bubbleTextColor }]}>
+                        {(fileExt || 'File')}{fileSizeLabel ? ` · ${fileSizeLabel}` : ''}
+                      </Text>
                     </View>
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
-                {item.type === 'image' || item.type === 'file' ? null : (
+                {isPoll && pollData ? (
+                  <PollBubble
+                    pollData={pollData}
+                    currentUserId={user?.id || ''}
+                    isOwn={isOwn}
+                    onVote={(optionIndex) => handlePollVote(item, optionIndex)}
+                    onVoteMultiple={(optionIndexes) => handlePollVoteMultiple(item, optionIndexes)}
+                  />
+                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) ? null : (
                   <Text
                     style={[
                       styles.messageText,
                       { color: bubbleTextColor, fontSize: messageFontSize, lineHeight: messageLineHeight },
                     ]}
                   >
-                    {displayContent}
+                    {isPoll ? 'Poll unavailable' : displayContent}
                     {showTimestamps && !readReceiptsEnabled && !isPinned && !isSaved && (
                       <InlineMeta asTextComponent={true} />
                     )}
@@ -1733,6 +1916,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     maxWidth: 320,
   },
+  mediaBubble: {
+    padding: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+  },
   messageBubbleOwn: {
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
@@ -1819,6 +2007,12 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 12,
     marginBottom: 4,
+  },
+  mediaCaption: {
+    paddingHorizontal: 10,
+    paddingBottom: 8,
+    fontSize: 13,
+    lineHeight: 18,
   },
   messageFile: {
     flexDirection: 'row',

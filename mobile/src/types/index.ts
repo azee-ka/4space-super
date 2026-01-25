@@ -27,7 +27,7 @@ export interface Message {
   sender_id: string;
   sender: User;
   content: string;
-  type: 'text' | 'image' | 'file' | 'audio' | 'video';
+  type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'poll' | 'location' | 'gif' | 'view-once' | 'timed-message';
   metadata?: Record<string, any> | string | null;
   encrypted_content?: string | null;
   reply_to?: Message;

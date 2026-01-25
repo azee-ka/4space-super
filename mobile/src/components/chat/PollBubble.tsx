@@ -26,6 +26,7 @@ interface PollBubbleProps {
   currentUserId: string;
   isOwn: boolean;
   onVote?: (optionIndex: number) => void;
+  onVoteMultiple?: (optionIndexes: number[]) => void;
 }
 
 export const PollBubble: React.FC<PollBubbleProps> = ({
@@ -33,11 +34,13 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
   currentUserId,
   isOwn,
   onVote,
+  onVoteMultiple,
 }) => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
 
-  const totalVotes = pollData.options.reduce((sum, opt) => sum + opt.votes.length, 0);
-  const userHasVoted = pollData.options.some(opt => opt.votes.includes(currentUserId));
+  const options = Array.isArray(pollData.options) ? pollData.options : [];
+  const totalVotes = options.reduce((sum, opt) => sum + (opt?.votes?.length ?? 0), 0);
+  const userHasVoted = options.some(opt => (opt?.votes ?? []).includes(currentUserId));
 
   const handleVote = (optionIndex: number) => {
     if (userHasVoted) return; // Can't vote again
@@ -60,7 +63,13 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
   };
 
   const handleSubmitMultiple = () => {
-    if (selectedOptions.length > 0 && onVote) {
+    if (selectedOptions.length === 0) return;
+    if (onVoteMultiple) {
+      onVoteMultiple(selectedOptions);
+      setSelectedOptions([]);
+      return;
+    }
+    if (onVote) {
       selectedOptions.forEach(index => onVote(index));
       setSelectedOptions([]);
     }
@@ -68,11 +77,11 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
 
   const getVotePercentage = (optionIndex: number): number => {
     if (totalVotes === 0) return 0;
-    return Math.round((pollData.options[optionIndex].votes.length / totalVotes) * 100);
+    return Math.round(((options[optionIndex]?.votes?.length ?? 0) / totalVotes) * 100);
   };
 
   const hasUserVotedForOption = (optionIndex: number): boolean => {
-    return pollData.options[optionIndex].votes.includes(currentUserId);
+    return (options[optionIndex]?.votes ?? []).includes(currentUserId);
   };
 
   return (
@@ -91,7 +100,7 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
 
       {/* Poll Options */}
       <View style={styles.optionsContainer}>
-        {pollData.options.map((option, index) => {
+        {options.map((option, index) => {
           const percentage = getVotePercentage(index);
           const isSelected = selectedOptions.includes(index);
           const hasVoted = hasUserVotedForOption(index);
@@ -149,9 +158,9 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
                     isOwn && styles.optionTextOwn,
                     (isSelected || hasVoted) && styles.optionTextActive,
                   ]}>
-                    {option.text}
-                  </Text>
-                </View>
+                {option?.text ?? 'Option'}
+              </Text>
+            </View>
 
                 {/* Vote count/percentage */}
                 {userHasVoted && (
