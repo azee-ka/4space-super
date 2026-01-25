@@ -89,7 +89,13 @@ export default function ChatScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showJump, setShowJump] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [mediaViewerVisible, setMediaViewerVisible] = useState(false);
+  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
+  const [showViewerChrome, setShowViewerChrome] = useState(true);
+  const [showReactionBar, setShowReactionBar] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showMediaMoreMenu, setShowMediaMoreMenu] = useState(false);
+  const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
@@ -103,6 +109,7 @@ export default function ChatScreen() {
   const [messageOptions, setMessageOptions] = useState<MessageOptions>({ viewOnce: false, timedDuration: 0 });
   const [signedAttachmentUrls, setSignedAttachmentUrls] = useState<Record<string, string>>({});
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
+  const mediaViewerListRef = useRef<FlatList>(null);
   const maxBubbleWidth = Math.min(Dimensions.get('window').width * 0.78, 340);
   const screenHeight = Dimensions.get('window').height;
 
@@ -118,6 +125,7 @@ export default function ChatScreen() {
   const plusMenuItems = [
     { key: 'photos', label: 'Photos', icon: 'image', tint: '#60a5fa' },
     { key: 'camera', label: 'Camera', icon: 'camera', tint: '#f97316' },
+    { key: 'video', label: 'Video', icon: 'videocam', tint: '#fb7185' },
     { key: 'file', label: 'File', icon: 'document-text', tint: '#a78bfa' },
     { key: 'poll', label: 'Poll', icon: 'stats-chart', tint: '#34d399' },
     { key: 'location', label: 'Location', icon: 'location', tint: '#f87171' },
@@ -210,10 +218,156 @@ export default function ChatScreen() {
     });
   }, [messages, searchOpen, searchQuery]);
 
+
   const renderedMessages = useMemo(
     () => displayMessages,
     [displayMessages]
   );
+
+  const mediaItems = useMemo(() => {
+    const items: {
+      id: string;
+      url: string;
+      type: 'image' | 'video';
+      caption?: string | null;
+      createdAt?: string;
+      message: Message;
+    }[] = [];
+
+    renderedMessages.forEach((msg) => {
+      const metadataValue = (() => {
+        if (!msg.metadata) return null;
+        if (typeof msg.metadata === 'string') {
+          try {
+            return JSON.parse(msg.metadata);
+          } catch {
+            return null;
+          }
+        }
+        if (typeof msg.metadata === 'object') return msg.metadata;
+        return null;
+      })();
+      const resolvedAttachments = (() => {
+        if (Array.isArray(msg.attachments)) return msg.attachments;
+        if (typeof msg.attachments === 'string') {
+          try {
+            const parsed = JSON.parse(msg.attachments);
+            if (Array.isArray(parsed)) return parsed;
+            if (parsed && typeof parsed === 'object') return [parsed];
+          } catch {
+            return undefined;
+          }
+        }
+        if (msg.attachments && typeof msg.attachments === 'object') {
+          return [msg.attachments];
+        }
+        const metaAttachment = metadataValue?.attachments ?? metadataValue?.attachment ?? metadataValue?.file ?? metadataValue?.media;
+        if (Array.isArray(metaAttachment)) return metaAttachment;
+        if (metaAttachment && typeof metaAttachment === 'object') return [metaAttachment];
+        return undefined;
+      })();
+      const attachment = resolvedAttachments?.[0];
+      const metadataFileUrl =
+        metadataValue?.fileUrl ?? metadataValue?.file_url ?? metadataValue?.url ?? metadataValue?.publicUrl ?? metadataValue?.downloadUrl;
+      const metadataFileName =
+        metadataValue?.fileName ?? metadataValue?.file_name ?? metadataValue?.name ?? metadataValue?.filename;
+      const metadataFileType =
+        metadataValue?.fileType ?? metadataValue?.file_type ?? metadataValue?.type ?? metadataValue?.mimeType ?? metadataValue?.mime_type;
+      const attachmentUrlRaw =
+        attachment?.url ??
+        attachment?.file_url ??
+        attachment?.fileUrl ??
+        attachment?.publicUrl ??
+        attachment?.downloadUrl ??
+        metadataFileUrl ??
+        msg.file_url ??
+        undefined;
+      const attachmentUrlBase = (() => {
+        if (attachmentUrlRaw) return attachmentUrlRaw;
+        const path = attachment?.path ?? attachment?.storage_path ?? metadataValue?.path ?? metadataValue?.storage_path;
+        if (!path) return undefined;
+        const bucket = attachment?.bucket ?? attachment?.bucket_id ?? metadataValue?.bucket ?? 'chat-media';
+        try {
+          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          return data?.publicUrl;
+        } catch {
+          return undefined;
+        }
+      })();
+      const attachmentUrl = signedAttachmentUrls[msg.id] ?? attachmentUrlBase;
+      if (!attachmentUrl) return;
+      const attachmentName =
+        attachment?.name ??
+        attachment?.file_name ??
+        attachment?.fileName ??
+        metadataFileName ??
+        msg.file_name ??
+        msg.content ??
+        undefined;
+      const attachmentType =
+        attachment?.type ??
+        attachment?.fileType ??
+        metadataFileType ??
+        msg.type;
+      const typeLower = typeof attachmentType === 'string' ? attachmentType.toLowerCase() : '';
+      const extFromUrl = getLowerExtension(attachmentUrl);
+      const extFromName = getLowerExtension(attachmentName || undefined);
+      const isImage =
+        typeLower === 'image' ||
+        typeLower === 'gif' ||
+        typeLower.startsWith('image/') ||
+        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(extFromUrl || extFromName || '');
+      const isVideo =
+        typeLower === 'video' ||
+        typeLower.startsWith('video/') ||
+        ['mp4', 'mov', 'm4v', 'webm', 'avi'].includes(extFromUrl || extFromName || '');
+      if (!isImage && !isVideo) return;
+      const caption = isImage && msg.content && msg.content !== 'Image' && msg.content !== 'GIF' ? msg.content : null;
+      items.push({
+        id: msg.id,
+        url: attachmentUrl,
+        type: isVideo ? 'video' : 'image',
+        caption,
+        createdAt: msg.created_at,
+        message: msg,
+      });
+    });
+    return items;
+  }, [renderedMessages, signedAttachmentUrls, getLowerExtension]);
+
+  const mediaIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    mediaItems.forEach((item, index) => {
+      map.set(item.id, index);
+    });
+    return map;
+  }, [mediaItems]);
+
+  const openMediaViewer = useCallback((messageId: string) => {
+    const index = mediaIndexById.get(messageId);
+    if (index == null) return;
+    setMediaViewerIndex(index);
+    setMediaViewerVisible(true);
+    setShowViewerChrome(true);
+    setShowReactionBar(false);
+    setShowEmojiPicker(false);
+    setShowMediaMoreMenu(false);
+    requestAnimationFrame(() => {
+      mediaViewerListRef.current?.scrollToIndex({ index, animated: false });
+    });
+  }, [mediaIndexById]);
+
+  const currentMediaItem = mediaItems[mediaViewerIndex];
+  const currentMediaMessage = currentMediaItem?.message;
+  const isDisappearingMessage =
+    currentMediaMessage?.type === 'view-once' || currentMediaMessage?.type === 'timed-message';
+
+  useEffect(() => {
+    if (!mediaViewerVisible || !mediaItems.length) return;
+    if (mediaViewerIndex >= mediaItems.length) {
+      setMediaViewerIndex(mediaItems.length - 1);
+    }
+  }, [mediaViewerVisible, mediaItems.length, mediaViewerIndex]);
 
   const pinnedMessage = useMemo(() => {
     if (!pinnedMessageId || !messages.length) return null;
@@ -503,6 +657,61 @@ export default function ChatScreen() {
     }
   }, [user, addReactionMutation]);
 
+  const handleSendVideo = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!user || !conversationId) return;
+    try {
+      const uri = asset.uri;
+      let contentType = asset.mimeType || 'video/mp4';
+      if (!contentType || contentType === 'application/octet-stream') {
+        const ext = getLowerExtension(uri) || 'mp4';
+        const mimeMap: Record<string, string> = {
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+          'm4v': 'video/x-m4v',
+          'webm': 'video/webm',
+        };
+        contentType = mimeMap[ext] || 'video/mp4';
+      }
+      const ext = getLowerExtension(uri) || 'mp4';
+      const fileName =
+        (asset as any).fileName ||
+        uri.split('/').pop() ||
+        `${Date.now()}.${ext}`;
+      const filePath = `${user.id}/${conversationId}/videos/${Date.now()}_${fileName}`;
+      const resolvedSize = await getFileSize(uri);
+
+      await uploadToStorage(uri, contentType, filePath);
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(filePath);
+
+      await sendMessageMutation.mutateAsync({
+        conversationId: conversationId,
+        content: 'Video',
+        senderId: user.id,
+        fileUrl: urlData.publicUrl,
+        fileName: fileName,
+        fileType: 'video',
+        metadata: {
+          fileUrl: urlData.publicUrl,
+          fileName: fileName,
+          fileType: 'video',
+          fileSize: resolvedSize,
+          bucket: 'chat-media',
+          path: filePath,
+        },
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Video upload error:', error);
+      Alert.alert('Upload failed', 'Failed to upload video. Please try again.');
+    }
+  }, [conversationId, user, sendMessageMutation, getLowerExtension, uploadToStorage, getFileSize]);
+
   const handlePickImage = useCallback(async () => {
     try {
       // Request permission first
@@ -517,20 +726,29 @@ export default function ChatScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ['images', 'videos'],
         allowsEditing: false,
         quality: 1,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setPhotoToEdit(result.assets[0].uri);
-        setShowPhotoEditor(true);
+        const asset = result.assets[0];
+        const isVideoAsset =
+          asset.type === 'video' ||
+          (asset.mimeType ? asset.mimeType.startsWith('video/') : false) ||
+          ['mp4', 'mov', 'm4v', 'webm'].includes(getLowerExtension(asset.uri) || '');
+        if (isVideoAsset) {
+          await handleSendVideo(asset);
+        } else {
+          setPhotoToEdit(asset.uri);
+          setShowPhotoEditor(true);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to open photo library. Please try again.');
     }
-  }, []);
+  }, [getLowerExtension, handleSendVideo]);
 
   const handleSavePhoto = useCallback(async (uri: string, caption?: string) => {
     setShowPhotoEditor(false);
@@ -642,6 +860,32 @@ export default function ChatScreen() {
       Alert.alert('Error', 'Failed to open camera. Please try again.');
     }
   }, []);
+
+  const handleTakeVideo = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow camera access to record video.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await handleSendVideo(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error recording video:', error);
+      Alert.alert('Error', 'Failed to open camera. Please try again.');
+    }
+  }, [handleSendVideo]);
 
   const handleSelectGif = useCallback(async (gifUrl: string) => {
     setShowGifPicker(false);
@@ -944,6 +1188,64 @@ export default function ChatScreen() {
     }
   }, [user, parsePollData, queryClient, conversationId]);
 
+  const formatMediaDateTime = (value?: string) => {
+    if (!value) return '';
+    const date = new Date(value);
+    const dateLabel = date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${dateLabel} · ${timeLabel}`;
+  };
+
+  const handleShareMedia = useCallback(async (item?: { url: string; caption?: string | null }) => {
+    if (!item) return;
+    try {
+      await Share.share({
+        message: item.caption || 'Media',
+        url: item.url,
+      });
+    } catch (error) {
+      Alert.alert('Share failed', 'Unable to open the share sheet.');
+    }
+  }, []);
+
+  const handleForwardMedia = useCallback(() => {
+    Alert.alert('Forward', 'Forwarding will be available soon.');
+  }, []);
+
+  const handleKeepMedia = useCallback(() => {
+    Alert.alert('Keep', 'Keeping disappearing media will be available soon.');
+  }, []);
+
+  const handleEditMedia = useCallback((item?: { type: 'image' | 'video'; url: string }) => {
+    if (!item || item.type !== 'image') {
+      Alert.alert('Edit', 'Video editing will be available soon.');
+      return;
+    }
+    setPhotoToEdit(item.url);
+    setShowPhotoEditor(true);
+    setMediaViewerVisible(false);
+  }, []);
+
+  const handleReplyFromViewer = useCallback(() => {
+    if (!currentMediaMessage) return;
+    setReplyingTo(currentMediaMessage);
+    setMediaViewerVisible(false);
+  }, [currentMediaMessage, setReplyingTo]);
+
+  const handleGoToMessage = useCallback(() => {
+    if (!currentMediaMessage) return;
+    const index = renderedMessages.findIndex((msg) => msg.id === currentMediaMessage.id);
+    if (index < 0) return;
+    setMediaViewerVisible(false);
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
+    });
+  }, [currentMediaMessage, renderedMessages]);
+
+  const handleMoreMedia = useCallback(() => {
+    setShowMediaMoreMenu((prev) => !prev);
+  }, [handleGoToMessage, handleReplyFromViewer]);
+
   const formatBytes = (bytes?: number) => {
     if (!bytes || !Number.isFinite(bytes)) return null;
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -963,12 +1265,19 @@ export default function ChatScreen() {
     return trimmed.startsWith('http://') || trimmed.startsWith('https://');
   };
 
-  const getFileExtension = (name?: string) => {
+  function getFileExtension(name?: string) {
     if (!name) return null;
     const parts = name.split('.');
     if (parts.length < 2) return null;
     return parts[parts.length - 1]?.toUpperCase() || null;
-  };
+  }
+  function getLowerExtension(value?: string | null) {
+    if (!value) return null;
+    const clean = value.split('?')[0] || '';
+    const parts = clean.split('.');
+    if (parts.length < 2) return null;
+    return parts[parts.length - 1]?.toLowerCase() || null;
+  }
   const decodeBase64ToArrayBuffer = (base64: string) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
     let bufferLength = base64.length * 0.75;
@@ -998,15 +1307,15 @@ export default function ChatScreen() {
       path: decodeURIComponent(match[2]),
     };
   };
-  const getFileSize = async (uri: string) => {
+  async function getFileSize(uri: string) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(uri);
       return typeof info.size === 'number' ? info.size : 0;
     } catch {
       return 0;
     }
-  };
-  const uploadToStorage = async (uri: string, contentType: string, filePath: string) => {
+  }
+  async function uploadToStorage(uri: string, contentType: string, filePath: string) {
     const base64 = await LegacyFileSystem.readAsStringAsync(uri, {
       encoding: LegacyFileSystem.EncodingType.Base64,
     });
@@ -1017,7 +1326,7 @@ export default function ChatScreen() {
       .upload(filePath, byteArray, { contentType });
     if (uploadError) throw uploadError;
     return byteArray.byteLength;
-  };
+  }
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset } = event.nativeEvent;
@@ -1161,8 +1470,12 @@ export default function ChatScreen() {
       typeLower === 'gif' ||
       typeLower.startsWith('image/') ||
       ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(extensionFromUrl || extensionFromName || '');
+    const isVideo =
+      typeLower === 'video' ||
+      typeLower.startsWith('video/') ||
+      ['mp4', 'mov', 'm4v', 'webm', 'avi'].includes(extensionFromUrl || extensionFromName || '');
     const isPoll = typeLower === 'poll';
-    const isFile = typeLower === 'file' || (!!attachmentUrl && !isImage && !isPoll);
+    const isFile = typeLower === 'file' || (!!attachmentUrl && !isImage && !isPoll && !isVideo);
     const pollData = isPoll ? parsePollData(item) : null;
     const caption = isImage && item.content && item.content !== 'Image' && item.content !== 'GIF'
       ? item.content
@@ -1367,7 +1680,7 @@ export default function ChatScreen() {
                   isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
                   bubbleRadius,
                   { maxWidth: maxBubbleWidth },
-                  isImage && styles.mediaBubble,
+                  (isImage || isVideo) && styles.mediaBubble,
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -1376,7 +1689,7 @@ export default function ChatScreen() {
                   </Text>
                 )}
                 {isImage && attachmentUrl && (
-                  <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => openMediaViewer(item.id)}>
                     {imageLoadErrors[item.id] ? (
                       <View style={styles.imageErrorFallback}>
                         <Text style={[styles.messageText, { color: bubbleTextColor }]}>
@@ -1412,8 +1725,22 @@ export default function ChatScreen() {
                     )}
                   </TouchableOpacity>
                 )}
+                {isVideo && attachmentUrl && (
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => openMediaViewer(item.id)}>
+                    <View style={styles.videoPreview}>
+                      <Ionicons name="play-circle" size={40} color="white" />
+                      <Text style={styles.videoPreviewText}>Video</Text>
+                    </View>
+                    {!!caption && (
+                      <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
                 {isImage && !attachmentUrl && (
                   <Text style={[styles.messageText, { color: bubbleTextColor }]}>Image unavailable</Text>
+                )}
+                {isVideo && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>Video unavailable</Text>
                 )}
                 {isFile && attachmentUrl && (
                   <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(attachmentUrl)}>
@@ -1440,7 +1767,7 @@ export default function ChatScreen() {
                     onVote={(optionIndex) => handlePollVote(item, optionIndex)}
                     onVoteMultiple={(optionIndexes) => handlePollVoteMultiple(item, optionIndexes)}
                   />
-                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) ? null : (
+                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) || (isVideo && attachmentUrl) ? null : (
                   <Text
                     style={[
                       styles.messageText,
@@ -1467,7 +1794,7 @@ export default function ChatScreen() {
                   bubbleColorStyle,
                   bubbleRadius,
                   { maxWidth: maxBubbleWidth },
-                  isImage && styles.mediaBubble,
+                  (isImage || isVideo) && styles.mediaBubble,
                 ]}
               >
                 {!isOwn && showAvatar && (
@@ -1476,7 +1803,7 @@ export default function ChatScreen() {
                   </Text>
                 )}
                 {isImage && attachmentUrl && (
-                  <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedImage(attachmentUrl)}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => openMediaViewer(item.id)}>
                     {imageLoadErrors[item.id] ? (
                       <View style={styles.imageErrorFallback}>
                         <Text style={[styles.messageText, { color: bubbleTextColor }]}>
@@ -1512,8 +1839,22 @@ export default function ChatScreen() {
                     )}
                   </TouchableOpacity>
                 )}
+                {isVideo && attachmentUrl && (
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => openMediaViewer(item.id)}>
+                    <View style={styles.videoPreview}>
+                      <Ionicons name="play-circle" size={40} color="white" />
+                      <Text style={styles.videoPreviewText}>Video</Text>
+                    </View>
+                    {!!caption && (
+                      <Text style={[styles.mediaCaption, { color: bubbleTextColor }]}>{caption}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
                 {isImage && !attachmentUrl && (
                   <Text style={[styles.messageText, { color: bubbleTextColor }]}>Image unavailable</Text>
+                )}
+                {isVideo && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>Video unavailable</Text>
                 )}
                 {isFile && attachmentUrl && (
                   <TouchableOpacity style={styles.messageFile} onPress={() => Linking.openURL(attachmentUrl)}>
@@ -1540,7 +1881,7 @@ export default function ChatScreen() {
                     onVote={(optionIndex) => handlePollVote(item, optionIndex)}
                     onVoteMultiple={(optionIndexes) => handlePollVoteMultiple(item, optionIndexes)}
                   />
-                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) ? null : (
+                ) : (isImage && attachmentUrl) || (isFile && attachmentUrl) || (isVideo && attachmentUrl) ? null : (
                   <Text
                     style={[
                       styles.messageText,
@@ -1585,7 +1926,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth, chatTheme, signedAttachmentUrls, imageLoadErrors]);
+  }, [user, renderedMessages, handleReaction, readReceiptsEnabled, pinnedMessageId, savedMessageIds, maxBubbleWidth, chatTheme, signedAttachmentUrls, imageLoadErrors, openMediaViewer]);
 
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
@@ -1921,6 +2262,9 @@ export default function ChatScreen() {
                       case 'camera':
                         handleTakePhoto();
                         break;
+                      case 'video':
+                        handleTakeVideo();
+                        break;
                       case 'file':
                         handlePickFile();
                         break;
@@ -1974,24 +2318,249 @@ export default function ChatScreen() {
       </Modal>
 
       <Modal
-        visible={!!selectedImage}
+        visible={mediaViewerVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setSelectedImage(null)}
+        onRequestClose={() => setMediaViewerVisible(false)}
       >
-        <View style={styles.imageViewerContainer}>
-          <TouchableOpacity
-            style={styles.imageViewerClose}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Ionicons name="close" size={28} color="white" />
-          </TouchableOpacity>
-          <Image
-            source={{ uri: selectedImage! }}
-            style={styles.imageViewerImage}
-            contentFit="contain"
-            transition={200}
-          />
+        <View style={styles.mediaViewerContainer}>
+          {showViewerChrome && (
+            <View style={styles.mediaViewerHeader}>
+              <TouchableOpacity
+                style={styles.mediaViewerClose}
+                onPress={() => setMediaViewerVisible(false)}
+              >
+                <Ionicons name="arrow-back" size={24} color="white" />
+              </TouchableOpacity>
+              <View style={styles.mediaViewerTitle}>
+                <Text style={styles.mediaViewerTime}>
+                  {currentMediaItem?.createdAt ? formatMediaDateTime(currentMediaItem.createdAt) : ''}
+                </Text>
+                <Text style={styles.mediaViewerCounter}>
+                  {mediaItems.length ? `${mediaViewerIndex + 1} / ${mediaItems.length}` : ''}
+                </Text>
+              </View>
+              <View style={styles.mediaViewerHeaderActions}>
+                <TouchableOpacity
+                  style={styles.mediaViewerHeaderButton}
+                  onPress={() => handleEditMedia(currentMediaItem)}
+                >
+                  <Ionicons name="brush" size={18} color={accentHex} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.mediaViewerHeaderButton}
+                  onPress={handleMoreMedia}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={18} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {mediaItems.length ? (
+            <FlatList
+              ref={mediaViewerListRef}
+              data={mediaItems}
+              keyExtractor={(item) => item.id}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={Math.min(mediaViewerIndex, mediaItems.length - 1)}
+              getItemLayout={(_, index) => ({
+                length: Dimensions.get('window').width,
+                offset: Dimensions.get('window').width * index,
+                index,
+              })}
+              onMomentumScrollEnd={(event) => {
+                const index = Math.round(
+                  event.nativeEvent.contentOffset.x / Dimensions.get('window').width
+                );
+                setMediaViewerIndex(index);
+                setShowReactionBar(false);
+                setShowEmojiPicker(false);
+                setShowMediaMoreMenu(false);
+              }}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.mediaViewerSlide}
+                  onPress={() => {
+                    setShowViewerChrome((prev) => !prev);
+                    setShowReactionBar(false);
+                    setShowEmojiPicker(false);
+                    setShowMediaMoreMenu(false);
+                  }}
+                >
+                  {showViewerChrome && (
+                    <View style={styles.mediaViewerOverlayRow}>
+                      <TouchableOpacity
+                        style={styles.mediaViewerOverlayButton}
+                        onPress={handleReplyFromViewer}
+                      >
+                        <Ionicons name="return-up-back" size={16} color="white" />
+                        <Text style={styles.mediaViewerReplyText}>Reply</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.mediaViewerOverlayButton}
+                        onPress={() => setShowReactionBar((prev) => !prev)}
+                      >
+                        <Ionicons name="happy-outline" size={16} color="white" />
+                        <Text style={styles.mediaViewerReplyText}>React</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {item.type === 'image' ? (
+                    <Image
+                      source={{ uri: item.url }}
+                      style={[
+                        styles.mediaViewerImage,
+                        {
+                          aspectRatio: mediaAspectRatios[item.id] || 1,
+                        },
+                      ]}
+                      contentFit="contain"
+                      transition={200}
+                      onLoad={({ source }) => {
+                        if (source?.width && source?.height) {
+                          const ratio = source.width / source.height;
+                          if (!mediaAspectRatios[item.id]) {
+                            setMediaAspectRatios((prev) => ({ ...prev, [item.id]: ratio }));
+                          }
+                        }
+                      }}
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.mediaViewerVideo}
+                      activeOpacity={0.9}
+                      onPress={() => Linking.openURL(item.url)}
+                    >
+                      <Ionicons name="play-circle" size={64} color="white" />
+                      <Text style={styles.mediaViewerVideoText}>Tap to play video</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!!item.caption && showViewerChrome && (
+                    <Text style={styles.mediaViewerCaption}>{item.caption}</Text>
+                  )}
+                </Pressable>
+              )}
+            />
+          ) : (
+            <View style={styles.mediaViewerSlide}>
+              <Text style={styles.mediaViewerVideoText}>No media available</Text>
+            </View>
+          )}
+
+          {showViewerChrome && (
+            <View style={styles.mediaViewerFooterOverlay}>
+              {showReactionBar && (
+                <View style={styles.mediaViewerReactionsRow}>
+                  {reactionEmojis.slice(0, 6).map((emoji) => (
+                    <TouchableOpacity
+                      key={emoji}
+                      style={styles.mediaViewerReaction}
+                      onPress={() => currentMediaMessage && handleReaction(currentMediaMessage.id, emoji)}
+                    >
+                      <Text style={styles.mediaViewerReactionText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.mediaViewerReactionPlus}
+                    onPress={() => setShowEmojiPicker((prev) => !prev)}
+                  >
+                    <Ionicons name="add" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {showEmojiPicker && (
+                <View style={styles.mediaViewerEmojiPicker}>
+                  {['😀','😅','😍','😮','😢','😡','👍','👏','🔥','🎉','🙏','💯'].map((emoji) => (
+                    <TouchableOpacity
+                      key={emoji}
+                      style={styles.mediaViewerEmojiItem}
+                      onPress={() => currentMediaMessage && handleReaction(currentMediaMessage.id, emoji)}
+                    >
+                      <Text style={styles.mediaViewerReactionText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.mediaViewerThumbs}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {mediaItems.map((item, index) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.mediaViewerThumbItem,
+                        index === mediaViewerIndex && [
+                          styles.mediaViewerThumbItemActive,
+                          { borderColor: accentHex },
+                        ],
+                      ]}
+                      onPress={() => {
+                        setMediaViewerIndex(index);
+                        mediaViewerListRef.current?.scrollToIndex({ index, animated: true });
+                      }}
+                    >
+                      {item.type === 'image' ? (
+                        <Image
+                          source={{ uri: item.url }}
+                          style={styles.mediaViewerThumbImage}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View style={styles.mediaViewerThumbVideo}>
+                          <Ionicons name="videocam" size={14} color="white" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.mediaViewerActionRow}>
+                <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={handleForwardMedia}>
+                  <Ionicons name="arrow-redo" size={20} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={() => handleShareMedia(currentMediaItem)}>
+                  <Ionicons name="share-social" size={20} color="white" />
+                </TouchableOpacity>
+                {isDisappearingMessage && (
+                  <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={handleKeepMedia}>
+                    <Ionicons name="bookmark" size={20} color="white" />
+                  </TouchableOpacity>
+                )}
+                <View style={styles.mediaViewerActionSpacer} />
+                {currentMediaMessage?.sender_id === user?.id && (
+                  <TouchableOpacity
+                    style={styles.mediaViewerActionIconDanger}
+                    onPress={() => {
+                      if (!currentMediaMessage) return;
+                      handleDeleteMessage(currentMediaMessage);
+                      setMediaViewerVisible(false);
+                    }}
+                  >
+                    <Ionicons name="trash" size={18} color="#f87171" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
+          {showViewerChrome && showMediaMoreMenu && (
+            <View style={styles.mediaViewerMoreMenu}>
+              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={handleGoToMessage}>
+                <Text style={styles.mediaViewerMoreText}>Go to message</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={handleReplyFromViewer}>
+                <Text style={styles.mediaViewerMoreText}>Reply</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={() => handleShareMedia(currentMediaItem)}>
+                <Text style={styles.mediaViewerMoreText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Modal>
 
@@ -2343,6 +2912,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.12)',
     marginBottom: 4,
   },
+  videoPreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    marginBottom: 4,
+  },
+  videoPreviewText: {
+    marginTop: 8,
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   mediaCaption: {
     paddingHorizontal: 10,
     paddingBottom: 8,
@@ -2621,24 +3205,240 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
-  imageViewerContainer: {
+  mediaViewerContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(5, 5, 10, 0.98)',
   },
-  imageViewerClose: {
+  mediaViewerHeader: {
     position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-    padding: 10,
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 46,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 4,
+    backgroundColor: 'rgba(8, 10, 20, 0.6)',
   },
-  imageViewerImage: {
-    width: '90%',
-    height: '70%',
-    borderRadius: 12,
+  mediaViewerClose: {
+    width: 40,
+    alignItems: 'flex-start',
+  },
+  mediaViewerTitle: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  mediaViewerTime: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  mediaViewerCounter: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mediaViewerHeaderActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  mediaViewerHeaderButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  mediaViewerSlide: {
+    width: Dimensions.get('window').width,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+  },
+  mediaViewerImage: {
+    width: Dimensions.get('window').width,
+    maxHeight: Dimensions.get('window').height * 0.78,
+  },
+  mediaViewerVideo: {
+    width: '100%',
+    height: Dimensions.get('window').height * 0.6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaViewerVideoText: {
+    marginTop: 10,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  mediaViewerCaption: {
+    marginTop: 16,
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  mediaViewerThumbs: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  mediaViewerFooterOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingBottom: 14,
+    paddingTop: 8,
+    backgroundColor: 'rgba(8, 10, 20, 0.55)',
+    zIndex: 3,
+  },
+  mediaViewerActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  mediaViewerActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  mediaViewerActionIconDanger: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(248,113,113,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.35)',
+  },
+  mediaViewerActionSpacer: {
+    flex: 1,
+  },
+  mediaViewerReactionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
+  mediaViewerReaction: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  mediaViewerReactionText: {
+    fontSize: 16,
+  },
+  mediaViewerReactionPlus: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  mediaViewerEmojiPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  mediaViewerEmojiItem: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  mediaViewerOverlayRow: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mediaViewerOverlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+  },
+  mediaViewerReplyText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mediaViewerMoreMenu: {
+    position: 'absolute',
+    top: 90,
+    right: 16,
+    backgroundColor: 'rgba(10,12,20,0.85)',
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    minWidth: 160,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  mediaViewerMoreItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  mediaViewerMoreText: {
+    color: 'white',
+    fontSize: 13,
+  },
+  mediaViewerThumbItem: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  mediaViewerThumbItemActive: {
+    borderColor: 'transparent',
+  },
+  mediaViewerThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaViewerThumbVideo: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
