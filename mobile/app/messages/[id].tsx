@@ -536,6 +536,9 @@ export default function ChatScreen() {
     options: string[];
     allowMultiple: boolean;
     anonymous: boolean;
+    pollType?: 'poll' | 'quiz';
+    correctOptions?: number[];
+    expiresAt?: string | null;
   }) => {
     setShowPollCreator(false);
     if (!user || !conversationId) return;
@@ -548,6 +551,9 @@ export default function ChatScreen() {
         options: poll.options.map(opt => ({ text: opt, votes: [] })),
         allowMultiple: poll.allowMultiple,
         anonymous: poll.anonymous,
+        pollType: poll.pollType || 'poll',
+        correctOptions: poll.correctOptions || [],
+        expiresAt: poll.expiresAt || null,
       };
 
       await sendMessageMutation.mutateAsync({
@@ -707,6 +713,8 @@ export default function ChatScreen() {
     if (!raw) return null;
     try {
       if (typeof raw === 'object') {
+        const directPoll = (raw as any).pollData ?? (raw as any).poll;
+        if (directPoll?.type === 'poll' && Array.isArray(directPoll.options)) return directPoll;
         if (raw.type === 'poll' && Array.isArray((raw as any).options)) return raw;
         const nested = (raw as any).content ?? (raw as any).text;
         if (typeof nested === 'string') {
@@ -814,6 +822,12 @@ export default function ChatScreen() {
     return `${rounded} ${units[index]}`;
   };
 
+  const isProbablyUrl = (value?: string | null) => {
+    if (!value || typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+  };
+
   const getFileExtension = (name?: string) => {
     if (!name) return null;
     const parts = name.split('.');
@@ -869,27 +883,99 @@ export default function ChatScreen() {
     const showAvatar = !isOwn && (!groupedWithPrev || prevGap > longGapMs);
     const hasReactions = item.reactions && item.reactions.length > 0;
     const displayContent = item.content || '';
+    const metadataValue = (() => {
+      if (!item.metadata) return null;
+      if (typeof item.metadata === 'string') {
+        try {
+          return JSON.parse(item.metadata);
+        } catch {
+          return null;
+        }
+      }
+      if (typeof item.metadata === 'object') return item.metadata;
+      return null;
+    })();
     const resolvedAttachments = (() => {
       if (Array.isArray(item.attachments)) return item.attachments;
       if (typeof item.attachments === 'string') {
         try {
           const parsed = JSON.parse(item.attachments);
-          return Array.isArray(parsed) ? parsed : undefined;
+          if (Array.isArray(parsed)) return parsed;
+          if (parsed && typeof parsed === 'object') return [parsed];
         } catch {
           return undefined;
         }
       }
+      if (item.attachments && typeof item.attachments === 'object') {
+        return [item.attachments];
+      }
+      const metaAttachment = metadataValue?.attachments ?? metadataValue?.attachment ?? metadataValue?.file ?? metadataValue?.media;
+      if (Array.isArray(metaAttachment)) return metaAttachment;
+      if (metaAttachment && typeof metaAttachment === 'object') return [metaAttachment];
       return undefined;
     })();
     const attachment = resolvedAttachments?.[0];
-    const attachmentUrl =
-      attachment?.url ?? attachment?.file_url ?? attachment?.fileUrl ?? item.file_url ?? undefined;
+    const metadataFileUrl =
+      metadataValue?.fileUrl ?? metadataValue?.file_url ?? metadataValue?.url ?? metadataValue?.publicUrl ?? metadataValue?.downloadUrl;
+    const metadataFileName =
+      metadataValue?.fileName ?? metadataValue?.file_name ?? metadataValue?.name ?? metadataValue?.filename;
+    const metadataFileType =
+      metadataValue?.fileType ?? metadataValue?.file_type ?? metadataValue?.type ?? metadataValue?.mimeType ?? metadataValue?.mime_type;
+    const contentUrl = isProbablyUrl(displayContent) ? displayContent.trim() : undefined;
+    const attachmentUrlRaw =
+      attachment?.url ??
+      attachment?.file_url ??
+      attachment?.fileUrl ??
+      attachment?.publicUrl ??
+      attachment?.downloadUrl ??
+      metadataFileUrl ??
+      contentUrl ??
+      item.file_url ??
+      undefined;
+    const attachmentUrl = (() => {
+      if (attachmentUrlRaw) return attachmentUrlRaw;
+      const path = attachment?.path ?? attachment?.storage_path ?? metadataValue?.path ?? metadataValue?.storage_path;
+      if (!path) return undefined;
+      const bucket = attachment?.bucket ?? attachment?.bucket_id ?? metadataValue?.bucket ?? 'chat-media';
+      try {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        return data?.publicUrl;
+      } catch {
+        return undefined;
+      }
+    })();
     const attachmentName =
-      attachment?.name ?? attachment?.file_name ?? attachment?.fileName ?? item.file_name ?? item.content ?? undefined;
-    const attachmentType = attachment?.type ?? attachment?.fileType ?? item.type;
-    const attachmentSize = attachment?.size ?? item.file_size ?? undefined;
+      attachment?.name ??
+      attachment?.file_name ??
+      attachment?.fileName ??
+      metadataFileName ??
+      item.file_name ??
+      item.content ??
+      undefined;
+    const attachmentType =
+      attachment?.type ??
+      attachment?.fileType ??
+      metadataFileType ??
+      item.type;
+    const attachmentSize =
+      attachment?.size ?? attachment?.file_size ?? metadataValue?.fileSize ?? metadataValue?.file_size ?? item.file_size ?? undefined;
+    const extensionFromUrl = (() => {
+      if (!attachmentUrl) return null;
+      const clean = attachmentUrl.split('?')[0] || '';
+      const parts = clean.split('.');
+      return parts.length > 1 ? parts[parts.length - 1]?.toLowerCase() : null;
+    })();
+    const extensionFromName = (() => {
+      if (!attachmentName) return null;
+      const parts = attachmentName.split('.');
+      return parts.length > 1 ? parts[parts.length - 1]?.toLowerCase() : null;
+    })();
     const typeLower = typeof attachmentType === 'string' ? attachmentType.toLowerCase() : '';
-    const isImage = typeLower === 'image' || typeLower === 'gif' || typeLower.startsWith('image/');
+    const isImage =
+      typeLower === 'image' ||
+      typeLower === 'gif' ||
+      typeLower.startsWith('image/') ||
+      ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(extensionFromUrl || extensionFromName || '');
     const isPoll = typeLower === 'poll';
     const isFile = typeLower === 'file' || (!!attachmentUrl && !isImage && !isPoll);
     const pollData = isPoll ? parsePollData(item) : null;
@@ -1134,6 +1220,9 @@ export default function ChatScreen() {
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
                 )}
+                {isFile && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>File unavailable</Text>
+                )}
                 {isPoll && pollData ? (
                   <PollBubble
                     pollData={pollData}
@@ -1206,6 +1295,9 @@ export default function ChatScreen() {
                     </View>
                     <Ionicons name="download-outline" size={20} color={bubbleTextColor} />
                   </TouchableOpacity>
+                )}
+                {isFile && !attachmentUrl && (
+                  <Text style={[styles.messageText, { color: bubbleTextColor }]}>File unavailable</Text>
                 )}
                 {isPoll && pollData ? (
                   <PollBubble

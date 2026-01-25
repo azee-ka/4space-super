@@ -20,6 +20,9 @@ interface PollCreatorProps {
     options: string[];
     allowMultiple: boolean;
     anonymous: boolean;
+    pollType?: 'poll' | 'quiz';
+    correctOptions?: number[];
+    expiresAt?: string | null;
   }) => void;
 }
 
@@ -32,6 +35,9 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
   const [options, setOptions] = useState(['', '']);
   const [allowMultiple, setAllowMultiple] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
+  const [pollType, setPollType] = useState<'poll' | 'quiz'>('poll');
+  const [correctOptions, setCorrectOptions] = useState<number[]>([]);
+  const [expiresInHours, setExpiresInHours] = useState<number | null>(null);
 
   const handleAddOption = () => {
     if (options.length < 10) {
@@ -51,25 +57,45 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
     setOptions(newOptions);
   };
 
+  const toggleCorrectOption = (index: number) => {
+    if (correctOptions.includes(index)) {
+      setCorrectOptions(correctOptions.filter(i => i !== index));
+    } else {
+      setCorrectOptions([...correctOptions, index]);
+    }
+  };
+
   const handleCreate = () => {
     const validOptions = options.filter(opt => opt.trim().length > 0);
     if (question.trim().length > 0 && validOptions.length >= 2) {
+      const expiresAt = expiresInHours
+        ? new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString()
+        : null;
+
       onCreatePoll({
         question: question.trim(),
         options: validOptions,
         allowMultiple,
         anonymous,
+        pollType,
+        correctOptions: pollType === 'quiz' ? correctOptions : [],
+        expiresAt,
       });
       // Reset form
       setQuestion('');
       setOptions(['', '']);
       setAllowMultiple(false);
       setAnonymous(false);
+      setPollType('poll');
+      setCorrectOptions([]);
+      setExpiresInHours(null);
       onClose();
     }
   };
 
-  const isValid = question.trim().length > 0 && options.filter(opt => opt.trim().length > 0).length >= 2;
+  const hasEnoughOptions = options.filter(opt => opt.trim().length > 0).length >= 2;
+  const hasCorrectSelection = pollType === 'quiz' ? correctOptions.length > 0 : true;
+  const isValid = question.trim().length > 0 && hasEnoughOptions && hasCorrectSelection;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -116,6 +142,18 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
                   style={styles.optionInput}
                   maxLength={100}
                 />
+                {pollType === 'quiz' && (
+                  <TouchableOpacity
+                    onPress={() => toggleCorrectOption(index)}
+                    style={styles.correctToggle}
+                  >
+                    <Ionicons
+                      name={correctOptions.includes(index) ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={20}
+                      color={correctOptions.includes(index) ? '#22c55e' : theme.colors.textMuted}
+                    />
+                  </TouchableOpacity>
+                )}
                 {options.length > 2 && (
                   <TouchableOpacity
                     onPress={() => handleRemoveOption(index)}
@@ -126,6 +164,9 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
                 )}
               </View>
             ))}
+            {pollType === 'quiz' && correctOptions.length === 0 && (
+              <Text style={styles.quizHint}>Select at least one correct answer.</Text>
+            )}
 
             {options.length < 10 && (
               <TouchableOpacity onPress={handleAddOption} style={styles.addOptionButton}>
@@ -137,6 +178,21 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
 
           <View style={styles.section}>
             <Text style={styles.label}>Settings</Text>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Quiz mode</Text>
+                <Text style={styles.settingDescription}>
+                  Mark correct answers and show results after voting
+                </Text>
+              </View>
+              <Switch
+                value={pollType === 'quiz'}
+                onValueChange={(value) => setPollType(value ? 'quiz' : 'poll')}
+                trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
+                thumbColor={theme.colors.base}
+              />
+            </View>
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
@@ -166,6 +222,32 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
                 trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
                 thumbColor={theme.colors.base}
               />
+            </View>
+
+            <View style={styles.settingRowColumn}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>End poll after</Text>
+                <Text style={styles.settingDescription}>
+                  Optional time limit for voting
+                </Text>
+              </View>
+              <View style={styles.expiryRow}>
+                {[null, 1, 24, 72, 168].map((hours) => {
+                  const label = hours === null ? 'No limit' : hours === 1 ? '1h' : hours === 24 ? '1d' : hours === 72 ? '3d' : '7d';
+                  const selected = expiresInHours === hours;
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      style={[styles.expiryChip, selected && styles.expiryChipActive]}
+                      onPress={() => setExpiresInHours(hours)}
+                    >
+                      <Text style={[styles.expiryChipText, selected && styles.expiryChipTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -235,6 +317,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  correctToggle: {
+    marginLeft: 8,
+    padding: 4,
+  },
   optionInput: {
     flex: 1,
     color: theme.colors.textPrimary,
@@ -261,10 +347,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: theme.colors.accent,
   },
+  quizHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: -4,
+    marginBottom: 6,
+  },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 12,
+  },
+  settingRowColumn: {
+    flexDirection: 'column',
+    gap: 10,
     paddingVertical: 12,
   },
   settingInfo: {
@@ -280,5 +377,30 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: 13,
     color: theme.colors.textMuted,
+  },
+  expiryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  expiryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  expiryChipActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: `${theme.colors.accent}15`,
+  },
+  expiryChipText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontWeight: '600',
+  },
+  expiryChipTextActive: {
+    color: theme.colors.accent,
   },
 });

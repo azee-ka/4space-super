@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../styles/theme';
@@ -19,6 +21,10 @@ interface PollData {
   options: PollOption[];
   allowMultiple: boolean;
   anonymous: boolean;
+  pollType?: 'poll' | 'quiz';
+  poll_type?: 'poll' | 'quiz';
+  correctOptions?: number[];
+  expiresAt?: string;
 }
 
 interface PollBubbleProps {
@@ -39,8 +45,37 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
 
   const options = Array.isArray(pollData.options) ? pollData.options : [];
+  const pollMode = pollData.pollType || pollData.poll_type || (pollData.type === 'quiz' ? 'quiz' : 'poll');
+  const correctOptions = useMemo(() => {
+    if (Array.isArray(pollData.correctOptions)) return new Set(pollData.correctOptions);
+    const indices = new Set<number>();
+    options.forEach((opt, idx) => {
+      if ((opt as any)?.isCorrect) indices.add(idx);
+    });
+    return indices;
+  }, [pollData.correctOptions, options]);
   const totalVotes = options.reduce((sum, opt) => sum + (opt?.votes?.length ?? 0), 0);
   const userHasVoted = options.some(opt => (opt?.votes ?? []).includes(currentUserId));
+  const hasCorrectAnswers = pollMode === 'quiz' && correctOptions.size > 0;
+
+  const progressAnims = useRef<Animated.Value[]>([]);
+  useEffect(() => {
+    if (progressAnims.current.length !== options.length) {
+      progressAnims.current = options.map(() => new Animated.Value(0));
+    }
+  }, [options.length]);
+
+  useEffect(() => {
+    progressAnims.current.forEach((anim, index) => {
+      const percentage = totalVotes === 0 ? 0 : Math.round(((options[index]?.votes?.length ?? 0) / totalVotes) * 100);
+      Animated.timing(anim, {
+        toValue: percentage,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [options, totalVotes]);
 
   const handleVote = (optionIndex: number) => {
     if (userHasVoted) return; // Can't vote again
@@ -104,6 +139,8 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
           const percentage = getVotePercentage(index);
           const isSelected = selectedOptions.includes(index);
           const hasVoted = hasUserVotedForOption(index);
+          const isCorrect = correctOptions.has(index);
+          const revealCorrect = userHasVoted && hasCorrectAnswers;
 
           return (
             <TouchableOpacity
@@ -113,6 +150,8 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
                 isSelected && styles.optionButtonSelected,
                 hasVoted && styles.optionButtonVoted,
                 userHasVoted && styles.optionButtonDisabled,
+                revealCorrect && isCorrect && styles.optionButtonCorrect,
+                revealCorrect && !isCorrect && hasVoted && styles.optionButtonWrong,
               ]}
               onPress={() => handleVote(index)}
               disabled={userHasVoted}
@@ -120,11 +159,16 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
             >
               {/* Vote progress bar background */}
               {userHasVoted && (
-                <View
+                <Animated.View
                   style={[
                     styles.voteProgressBar,
                     {
-                      width: `${percentage}%`,
+                      width: progressAnims.current[index]
+                        ? progressAnims.current[index].interpolate({
+                            inputRange: [0, 100],
+                            outputRange: ['0%', '100%'],
+                          })
+                        : `${percentage}%`,
                       backgroundColor: hasVoted
                         ? (isOwn ? 'rgba(255,255,255,0.3)' : `${theme.colors.accent}30`)
                         : 'rgba(100,100,100,0.15)'
@@ -158,9 +202,9 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
                     isOwn && styles.optionTextOwn,
                     (isSelected || hasVoted) && styles.optionTextActive,
                   ]}>
-                {option?.text ?? 'Option'}
-              </Text>
-            </View>
+                    {option?.text ?? 'Option'}
+                  </Text>
+                </View>
 
                 {/* Vote count/percentage */}
                 {userHasVoted && (
@@ -172,6 +216,13 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
                       <Text style={[styles.voteNumber, isOwn && styles.voteNumberOwn]}>
                         ({option.votes.length})
                       </Text>
+                    )}
+                    {revealCorrect && (
+                      <Ionicons
+                        name={isCorrect ? 'checkmark-circle' : hasVoted ? 'close-circle' : 'ellipse-outline'}
+                        size={14}
+                        color={isCorrect ? '#22c55e' : hasVoted ? '#ef4444' : theme.colors.textSubtle}
+                      />
                     )}
                   </View>
                 )}
@@ -205,6 +256,18 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
             {pollData.allowMultiple ? 'Multiple choice' : 'Single choice'}
           </Text>
         </View>
+        {pollMode === 'quiz' && (
+          <View style={styles.metaRow}>
+            <Ionicons
+              name="school-outline"
+              size={12}
+              color={isOwn ? 'rgba(255,255,255,0.6)' : theme.colors.textSubtle}
+            />
+            <Text style={[styles.metaText, isOwn && styles.metaTextOwn]}>
+              Quiz mode
+            </Text>
+          </View>
+        )}
         {pollData.anonymous && (
           <View style={styles.metaRow}>
             <Ionicons
@@ -214,6 +277,18 @@ export const PollBubble: React.FC<PollBubbleProps> = ({
             />
             <Text style={[styles.metaText, isOwn && styles.metaTextOwn]}>
               Anonymous
+            </Text>
+          </View>
+        )}
+        {!!pollData.expiresAt && (
+          <View style={styles.metaRow}>
+            <Ionicons
+              name="time-outline"
+              size={12}
+              color={isOwn ? 'rgba(255,255,255,0.6)' : theme.colors.textSubtle}
+            />
+            <Text style={[styles.metaText, isOwn && styles.metaTextOwn]}>
+              Ends {new Date(pollData.expiresAt).toLocaleDateString()}
             </Text>
           </View>
         )}
@@ -385,5 +460,11 @@ const styles = StyleSheet.create({
   },
   metaTextOwn: {
     color: 'rgba(255,255,255,0.6)',
+  },
+  optionButtonCorrect: {
+    borderColor: 'rgba(34,197,94,0.5)',
+  },
+  optionButtonWrong: {
+    borderColor: 'rgba(239,68,68,0.5)',
   },
 });
