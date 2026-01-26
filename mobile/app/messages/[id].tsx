@@ -2377,11 +2377,15 @@ export default function ChatScreen() {
         onForward={handleForwardMessage}
         onDelete={handleDeleteMessage}
         onEdit={handleEditFromViewer}
-        onKeep={handleKeepMessage}
-        currentUserId={user?.id || ''}
-        accentColor={accentHex}
-        isDisappearingMode={isDisappearingMessage}
-        hapticsEnabled={currentSettings.hapticFeedback}
+        onGoToMessage={(message) => {
+          const index = renderedMessages.findIndex((msg) => msg.id === message.id);
+          if (index >= 0) {
+            setMediaViewerVisible(false);
+            requestAnimationFrame(() => {
+              flatListRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
+            });
+          }
+        }}
       />
 
       {imageToEdit && (

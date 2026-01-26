@@ -131,6 +131,7 @@ export function AdvancedImageEditor({
   onClose,
   onSave,
   hapticsEnabled,
+  accentColor = '#007AFF',
 }: AdvancedImageEditorProps) {
   const [workingUri, setWorkingUri] = useState(imageUri);
   const [annotationText, setAnnotationText] = useState('');
