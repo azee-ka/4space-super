@@ -33,9 +33,9 @@ import { useMessagePreferencesStore } from '../../src/store/messagePreferencesSt
 import { useThemeStore } from '../../src/store/themeStore';
 import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
-import { TypingIndicator, BackgroundPicker, PhotoEditor, GifPicker, PollCreator, LocationPicker, MessageOptionsModal } from '../../src/components/chat';
+import { TypingIndicator, BackgroundPicker, GifPicker, PollCreator, LocationPicker, MessageOptionsModal, MediaViewer, AdvancedImageEditor, CameraPicker, ForwardMessageModal } from '../../src/components/chat';
 import { PollBubble } from '../../src/components/chat/PollBubble';
-import type { MessageOptions } from '../../src/components/chat';
+import type { MessageOptions, MediaItem } from '../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
 import { Message } from '../../src/types';
@@ -107,6 +107,11 @@ export default function ChatScreen() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showMessageOptions, setShowMessageOptions] = useState(false);
   const [messageOptions, setMessageOptions] = useState<MessageOptions>({ viewOnce: false, timedDuration: 0 });
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<MediaItem | null>(null);
+  const [showCameraPicker, setShowCameraPicker] = useState(false);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const [signedAttachmentUrls, setSignedAttachmentUrls] = useState<Record<string, string>>({});
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const mediaViewerListRef = useRef<FlatList>(null);
@@ -125,7 +130,6 @@ export default function ChatScreen() {
   const plusMenuItems = [
     { key: 'photos', label: 'Photos', icon: 'image', tint: '#60a5fa' },
     { key: 'camera', label: 'Camera', icon: 'camera', tint: '#f97316' },
-    { key: 'video', label: 'Video', icon: 'videocam', tint: '#fb7185' },
     { key: 'file', label: 'File', icon: 'document-text', tint: '#a78bfa' },
     { key: 'poll', label: 'Poll', icon: 'stats-chart', tint: '#34d399' },
     { key: 'location', label: 'Location', icon: 'location', tint: '#f87171' },
@@ -886,6 +890,52 @@ export default function ChatScreen() {
       Alert.alert('Error', 'Failed to open camera. Please try again.');
     }
   }, [handleSendVideo]);
+
+  const handleCameraPhoto = useCallback((uri: string) => {
+    setImageToEdit({ id: 'new', url: uri, type: 'image', message: {} as Message });
+    setShowAdvancedEditor(true);
+  }, []);
+
+  const handleCameraVideo = useCallback(async (uri: string) => {
+    await handleSendVideo({ uri, type: 'video', mimeType: 'video/mp4' } as ImagePicker.ImagePickerAsset);
+  }, [handleSendVideo]);
+
+  const handleEditFromViewer = useCallback((mediaItem: MediaItem) => {
+    setMediaViewerVisible(false);
+    setImageToEdit(mediaItem);
+    setShowAdvancedEditor(true);
+  }, []);
+
+  const handleForwardMessage = useCallback((message: Message) => {
+    setMediaViewerVisible(false);
+    setMessageToForward(message);
+    setShowForwardModal(true);
+  }, []);
+
+  const handleForwardSubmit = useCallback(async (conversationIds: string[]) => {
+    if (!messageToForward || !user) return;
+
+    try {
+      for (const convId of conversationIds) {
+        await sendMessageMutation.mutateAsync({
+          conversationId: convId,
+          content: messageToForward.content,
+          senderId: user.id,
+          fileUrl: messageToForward.file_url,
+          fileName: messageToForward.file_name,
+          fileType: messageToForward.type,
+        } as any);
+      }
+      Alert.alert('Success', `Message forwarded to ${conversationIds.length} conversation(s)`);
+    } catch (error) {
+      console.error('Forward error:', error);
+      Alert.alert('Error', 'Failed to forward message');
+    }
+  }, [messageToForward, user, sendMessageMutation]);
+
+  const handleKeepMessage = useCallback((message: Message) => {
+    Alert.alert('Saved', 'Media has been saved');
+  }, []);
 
   const handleSelectGif = useCallback(async (gifUrl: string) => {
     setShowGifPicker(false);
@@ -2260,10 +2310,7 @@ export default function ChatScreen() {
                         handlePickImage();
                         break;
                       case 'camera':
-                        handleTakePhoto();
-                        break;
-                      case 'video':
-                        handleTakeVideo();
+                        setShowCameraPicker(true);
                         break;
                       case 'file':
                         handlePickFile();
@@ -2317,255 +2364,46 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      <Modal
+      <MediaViewer
         visible={mediaViewerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMediaViewerVisible(false)}
-      >
-        <View style={styles.mediaViewerContainer}>
-          {showViewerChrome && (
-            <View style={styles.mediaViewerHeader}>
-              <TouchableOpacity
-                style={styles.mediaViewerClose}
-                onPress={() => setMediaViewerVisible(false)}
-              >
-                <Ionicons name="arrow-back" size={24} color="white" />
-              </TouchableOpacity>
-              <View style={styles.mediaViewerTitle}>
-                <Text style={styles.mediaViewerTime}>
-                  {currentMediaItem?.createdAt ? formatMediaDateTime(currentMediaItem.createdAt) : ''}
-                </Text>
-                <Text style={styles.mediaViewerCounter}>
-                  {mediaItems.length ? `${mediaViewerIndex + 1} / ${mediaItems.length}` : ''}
-                </Text>
-              </View>
-              <View style={styles.mediaViewerHeaderActions}>
-                <TouchableOpacity
-                  style={styles.mediaViewerHeaderButton}
-                  onPress={() => handleEditMedia(currentMediaItem)}
-                >
-                  <Ionicons name="brush" size={18} color={accentHex} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.mediaViewerHeaderButton}
-                  onPress={handleMoreMedia}
-                >
-                  <Ionicons name="ellipsis-horizontal" size={18} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+        mediaItems={mediaItems}
+        initialIndex={mediaViewerIndex}
+        onClose={() => setMediaViewerVisible(false)}
+        onReply={(message) => {
+          setReplyingTo(message);
+          setMediaViewerVisible(false);
+        }}
+        onReact={handleReaction}
+        onForward={handleForwardMessage}
+        onDelete={handleDeleteMessage}
+        onEdit={handleEditFromViewer}
+        onKeep={handleKeepMessage}
+        currentUserId={user?.id || ''}
+        accentColor={accentHex}
+        isDisappearingMode={isDisappearingMessage}
+        hapticsEnabled={currentSettings.hapticFeedback}
+      />
 
-          {mediaItems.length ? (
-            <FlatList
-              ref={mediaViewerListRef}
-              data={mediaItems}
-              keyExtractor={(item) => item.id}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              initialScrollIndex={Math.min(mediaViewerIndex, mediaItems.length - 1)}
-              getItemLayout={(_, index) => ({
-                length: Dimensions.get('window').width,
-                offset: Dimensions.get('window').width * index,
-                index,
-              })}
-              onMomentumScrollEnd={(event) => {
-                const index = Math.round(
-                  event.nativeEvent.contentOffset.x / Dimensions.get('window').width
-                );
-                setMediaViewerIndex(index);
-                setShowReactionBar(false);
-                setShowEmojiPicker(false);
-                setShowMediaMoreMenu(false);
-              }}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.mediaViewerSlide}
-                  onPress={() => {
-                    setShowViewerChrome((prev) => !prev);
-                    setShowReactionBar(false);
-                    setShowEmojiPicker(false);
-                    setShowMediaMoreMenu(false);
-                  }}
-                >
-                  {showViewerChrome && (
-                    <View style={styles.mediaViewerOverlayRow}>
-                      <TouchableOpacity
-                        style={styles.mediaViewerOverlayButton}
-                        onPress={handleReplyFromViewer}
-                      >
-                        <Ionicons name="return-up-back" size={16} color="white" />
-                        <Text style={styles.mediaViewerReplyText}>Reply</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.mediaViewerOverlayButton}
-                        onPress={() => setShowReactionBar((prev) => !prev)}
-                      >
-                        <Ionicons name="happy-outline" size={16} color="white" />
-                        <Text style={styles.mediaViewerReplyText}>React</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  {item.type === 'image' ? (
-                    <Image
-                      source={{ uri: item.url }}
-                      style={[
-                        styles.mediaViewerImage,
-                        {
-                          aspectRatio: mediaAspectRatios[item.id] || 1,
-                        },
-                      ]}
-                      contentFit="contain"
-                      transition={200}
-                      onLoad={({ source }) => {
-                        if (source?.width && source?.height) {
-                          const ratio = source.width / source.height;
-                          if (!mediaAspectRatios[item.id]) {
-                            setMediaAspectRatios((prev) => ({ ...prev, [item.id]: ratio }));
-                          }
-                        }
-                      }}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.mediaViewerVideo}
-                      activeOpacity={0.9}
-                      onPress={() => Linking.openURL(item.url)}
-                    >
-                      <Ionicons name="play-circle" size={64} color="white" />
-                      <Text style={styles.mediaViewerVideoText}>Tap to play video</Text>
-                    </TouchableOpacity>
-                  )}
-                  {!!item.caption && showViewerChrome && (
-                    <Text style={styles.mediaViewerCaption}>{item.caption}</Text>
-                  )}
-                </Pressable>
-              )}
-            />
-          ) : (
-            <View style={styles.mediaViewerSlide}>
-              <Text style={styles.mediaViewerVideoText}>No media available</Text>
-            </View>
-          )}
-
-          {showViewerChrome && (
-            <View style={styles.mediaViewerFooterOverlay}>
-              {showReactionBar && (
-                <View style={styles.mediaViewerReactionsRow}>
-                  {reactionEmojis.slice(0, 6).map((emoji) => (
-                    <TouchableOpacity
-                      key={emoji}
-                      style={styles.mediaViewerReaction}
-                      onPress={() => currentMediaMessage && handleReaction(currentMediaMessage.id, emoji)}
-                    >
-                      <Text style={styles.mediaViewerReactionText}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    style={styles.mediaViewerReactionPlus}
-                    onPress={() => setShowEmojiPicker((prev) => !prev)}
-                  >
-                    <Ionicons name="add" size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {showEmojiPicker && (
-                <View style={styles.mediaViewerEmojiPicker}>
-                  {['😀','😅','😍','😮','😢','😡','👍','👏','🔥','🎉','🙏','💯'].map((emoji) => (
-                    <TouchableOpacity
-                      key={emoji}
-                      style={styles.mediaViewerEmojiItem}
-                      onPress={() => currentMediaMessage && handleReaction(currentMediaMessage.id, emoji)}
-                    >
-                      <Text style={styles.mediaViewerReactionText}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.mediaViewerThumbs}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {mediaItems.map((item, index) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.mediaViewerThumbItem,
-                        index === mediaViewerIndex && [
-                          styles.mediaViewerThumbItemActive,
-                          { borderColor: accentHex },
-                        ],
-                      ]}
-                      onPress={() => {
-                        setMediaViewerIndex(index);
-                        mediaViewerListRef.current?.scrollToIndex({ index, animated: true });
-                      }}
-                    >
-                      {item.type === 'image' ? (
-                        <Image
-                          source={{ uri: item.url }}
-                          style={styles.mediaViewerThumbImage}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View style={styles.mediaViewerThumbVideo}>
-                          <Ionicons name="videocam" size={14} color="white" />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              <View style={styles.mediaViewerActionRow}>
-                <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={handleForwardMedia}>
-                  <Ionicons name="arrow-redo" size={20} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={() => handleShareMedia(currentMediaItem)}>
-                  <Ionicons name="share-social" size={20} color="white" />
-                </TouchableOpacity>
-                {isDisappearingMessage && (
-                  <TouchableOpacity style={styles.mediaViewerActionIcon} onPress={handleKeepMedia}>
-                    <Ionicons name="bookmark" size={20} color="white" />
-                  </TouchableOpacity>
-                )}
-                <View style={styles.mediaViewerActionSpacer} />
-                {currentMediaMessage?.sender_id === user?.id && (
-                  <TouchableOpacity
-                    style={styles.mediaViewerActionIconDanger}
-                    onPress={() => {
-                      if (!currentMediaMessage) return;
-                      handleDeleteMessage(currentMediaMessage);
-                      setMediaViewerVisible(false);
-                    }}
-                  >
-                    <Ionicons name="trash" size={18} color="#f87171" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
-          {showViewerChrome && showMediaMoreMenu && (
-            <View style={styles.mediaViewerMoreMenu}>
-              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={handleGoToMessage}>
-                <Text style={styles.mediaViewerMoreText}>Go to message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={handleReplyFromViewer}>
-                <Text style={styles.mediaViewerMoreText}>Reply</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaViewerMoreItem} onPress={() => handleShareMedia(currentMediaItem)}>
-                <Text style={styles.mediaViewerMoreText}>Share</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </Modal>
+      {imageToEdit && (
+        <AdvancedImageEditor
+          visible={showAdvancedEditor}
+          imageUri={imageToEdit.url}
+          onClose={() => {
+            setShowAdvancedEditor(false);
+            setImageToEdit(null);
+          }}
+          onSave={async (uri, caption, sendMode, timerSeconds) => {
+            await handleSavePhoto(uri, caption);
+            setShowAdvancedEditor(false);
+            setImageToEdit(null);
+          }}
+          hapticsEnabled={currentSettings.hapticFeedback}
+          accentColor={accentHex}
+        />
+      )}
 
       {photoToEdit && (
-        <PhotoEditor
+        <AdvancedImageEditor
           visible={showPhotoEditor}
           imageUri={photoToEdit}
           onClose={() => {
@@ -2601,6 +2439,21 @@ export default function ChatScreen() {
           setMessageOptions(options);
           setShowMessageOptions(false);
         }}
+      />
+
+      <CameraPicker
+        visible={showCameraPicker}
+        onClose={() => setShowCameraPicker(false)}
+        onPhotoTaken={handleCameraPhoto}
+        onVideoTaken={handleCameraVideo}
+      />
+
+      <ForwardMessageModal
+        visible={showForwardModal}
+        message={messageToForward}
+        conversations={[]}
+        onClose={() => setShowForwardModal(false)}
+        onForward={handleForwardSubmit}
       />
     </SafeAreaView>
   );

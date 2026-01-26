@@ -996,53 +996,6 @@ export default function ChatSettingsScreen() {
           })}
         </View>
 
-        {activeThemeTab === 'featured' && (
-          <View style={styles.sectionCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: 'rgba(34, 211, 238, 0.18)' }]}>
-                  <Ionicons name="sparkles-outline" size={16} color="#22d3ee" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={styles.settingLabel}>Scene presets</Text>
-                  <Text style={styles.settingHint}>Apply a curated scene with matching tones.</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.syncButton}
-                onPress={() => {
-                  if (matchingBackgroundId) {
-                    if (!conversationId) return;
-                    setBackgroundId(conversationId, matchingBackgroundId as any);
-                  }
-                }}
-              >
-                <Ionicons name="color-wand-outline" size={16} color={theme.colors.base} />
-                <Text style={styles.syncButtonText}>Sync</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.presetGrid}>
-              {CHAT_THEME_PRESETS.map((preset) => {
-                const isActive = preset.id === chatTheme.id;
-                return (
-                  <TouchableOpacity
-                    key={preset.id}
-                    style={[styles.presetCard, isActive && styles.presetCardActive]}
-                    onPress={() => setConversationTheme(conversationId, preset.id)}
-                  >
-                    <View style={[styles.presetSwatch, { backgroundColor: preset.backgroundColor }]} />
-                    <View style={styles.presetBubbleRow}>
-                      <View style={[styles.presetBubble, { backgroundColor: preset.sentBubbleColor }]} />
-                      <View style={[styles.presetBubble, { backgroundColor: preset.receivedBubbleColor }]} />
-                    </View>
-                    <Text style={styles.presetTitle}>{preset.name}</Text>
-                    <Text style={styles.presetSubtitle} numberOfLines={2}>{preset.description}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
 
         {activeThemeTab !== 'custom' && (
           <>
