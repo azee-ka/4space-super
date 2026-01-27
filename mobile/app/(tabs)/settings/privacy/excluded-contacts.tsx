@@ -1,38 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../../src/utils/themeUtils';
 import { theme } from '../../../../src/styles/theme';
-import { Avatar } from '../../../../src/components/ui';
-
-// Mock data
-const MOCK_CONTACTS = [
-  { id: '1', name: 'Alice Johnson', username: 'alice', avatar: null },
-  { id: '2', name: 'Bob Smith', username: 'bobsmith', avatar: null },
-  { id: '3', name: 'Carol White', username: 'carolw', avatar: null },
-  { id: '4', name: 'David Brown', username: 'davidb', avatar: null },
-];
+import { usePrivacyStore } from '../../../../src/store/privacyStore';
+import ContactSelectionPanel from './components/ContactSelectionPanel';
 
 export default function ExcludedContactsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [excludedIds, setExcludedIds] = useState<string[]>([]);
-
-  const filteredContacts = MOCK_CONTACTS.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { excludedContactIds, setExcludedContactIds } = usePrivacyStore();
 
   const toggleExclude = (id: string) => {
-    setExcludedIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setExcludedContactIds((prev) => {
+      return prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+    });
   };
 
   return (
@@ -56,89 +42,17 @@ export default function ExcludedContactsScreen() {
           </Text>
         </View>
 
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color={theme.colors.textSubtle} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search contacts..."
-            placeholderTextColor={theme.colors.textSubtle}
-            style={styles.searchInput}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={theme.colors.textSubtle} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <ContactSelectionPanel
+          selectedIds={excludedContactIds}
+          onToggle={toggleExclude}
+          description="People you exclude won't see your presence indicators."
+        />
 
-        {excludedIds.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Excluded ({excludedIds.length})</Text>
-            <View style={styles.contactsList}>
-              {MOCK_CONTACTS.filter(c => excludedIds.includes(c.id)).map((contact, index) => (
-                <TouchableOpacity
-                  key={contact.id}
-                  style={[
-                    styles.contactItem,
-                    index < MOCK_CONTACTS.filter(c => excludedIds.includes(c.id)).length - 1 && styles.contactItemBorder
-                  ]}
-                  onPress={() => toggleExclude(contact.id)}
-                >
-                  <Avatar
-                    uri={contact.avatar}
-                    name={contact.name}
-                    seed={contact.id}
-                    size="md"
-                  />
-                  <View style={styles.contactInfo}>
-                    <Text style={styles.contactName}>{contact.name}</Text>
-                    <Text style={styles.contactUsername}>@{contact.username}</Text>
-                  </View>
-                  <Ionicons name="checkmark-circle" size={24} color={accentHex} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
-        <Text style={styles.sectionTitle}>All Contacts</Text>
-        <View style={styles.contactsList}>
-          {filteredContacts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={48} color={theme.colors.textSubtle} />
-              <Text style={styles.emptyText}>No contacts found</Text>
-            </View>
-          ) : (
-            filteredContacts.map((contact, index) => {
-              const isExcluded = excludedIds.includes(contact.id);
-              const isLast = index === filteredContacts.length - 1;
-
-              return (
-                <TouchableOpacity
-                  key={contact.id}
-                  style={[styles.contactItem, !isLast && styles.contactItemBorder]}
-                  onPress={() => toggleExclude(contact.id)}
-                >
-                  <Avatar
-                    uri={contact.avatar}
-                    name={contact.name}
-                    seed={contact.id}
-                    size="md"
-                  />
-                  <View style={styles.contactInfo}>
-                    <Text style={styles.contactName}>{contact.name}</Text>
-                    <Text style={styles.contactUsername}>@{contact.username}</Text>
-                  </View>
-                  {isExcluded ? (
-                    <Ionicons name="checkmark-circle" size={24} color={accentHex} />
-                  ) : (
-                    <View style={styles.uncheckedCircle} />
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
+        <View style={styles.noteCard}>
+          <Ionicons name="information-circle-outline" size={20} color={theme.colors.textSubtle} />
+          <Text style={styles.noteText}>
+            You can clear exclusions anytime and they only affect presence visibility.
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -181,7 +95,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   iconCircle: {
     width: 56,
@@ -203,75 +117,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
-  searchContainer: {
+  noteCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 20,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textSubtle,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 14,
+    padding: 14,
     marginTop: 8,
-    marginBottom: 10,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  contactsList: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  contactItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  contactInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  contactName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  contactUsername: {
+  noteText: {
+    color: theme.colors.textSubtle,
+    marginLeft: 10,
     fontSize: 13,
-    color: theme.colors.textSubtle,
-  },
-  uncheckedCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textSubtle,
-    marginTop: 12,
+    lineHeight: 18,
   },
 });

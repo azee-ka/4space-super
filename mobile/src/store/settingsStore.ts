@@ -186,6 +186,7 @@ interface SpaceSettings {
   defaultPrivacy: 'Private' | 'Shared' | 'Team' | 'Public';
   defaultSpaceType: 'Team' | 'Community' | 'Project' | 'Personal';
   autoJoinSpaces: boolean;
+  autoPinUpdates: boolean;
   spaceNotifications: boolean;
   showSpaceActivity: boolean;
 }
@@ -322,6 +323,7 @@ const defaultSettings: Omit<SettingsState, 'updateNotificationSettings' | 'updat
     defaultPrivacy: 'Private',
     defaultSpaceType: 'Team',
     autoJoinSpaces: false,
+    autoPinUpdates: false,
     spaceNotifications: true,
     showSpaceActivity: true,
   },

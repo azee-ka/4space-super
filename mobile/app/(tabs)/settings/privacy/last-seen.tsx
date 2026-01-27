@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../../src/utils/themeUtils';
 import { theme } from '../../../../src/styles/theme';
 import { PrivacyVisibility, usePrivacyStore } from '../../../../src/store/privacyStore';
+import ContactSelectionPanel from './components/ContactSelectionPanel';
 
 const OPTIONS: Array<{ value: PrivacyVisibility; label: string; description: string }> = [
   {
@@ -35,11 +36,21 @@ export default function LastSeenScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
-  const { lastSeenVisibility, setLastSeenVisibility } = usePrivacyStore();
+  const {
+    lastSeenVisibility,
+    setLastSeenVisibility,
+    excludedContactIds,
+    setExcludedContactIds,
+  } = usePrivacyStore();
 
   const handleSelect = (value: PrivacyVisibility) => {
     setLastSeenVisibility(value);
-    router.back();
+  };
+
+  const toggleExclude = (id: string) => {
+    setExcludedContactIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -66,24 +77,32 @@ export default function LastSeenScreen() {
             const isSelected = option.value === lastSeenVisibility;
             const isLast = index === OPTIONS.length - 1;
 
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.optionItem, !isLast && styles.optionItemBorder]}
-                onPress={() => handleSelect(option.value)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.optionContent}>
-                  <Text style={styles.optionLabel}>{option.label}</Text>
-                  <Text style={styles.optionDescription}>{option.description}</Text>
-                </View>
-                {isSelected && (
-                  <Ionicons name="checkmark-circle" size={24} color={accentHex} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.optionItem, !isLast && styles.optionItemBorder]}
+                  onPress={() => handleSelect(option.value)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionLabel}>{option.label}</Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={24} color={accentHex} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
         </View>
+
+        {lastSeenVisibility === 'contacts_except' && (
+          <ContactSelectionPanel
+            selectedIds={excludedContactIds}
+            onToggle={toggleExclude}
+            description="Pick contacts who won't see your last seen timestamp."
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );

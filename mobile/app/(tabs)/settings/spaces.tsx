@@ -58,8 +58,8 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={spaces.autoJoinSpaces}
-              onValueChange={(value) => updateSpaceSettings({ autoJoinSpaces: value })}
+              value={spaces.autoPinUpdates}
+              onValueChange={(value) => updateSpaceSettings({ autoPinUpdates: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -117,7 +117,7 @@ export default function SpaceSettingsScreen() {
               </View>
               <View style={styles.menuItemTextGroup}>
                 <Text style={styles.menuItemText}>Default Privacy</Text>
-                <Text style={styles.menuItemSubtext}>New spaces start as {defaultSpacePrivacy.toLowerCase()}</Text>
+                <Text style={styles.menuItemSubtext}>New spaces start as {spaces.defaultPrivacy.toLowerCase()}</Text>
               </View>
             </View>
             <View style={styles.menuItemRight}>

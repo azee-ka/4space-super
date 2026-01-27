@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../../src/utils/themeUtils';
 import { theme } from '../../../../src/styles/theme';
 import { PrivacyVisibility, usePrivacyStore } from '../../../../src/store/privacyStore';
+import ContactSelectionPanel from './components/ContactSelectionPanel';
 
 const OPTIONS: Array<{ value: PrivacyVisibility; label: string; description: string }> = [
   {
@@ -35,11 +36,21 @@ export default function OnlineStatusScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
-  const { onlineVisibility, setOnlineVisibility } = usePrivacyStore();
+  const {
+    onlineVisibility,
+    setOnlineVisibility,
+    excludedContactIds,
+    setExcludedContactIds,
+  } = usePrivacyStore();
 
   const handleSelect = (value: PrivacyVisibility) => {
     setOnlineVisibility(value);
-    router.back();
+  };
+
+  const toggleExclude = (id: string) => {
+    setExcludedContactIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -86,6 +97,14 @@ export default function OnlineStatusScreen() {
             );
           })}
         </View>
+
+        {onlineVisibility === 'contacts_except' && (
+          <ContactSelectionPanel
+            selectedIds={excludedContactIds}
+            onToggle={toggleExclude}
+            description="Choose contacts that should not see when you are online."
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
