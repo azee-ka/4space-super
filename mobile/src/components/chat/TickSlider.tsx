@@ -55,30 +55,40 @@ export function TickSlider({
   }, [hapticsEnabled]);
 
   const scrollToValue = useCallback(
-    (val: number) => {
+    (val: number, animated: boolean = true) => {
       if (!scrollRef.current || trackWidth === 0) return;
       const index = valueToIndex(val);
-      const rawOffset = sidePadding + index * TICK_SPACING - trackWidth / 2;
-      const offset = Math.max(0, rawOffset);
-      scrollRef.current.scrollTo({ x: offset, animated: true });
+      // Center the value in the viewport
+      const targetOffset = index * TICK_SPACING - trackWidth / 2 + sidePadding;
+      const offset = Math.max(0, targetOffset);
+      scrollRef.current.scrollTo({ x: offset, animated });
     },
-    [sidePadding, trackWidth, valueToIndex]
+    [trackWidth, valueToIndex, sidePadding]
   );
 
   const handleValueChange = useCallback(
     (nextValue: number) => {
       const clampedValue = Math.max(min, Math.min(max, nextValue));
       if (clampedValue === lastValueRef.current) return;
+
+      // Only trigger haptic if value changed by at least the step amount
+      const shouldHaptic = Math.abs(clampedValue - lastValueRef.current) >= step;
+
       lastValueRef.current = clampedValue;
       onChange(clampedValue);
-      triggerHaptic();
+
+      if (shouldHaptic && isDraggingRef.current) {
+        triggerHaptic();
+      }
     },
-    [max, min, onChange, triggerHaptic]
+    [max, min, onChange, triggerHaptic, step]
   );
 
   const handleScroll = useCallback(
     (event: any) => {
+      if (!isDraggingRef.current) return;
       const offset = event.nativeEvent.contentOffset.x;
+      // Calculate index from scroll position, accounting for padding
       const rawIndex = (offset + trackWidth / 2 - sidePadding) / TICK_SPACING;
       const nextValue = indexToValue(Math.round(rawIndex));
       if (nextValue !== value) {
@@ -93,11 +103,15 @@ export function TickSlider({
       const offset = event.nativeEvent.contentOffset.x;
       const rawIndex = (offset + trackWidth / 2 - sidePadding) / TICK_SPACING;
       const nextValue = indexToValue(Math.round(rawIndex));
-      onSlidingComplete?.(nextValue);
       isDraggingRef.current = false;
-      scrollToValue(nextValue);
+
+      // Snap to the nearest tick
+      requestAnimationFrame(() => {
+        scrollToValue(nextValue, true);
+        onSlidingComplete?.(nextValue);
+      });
     },
-    [trackWidth, sidePadding, indexToValue, onSlidingComplete]
+    [trackWidth, sidePadding, indexToValue, onSlidingComplete, scrollToValue]
   );
 
   const handleScrollBegin = useCallback(() => {
@@ -136,7 +150,7 @@ export function TickSlider({
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
-          decelerationRate="fast"
+          decelerationRate={0.988}
           onScrollBeginDrag={handleScrollBegin}
           onScroll={handleScroll}
           onMomentumScrollEnd={handleMomentumEnd}

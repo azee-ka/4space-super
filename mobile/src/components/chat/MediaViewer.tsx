@@ -98,17 +98,17 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   // Auto-scroll thumbnail when current index changes
   React.useEffect(() => {
     if (visible && thumbnailScrollRef.current && currentIndex >= 0) {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         thumbnailScrollRef.current?.scrollToIndex({
           index: currentIndex,
           animated: true,
           viewPosition: 0.5,
         });
-      }, 100);
+      });
     }
   }, [currentIndex, visible]);
 
-  const handleScroll = useCallback((event: any) => {
+  const handleScrollEnd = useCallback((event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / SCREEN_WIDTH);
     if (index !== currentIndex && index >= 0 && index < mediaItems.length) {
@@ -239,56 +239,64 @@ From: ${currentMessage.sender.display_name || currentMessage.sender.username}
     return currentMessage?.type === 'view-once' || currentMessage?.type === 'timed-message';
   }, [currentMessage]);
 
-  const renderThumbnail = useCallback(({ item, index }: { item: MediaItem; index: number }) => {
-    const distance = Math.abs(index - currentIndex);
-    const isActive = index === currentIndex;
+  const renderThumbnail = useCallback(
+    ({ item, index }: { item: MediaItem; index: number }) => {
+      const distance = Math.abs(index - currentIndex);
+      const isActive = index === currentIndex;
 
-    // Scale and opacity based on distance from current
-    let scale = 1;
-    let opacity = 0.4;
+      // Size and opacity based on distance from current
+      let opacity = 0.5;
+      let width = 40;
+      let height = 40;
 
-    if (isActive) {
-      scale = 1.3;
-      opacity = 1;
-    } else if (distance === 1) {
-      scale = 1.1;
-      opacity = 0.7;
-    } else if (distance === 2) {
-      scale = 1;
-      opacity = 0.5;
-    }
+      if (isActive) {
+        opacity = 1;
+        width = 54;
+        height = 54;
+      } else if (distance === 1) {
+        opacity = 0.7;
+        width = 42;
+        height = 42;
+      }
 
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => {
-          setCurrentIndex(index);
-          scrollViewRef.current?.scrollTo({
-            x: index * SCREEN_WIDTH,
-            animated: true,
-          });
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }}
-        style={[
-          styles.thumbnail,
-          isActive && styles.thumbnailActive,
-        ]}
-      >
-        <Image
-          source={{ uri: item.url }}
-          style={[styles.thumbnailImage, { transform: [{ scale }], opacity }]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          priority={distance <= 2 ? 'high' : 'low'}
-        />
-        {item.type === 'video' && (
-          <View style={styles.thumbnailVideoIndicator}>
-            <Ionicons name="play" size={10} color="white" />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }, [currentIndex]);
+      return (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            setCurrentIndex(index);
+            scrollViewRef.current?.scrollTo({
+              x: index * SCREEN_WIDTH,
+              animated: true,
+            });
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          style={[
+            styles.thumbnail,
+            {
+              width,
+              height,
+              opacity,
+            },
+          ]}
+        >
+          <Image
+            source={{ uri: item.url }}
+            style={styles.thumbnailImage}
+            contentFit={isActive ? 'contain' : 'cover'}
+            cachePolicy="memory-disk"
+            priority="high"
+            recyclingKey={`thumb-${item.id}`}
+          />
+          {item.type === 'video' && (
+            <View style={styles.thumbnailVideoIndicator}>
+              <Ionicons name="play" size={8} color="white" />
+            </View>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [currentIndex]
+  );
 
   if (!visible || !currentItem) return null;
 
@@ -307,12 +315,12 @@ From: ${currentMessage.sender.display_name || currentMessage.sender.username}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onScroll={handleScroll}
+          onMomentumScrollEnd={handleScrollEnd}
           scrollEventThrottle={16}
           bounces={false}
           decelerationRate="fast"
         >
-          {mediaItems.map((item) => (
+          {mediaItems.map((item, idx) => (
             <Pressable
               key={item.id}
               style={styles.mediaContainer}
@@ -324,7 +332,8 @@ From: ${currentMessage.sender.display_name || currentMessage.sender.username}
                 contentFit="contain"
                 cachePolicy="memory-disk"
                 transition={0}
-                priority="high"
+                priority={Math.abs(idx - currentIndex) <= 1 ? 'high' : 'normal'}
+                recyclingKey={`media-${item.id}`}
               />
               {item.type === 'video' && (
                 <View style={styles.videoPlayOverlay}>
@@ -477,17 +486,20 @@ From: ${currentMessage.sender.display_name || currentMessage.sender.username}
                   showsHorizontalScrollIndicator={false}
                   renderItem={renderThumbnail}
                   keyExtractor={(item) => item.id}
+                  extraData={currentIndex}
                   contentContainerStyle={styles.thumbnailList}
                   getItemLayout={(_data, index) => ({
-                    length: 48,
-                    offset: 48 * index,
+                    length: 54,
+                    offset: 54 * index,
                     index,
                   })}
                   initialScrollIndex={currentIndex >= 0 ? currentIndex : 0}
                   onScrollToIndexFailed={() => {}}
-                  removeClippedSubviews={true}
-                  maxToRenderPerBatch={5}
-                  windowSize={5}
+                  removeClippedSubviews={false}
+                  maxToRenderPerBatch={15}
+                  windowSize={21}
+                  initialNumToRender={11}
+                  decelerationRate="fast"
                 />
               </View>
             )}
@@ -684,25 +696,22 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   thumbnailStrip: {
-    height: 48,
+    height: 64,
     marginBottom: 14,
     justifyContent: 'center',
   },
   thumbnailList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_WIDTH / 2 - 27,
     alignItems: 'center',
   },
   thumbnail: {
-    width: 42,
-    height: 42,
-    borderRadius: 6,
+    borderRadius: 8,
     overflow: 'hidden',
-    marginHorizontal: 3,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    marginHorizontal: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   thumbnailActive: {
-    borderColor: 'white',
+    borderColor: 'transparent',
   },
   thumbnailImage: {
     width: '100%',

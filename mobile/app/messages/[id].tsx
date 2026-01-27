@@ -33,7 +33,7 @@ import { useMessagePreferencesStore } from '../../src/store/messagePreferencesSt
 import { useThemeStore } from '../../src/store/themeStore';
 import { getAccentColorHex } from '../../src/utils/themeUtils';
 import { useConversation, useMessages, useSendMessage, useAddReaction } from '../../src/hooks/useConversations';
-import { TypingIndicator, BackgroundPicker, GifPicker, PollCreator, LocationPicker, MessageOptionsModal, MediaViewer, AdvancedImageEditor, CameraPicker, ForwardMessageModal } from '../../src/components/chat';
+import { TypingIndicator, BackgroundPicker, GifPicker, PollCreator, LocationPicker, MessageOptionsModal, MediaViewer, AdvancedImageEditorCompact, CameraPicker, ForwardMessageModal } from '../../src/components/chat';
 import { PollBubble } from '../../src/components/chat/PollBubble';
 import type { MessageOptions, MediaItem } from '../../src/components/chat';
 import { LoadingSpinner, Avatar } from '../../src/components/ui';
@@ -2389,7 +2389,7 @@ export default function ChatScreen() {
       />
 
       {imageToEdit && (
-        <AdvancedImageEditor
+        <AdvancedImageEditorCompact
           visible={showAdvancedEditor}
           imageUri={imageToEdit.url}
           onClose={() => {
@@ -2407,7 +2407,7 @@ export default function ChatScreen() {
       )}
 
       {photoToEdit && (
-        <AdvancedImageEditor
+        <AdvancedImageEditorCompact
           visible={showPhotoEditor}
           imageUri={photoToEdit}
           onClose={() => {
