@@ -1108,9 +1108,15 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           email: string | null
+          font_size: string | null
           id: string
+          is_online: boolean | null
+          language: string | null
           last_seen: string | null
+          last_seen_at: string | null
+          location: string | null
           message_preview_in_notifications: boolean | null
+          pronoun: string | null
           screen_security: boolean | null
           show_last_seen: boolean | null
           show_online_status: boolean | null
@@ -1118,9 +1124,13 @@ export type Database = {
           show_read_receipts: boolean | null
           show_typing_indicator: boolean | null
           status: string | null
+          status_message: string | null
+          theme_preference: string | null
+          timezone: string | null
           two_factor_auth: boolean | null
           updated_at: string | null
           username: string | null
+          website: string | null
         }
         Insert: {
           auto_download_media?: boolean | null
@@ -1130,9 +1140,15 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           email?: string | null
+          font_size?: string | null
           id: string
+          is_online?: boolean | null
+          language?: string | null
           last_seen?: string | null
+          last_seen_at?: string | null
+          location?: string | null
           message_preview_in_notifications?: boolean | null
+          pronoun?: string | null
           screen_security?: boolean | null
           show_last_seen?: boolean | null
           show_online_status?: boolean | null
@@ -1140,9 +1156,13 @@ export type Database = {
           show_read_receipts?: boolean | null
           show_typing_indicator?: boolean | null
           status?: string | null
+          status_message?: string | null
+          theme_preference?: string | null
+          timezone?: string | null
           two_factor_auth?: boolean | null
           updated_at?: string | null
           username?: string | null
+          website?: string | null
         }
         Update: {
           auto_download_media?: boolean | null
@@ -1152,9 +1172,15 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           email?: string | null
+          font_size?: string | null
           id?: string
+          is_online?: boolean | null
+          language?: string | null
           last_seen?: string | null
+          last_seen_at?: string | null
+          location?: string | null
           message_preview_in_notifications?: boolean | null
+          pronoun?: string | null
           screen_security?: boolean | null
           show_last_seen?: boolean | null
           show_online_status?: boolean | null
@@ -1162,9 +1188,13 @@ export type Database = {
           show_read_receipts?: boolean | null
           show_typing_indicator?: boolean | null
           status?: string | null
+          status_message?: string | null
+          theme_preference?: string | null
+          timezone?: string | null
           two_factor_auth?: boolean | null
           updated_at?: string | null
           username?: string | null
+          website?: string | null
         }
         Relationships: []
       }

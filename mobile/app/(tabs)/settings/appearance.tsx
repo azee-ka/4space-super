@@ -1,31 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { ACCENT_OPTIONS, getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function AppearanceSettingsScreen() {
   const router = useRouter();
   const { accentColor, setAccentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [darkMode, setDarkMode] = useState(true);
-  const [themeMode, setThemeMode] = useState('OLED Black');
-  const [fontSize, setFontSize] = useState('Medium');
-  const [compactMode, setCompactMode] = useState(false);
-  const [showAvatars, setShowAvatars] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
+  const { appearance, updateAppearanceSettings } = useSettingsStore();
 
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -51,8 +40,8 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
+              value={appearance.darkMode}
+              onValueChange={(value) => updateAppearanceSettings({ darkMode: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -60,7 +49,10 @@ export default function AppearanceSettingsScreen() {
 
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
-            onPress={() => showPicker('Theme Style', ['OLED Black', 'Dim', 'Classic'], setThemeMode)}
+            onPress={() => router.push({
+              pathname: '/settings/appearance/theme-style',
+              params: { current: appearance.themeStyle }
+            })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -72,14 +64,17 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{themeMode}</Text>
+              <Text style={styles.menuItemValue}>{appearance.themeStyle}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => showPicker('Font Size', ['Small', 'Medium', 'Large'], setFontSize)}
+            onPress={() => router.push({
+              pathname: '/settings/appearance/font-size',
+              params: { current: appearance.fontSize }
+            })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -91,7 +86,7 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{fontSize}</Text>
+              <Text style={styles.menuItemValue}>{appearance.fontSize}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
@@ -127,19 +122,19 @@ export default function AppearanceSettingsScreen() {
                 <Ionicons name="grid-outline" size={20} color="#22d3ee" />
               </View>
               <View style={styles.menuItemTextGroup}>
-                <Text style={styles.menuItemText}>Compact Layout</Text>
+                <Text style={styles.menuItemText}>Compact Mode</Text>
                 <Text style={styles.menuItemSubtext}>Reduce spacing density</Text>
               </View>
             </View>
             <Switch
-              value={compactMode}
-              onValueChange={setCompactMode}
+              value={appearance.compactMode}
+              onValueChange={(value) => updateAppearanceSettings({ compactMode: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="person-circle-outline" size={20} color="#34d399" />
@@ -150,12 +145,135 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={showAvatars}
-              onValueChange={setShowAvatars}
+              value={appearance.showAvatars}
+              onValueChange={(value) => updateAppearanceSettings({ showAvatars: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="layers-outline" size={20} color="#8b5cf6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Message Grouping</Text>
+                <Text style={styles.menuItemSubtext}>Group consecutive messages</Text>
+              </View>
+            </View>
+            <Switch
+              value={appearance.messageGrouping}
+              onValueChange={(value) => updateAppearanceSettings({ messageGrouping: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="time-outline" size={20} color="#f59e0b" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Show Timestamps</Text>
+                <Text style={styles.menuItemSubtext}>Display message times</Text>
+              </View>
+            </View>
+            <Switch
+              value={appearance.showTimestamps}
+              onValueChange={(value) => updateAppearanceSettings({ showTimestamps: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="resize-outline" size={20} color="#ec4899" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Compact Headers</Text>
+                <Text style={styles.menuItemSubtext}>Smaller header bars</Text>
+              </View>
+            </View>
+            <Switch
+              value={appearance.compactHeaders}
+              onValueChange={(value) => updateAppearanceSettings({ compactHeaders: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Customization</Text>
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({
+              pathname: '/settings/appearance/chat-wallpaper',
+              params: { current: appearance.chatWallpaper || 'None' }
+            })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="image-outline" size={20} color="#22d3ee" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Chat Wallpaper</Text>
+                <Text style={styles.menuItemSubtext}>Background for conversations</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{appearance.chatWallpaper || 'None'}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({
+              pathname: '/settings/appearance/bubble-style',
+              params: { current: appearance.bubbleStyle }
+            })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="chatbubble-outline" size={20} color="#a855f7" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Bubble Style</Text>
+                <Text style={styles.menuItemSubtext}>Message bubble shape</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{appearance.bubbleStyle}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push({
+              pathname: '/settings/appearance/message-alignment',
+              params: { current: appearance.messageAlignment }
+            })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="swap-horizontal-outline" size={20} color="#10b981" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Message Alignment</Text>
+                <Text style={styles.menuItemSubtext}>Bubble positioning</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{appearance.messageAlignment}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Accessibility</Text>
@@ -171,14 +289,14 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={reduceMotion}
-              onValueChange={setReduceMotion}
+              value={appearance.reduceMotion}
+              onValueChange={(value) => updateAppearanceSettings({ reduceMotion: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="contrast-outline" size={20} color="#f59e0b" />
@@ -189,8 +307,44 @@ export default function AppearanceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={highContrast}
-              onValueChange={setHighContrast}
+              value={appearance.highContrast}
+              onValueChange={(value) => updateAppearanceSettings({ highContrast: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="hand-left-outline" size={20} color="#34d399" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Larger Tap Targets</Text>
+                <Text style={styles.menuItemSubtext}>Bigger buttons and controls</Text>
+              </View>
+            </View>
+            <Switch
+              value={appearance.largerTapTargets}
+              onValueChange={(value) => updateAppearanceSettings({ largerTapTargets: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="color-palette-outline" size={20} color="#ef4444" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Color Blind Mode</Text>
+                <Text style={styles.menuItemSubtext}>Adjusted color palette</Text>
+              </View>
+            </View>
+            <Switch
+              value={appearance.colorBlindMode}
+              onValueChange={(value) => updateAppearanceSettings({ colorBlindMode: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />

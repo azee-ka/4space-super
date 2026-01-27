@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet, Share, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Share, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,12 +15,14 @@ export default function SettingsScreen() {
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {
-        Alert.alert('Unable to open link', 'Please try again later.');
+        // In a real app, show a toast notification
+        console.warn('Unable to open link');
         return;
       }
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert('Unable to open link', 'Please try again later.');
+      // In a real app, show a toast notification
+      console.error('Unable to open link');
     }
   };
 
@@ -29,26 +31,13 @@ export default function SettingsScreen() {
     try {
       await Share.share({ message: `Find me on 4Space: ${link}` });
     } catch (error) {
-      Alert.alert('Share failed', 'Unable to open the share sheet.');
+      // In a real app, show a toast notification
+      console.error('Share failed');
     }
   };
 
-  const handleSignOut = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut();
-            router.replace('/login');
-          } catch (error) {
-            Alert.alert('Error', 'Failed to sign out');
-          }
-        },
-      },
-    ]);
+  const handleSignOut = () => {
+    router.push('/settings/sign-out');
   };
 
   return (

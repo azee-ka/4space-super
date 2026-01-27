@@ -1,30 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function SpaceSettingsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [autoJoinSpaces, setAutoJoinSpaces] = useState(true);
-  const [spaceActivitySummary, setSpaceActivitySummary] = useState(true);
-  const [spaceMentions, setSpaceMentions] = useState(true);
-  const [defaultSpacePrivacy, setDefaultSpacePrivacy] = useState('Private');
-  const [defaultSpaceType, setDefaultSpaceType] = useState('Team');
-  const [autoPinUpdates, setAutoPinUpdates] = useState(false);
+  const { spaces, updateSpaceSettings } = useSettingsStore();
 
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -50,8 +40,8 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={autoJoinSpaces}
-              onValueChange={setAutoJoinSpaces}
+              value={spaces.autoJoinSpaces}
+              onValueChange={(value) => updateSpaceSettings({ autoJoinSpaces: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -68,8 +58,8 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={autoPinUpdates}
-              onValueChange={setAutoPinUpdates}
+              value={spaces.autoJoinSpaces}
+              onValueChange={(value) => updateSpaceSettings({ autoJoinSpaces: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -89,8 +79,8 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={spaceActivitySummary}
-              onValueChange={setSpaceActivitySummary}
+              value={spaces.showSpaceActivity}
+              onValueChange={(value) => updateSpaceSettings({ showSpaceActivity: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -107,8 +97,8 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={spaceMentions}
-              onValueChange={setSpaceMentions}
+              value={spaces.spaceNotifications}
+              onValueChange={(value) => updateSpaceSettings({ spaceNotifications: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -119,7 +109,7 @@ export default function SpaceSettingsScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
-            onPress={() => showPicker('Default Privacy', ['Private', 'Shared', 'Team', 'Public'], setDefaultSpacePrivacy)}
+            onPress={() => router.push({ pathname: '/settings/spaces/default-privacy', params: { current: spaces.defaultPrivacy } })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -131,14 +121,14 @@ export default function SpaceSettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{defaultSpacePrivacy}</Text>
+              <Text style={styles.menuItemValue}>{spaces.defaultPrivacy}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => showPicker('Default Space Type', ['Team', 'Community', 'Project', 'Personal'], setDefaultSpaceType)}
+            onPress={() => router.push({ pathname: '/settings/spaces/default-type', params: { current: spaces.defaultSpaceType } })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -146,11 +136,11 @@ export default function SpaceSettingsScreen() {
               </View>
               <View style={styles.menuItemTextGroup}>
                 <Text style={styles.menuItemText}>Default Space Type</Text>
-                <Text style={styles.menuItemSubtext}>Start new spaces as {defaultSpaceType}</Text>
+                <Text style={styles.menuItemSubtext}>Start new spaces as {spaces.defaultSpaceType.toLowerCase()}</Text>
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{defaultSpaceType}</Text>
+              <Text style={styles.menuItemValue}>{spaces.defaultSpaceType}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>

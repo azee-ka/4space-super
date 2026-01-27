@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -32,11 +32,15 @@ const DEVICES = [
 export default function DevicesSettingsScreen() {
   const router = useRouter();
 
-  const handleLogoutDevice = (name: string) => {
-    Alert.alert('Remove Device', `Sign out from ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive' },
-    ]);
+  const handleLogoutDevice = (device: typeof DEVICES[0]) => {
+    router.push({
+      pathname: '/settings/devices/logout-device',
+      params: {
+        deviceName: device.name,
+        deviceLocation: device.location,
+        deviceLastActive: device.lastActive,
+      },
+    });
   };
 
   return (
@@ -78,7 +82,7 @@ export default function DevicesSettingsScreen() {
                     <Text style={styles.currentBadgeText}>Current</Text>
                   </View>
                 ) : (
-                  <TouchableOpacity onPress={() => handleLogoutDevice(device.name)}>
+                  <TouchableOpacity onPress={() => handleLogoutDevice(device)}>
                     <Ionicons name="log-out-outline" size={18} color="#ef4444" />
                   </TouchableOpacity>
                 )}
@@ -89,7 +93,7 @@ export default function DevicesSettingsScreen() {
 
         <Text style={styles.sectionTitle}>Security</Text>
         <View style={styles.section}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Device Alerts', 'Notification settings coming soon.')}
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/settings/devices/device-alerts')}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>

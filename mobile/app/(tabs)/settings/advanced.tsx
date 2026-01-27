@@ -1,36 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function AdvancedSettingsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [backgroundRefresh, setBackgroundRefresh] = useState(true);
-  const [autoArchive, setAutoArchive] = useState(false);
-  const [language, setLanguage] = useState('English');
-  const [developerMode, setDeveloperMode] = useState(false);
-  const [experimentalFeatures, setExperimentalFeatures] = useState(false);
-  const [proxyEnabled, setProxyEnabled] = useState(false);
-
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
+  const { advanced, updateAdvancedSettings } = useSettingsStore();
 
   const handleResetPreferences = () => {
-    Alert.alert('Reset Preferences', 'Reset all settings to their defaults?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive' },
-    ]);
+    router.push('/settings/advanced/reset-preferences');
   };
 
   return (
@@ -57,8 +43,8 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={backgroundRefresh}
-              onValueChange={setBackgroundRefresh}
+              value={advanced.backgroundRefresh}
+              onValueChange={(value) => updateAdvancedSettings({ backgroundRefresh: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -75,8 +61,8 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={autoArchive}
-              onValueChange={setAutoArchive}
+              value={advanced.autoArchive}
+              onValueChange={(value) => updateAdvancedSettings({ autoArchive: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -87,7 +73,7 @@ export default function AdvancedSettingsScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
-            onPress={() => showPicker('Language', ['English', 'Spanish', 'French', 'Hindi'], setLanguage)}
+            onPress={() => router.push({ pathname: '/settings/advanced/language', params: { current: advanced.language } })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -99,7 +85,7 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{language}</Text>
+              <Text style={styles.menuItemValue}>{advanced.language}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
@@ -115,8 +101,8 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={proxyEnabled}
-              onValueChange={setProxyEnabled}
+              value={advanced.proxyEnabled}
+              onValueChange={(value) => updateAdvancedSettings({ proxyEnabled: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -136,8 +122,8 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={developerMode}
-              onValueChange={setDeveloperMode}
+              value={advanced.developerMode}
+              onValueChange={(value) => updateAdvancedSettings({ developerMode: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -154,8 +140,8 @@ export default function AdvancedSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={experimentalFeatures}
-              onValueChange={setExperimentalFeatures}
+              value={advanced.experimentalFeatures}
+              onValueChange={(value) => updateAdvancedSettings({ experimentalFeatures: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />

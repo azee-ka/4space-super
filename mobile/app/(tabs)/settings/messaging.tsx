@@ -1,35 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function MessagingSettingsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [readReceipts, setReadReceipts] = useState(true);
-  const [typingIndicators, setTypingIndicators] = useState(true);
-  const [linkPreviews, setLinkPreviews] = useState(true);
-  const [messageRequests, setMessageRequests] = useState(true);
-  const [smartReplies, setSmartReplies] = useState(false);
-  const [autoDelete, setAutoDelete] = useState('Off');
-  const [chatFolders, setChatFolders] = useState(true);
-  const [archiveInactive, setArchiveInactive] = useState(false);
-  const [translateMessages, setTranslateMessages] = useState(false);
-  const [stickerSuggestions, setStickerSuggestions] = useState(true);
-  const [sendWithEnter, setSendWithEnter] = useState(false);
+  const { messaging, updateMessagingSettings } = useSettingsStore();
 
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -55,8 +40,8 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={readReceipts}
-              onValueChange={setReadReceipts}
+              value={messaging.readReceipts}
+              onValueChange={(value) => updateMessagingSettings({ readReceipts: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -73,8 +58,8 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={typingIndicators}
-              onValueChange={setTypingIndicators}
+              value={messaging.typingIndicators}
+              onValueChange={(value) => updateMessagingSettings({ typingIndicators: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -91,8 +76,83 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={linkPreviews}
-              onValueChange={setLinkPreviews}
+              value={messaging.linkPreviews}
+              onValueChange={(value) => updateMessagingSettings({ linkPreviews: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Media Playback</Text>
+        <View style={styles.section}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="gif-outline" size={20} color="#f472b6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Auto-Play GIFs</Text>
+                <Text style={styles.menuItemSubtext}>Play GIFs automatically</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.autoPlayGifs}
+              onValueChange={(value) => updateMessagingSettings({ autoPlayGifs: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="play-circle-outline" size={20} color="#ef4444" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Auto-Play Videos</Text>
+                <Text style={styles.menuItemSubtext}>Play videos automatically</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.autoPlayVideos}
+              onValueChange={(value) => updateMessagingSettings({ autoPlayVideos: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="cloud-download-outline" size={20} color="#22d3ee" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Auto-Download Media</Text>
+                <Text style={styles.menuItemSubtext}>Save media automatically</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.autoDownloadMedia}
+              onValueChange={(value) => updateMessagingSettings({ autoDownloadMedia: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="wifi-outline" size={20} color="#10b981" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Download Over Wi-Fi</Text>
+                <Text style={styles.menuItemSubtext}>Only download on Wi-Fi</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.autoDownloadOverWifi}
+              onValueChange={(value) => updateMessagingSettings({ autoDownloadOverWifi: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -112,8 +172,8 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={messageRequests}
-              onValueChange={setMessageRequests}
+              value={messaging.messageRequests}
+              onValueChange={(value) => updateMessagingSettings({ messageRequests: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -121,7 +181,10 @@ export default function MessagingSettingsScreen() {
 
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
-            onPress={() => showPicker('Auto-Delete Messages', ['Off', '24 hours', '7 days', '30 days'], setAutoDelete)}
+            onPress={() => router.push({
+              pathname: '/settings/messaging/auto-delete',
+              params: { current: messaging.autoDelete }
+            })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -129,11 +192,11 @@ export default function MessagingSettingsScreen() {
               </View>
               <View style={styles.menuItemTextGroup}>
                 <Text style={styles.menuItemText}>Auto-Delete</Text>
-                <Text style={styles.menuItemSubtext}>Auto-clear chats after {autoDelete}</Text>
+                <Text style={styles.menuItemSubtext}>Auto-clear chats after {messaging.autoDelete}</Text>
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{autoDelete}</Text>
+              <Text style={styles.menuItemValue}>{messaging.autoDelete}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
@@ -149,14 +212,14 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={chatFolders}
-              onValueChange={setChatFolders}
+              value={messaging.chatFolders}
+              onValueChange={(value) => updateMessagingSettings({ chatFolders: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="archive-outline" size={20} color="#f472b6" />
@@ -167,8 +230,62 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={archiveInactive}
-              onValueChange={setArchiveInactive}
+              value={messaging.archiveInactive}
+              onValueChange={(value) => updateMessagingSettings({ archiveInactive: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="arrow-redo-outline" size={20} color="#8b5cf6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Message Forwarding</Text>
+                <Text style={styles.menuItemSubtext}>Allow forwarding messages</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.messageForwarding}
+              onValueChange={(value) => updateMessagingSettings({ messageForwarding: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="push-outline" size={20} color="#f59e0b" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Message Pinning</Text>
+                <Text style={styles.menuItemSubtext}>Pin important messages</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.messagePinning}
+              onValueChange={(value) => updateMessagingSettings({ messagePinning: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="star-outline" size={20} color="#fbbf24" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Starred Messages</Text>
+                <Text style={styles.menuItemSubtext}>Save messages to favorites</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.starredMessages}
+              onValueChange={(value) => updateMessagingSettings({ starredMessages: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -188,8 +305,8 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={smartReplies}
-              onValueChange={setSmartReplies}
+              value={messaging.smartReplies}
+              onValueChange={(value) => updateMessagingSettings({ smartReplies: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -206,14 +323,14 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={translateMessages}
-              onValueChange={setTranslateMessages}
+              value={messaging.translateMessages}
+              onValueChange={(value) => updateMessagingSettings({ translateMessages: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="happy-outline" size={20} color="#22d3ee" />
@@ -224,17 +341,71 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={stickerSuggestions}
-              onValueChange={setStickerSuggestions}
+              value={messaging.stickerSuggestions}
+              onValueChange={(value) => updateMessagingSettings({ stickerSuggestions: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="happy-outline" size={20} color="#fbbf24" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Emoji Suggestions</Text>
+                <Text style={styles.menuItemSubtext}>Suggest emojis while typing</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.emojiSuggestions}
+              onValueChange={(value) => updateMessagingSettings({ emojiSuggestions: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="search-outline" size={20} color="#f472b6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>GIF Search</Text>
+                <Text style={styles.menuItemSubtext}>Enable GIF picker</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.gifSearch}
+              onValueChange={(value) => updateMessagingSettings({ gifSearch: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="mic-outline" size={20} color="#ef4444" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Voice Messages</Text>
+                <Text style={styles.menuItemSubtext}>Send audio recordings</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.voiceMessages}
+              onValueChange={(value) => updateMessagingSettings({ voiceMessages: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Input</Text>
+        <Text style={styles.sectionTitle}>Input & Formatting</Text>
         <View style={styles.section}>
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="return-down-forward-outline" size={20} color="#10b981" />
@@ -245,8 +416,102 @@ export default function MessagingSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={sendWithEnter}
-              onValueChange={setSendWithEnter}
+              value={messaging.sendWithEnter}
+              onValueChange={(value) => updateMessagingSettings({ sendWithEnter: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="checkmark-done-outline" size={20} color="#3b82f6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Spell Check</Text>
+                <Text style={styles.menuItemSubtext}>Check spelling as you type</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.spellCheck}
+              onValueChange={(value) => updateMessagingSettings({ spellCheck: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="create-outline" size={20} color="#8b5cf6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Auto-Correct</Text>
+                <Text style={styles.menuItemSubtext}>Fix typos automatically</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.autoCorrect}
+              onValueChange={(value) => updateMessagingSettings({ autoCorrect: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({
+              pathname: '/settings/messaging/formatting',
+              params: { current: messaging.messageFormatting }
+            })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="text-outline" size={20} color="#f59e0b" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Message Formatting</Text>
+                <Text style={styles.menuItemSubtext}>Text formatting style</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{messaging.messageFormatting}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="code-slash-outline" size={20} color="#22d3ee" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Code Block Support</Text>
+                <Text style={styles.menuItemSubtext}>Format code snippets</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.codeBlockSupport}
+              onValueChange={(value) => updateMessagingSettings({ codeBlockSupport: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="at-outline" size={20} color="#ec4899" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Mention Suggestions</Text>
+                <Text style={styles.menuItemSubtext}>Suggest user mentions</Text>
+              </View>
+            </View>
+            <Switch
+              value={messaging.mentionSuggestions}
+              onValueChange={(value) => updateMessagingSettings({ mentionSuggestions: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />

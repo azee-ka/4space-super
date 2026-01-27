@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,7 @@ import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
 import { PrivacyVisibility, usePrivacyStore } from '../../../src/store/privacyStore';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function PrivacySettingsScreen() {
   const router = useRouter();
@@ -20,13 +21,8 @@ export default function PrivacySettingsScreen() {
     setLastSeenVisibility,
     setOnlineVisibility,
   } = usePrivacyStore();
-  const [discoverable, setDiscoverable] = React.useState(true);
-  const [analyticsSharing, setAnalyticsSharing] = React.useState(false);
-  const [appLock, setAppLock] = React.useState(false);
-  const [twoFactor, setTwoFactor] = React.useState(false);
-  const [loginAlerts, setLoginAlerts] = React.useState(true);
-  const [sessionTimeout, setSessionTimeout] = React.useState('30 min');
-  const [screenshotsAllowed, setScreenshotsAllowed] = React.useState(true);
+
+  const { privacy, updatePrivacySettings } = useSettingsStore();
 
   const privacyOptions: Array<{ label: string; value: PrivacyVisibility }> = [
     { label: 'Everyone', value: 'everyone' },
@@ -48,26 +44,7 @@ export default function PrivacySettingsScreen() {
     }
   };
 
-  const showPrivacyPicker = (
-    title: string,
-    current: PrivacyVisibility,
-    setter: (value: PrivacyVisibility) => void
-  ) => {
-    Alert.alert(title, '', [
-      ...privacyOptions.map((option) => ({
-        text: option.label,
-        onPress: () => setter(option.value),
-      })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -82,7 +59,10 @@ export default function PrivacySettingsScreen() {
 
         <Text style={styles.sectionTitle}>Privacy</Text>
         <View style={styles.section}>
-          <View style={[styles.menuItem, styles.menuItemBorder]}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push('/settings/privacy/last-seen')}
+          >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="eye-outline" size={20} color="#22d3ee" />
@@ -92,15 +72,16 @@ export default function PrivacySettingsScreen() {
                 <Text style={styles.menuItemSubtext}>Who can see your last seen</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.valueChip}
-              onPress={() => showPrivacyPicker('Last seen', lastSeenVisibility, setLastSeenVisibility)}
-            >
-              <Text style={styles.valueText}>{formatVisibility(lastSeenVisibility)}</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{formatVisibility(lastSeenVisibility)}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
 
-          <View style={[styles.menuItem, styles.menuItemBorder]}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push('/settings/privacy/online-status')}
+          >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="radio-outline" size={20} color="#22c55e" />
@@ -110,13 +91,11 @@ export default function PrivacySettingsScreen() {
                 <Text style={styles.menuItemSubtext}>Who can see when you are online</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.valueChip}
-              onPress={() => showPrivacyPicker('Online status', onlineVisibility, setOnlineVisibility)}
-            >
-              <Text style={styles.valueText}>{formatVisibility(onlineVisibility)}</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{formatVisibility(onlineVisibility)}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
 
           <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
@@ -132,7 +111,7 @@ export default function PrivacySettingsScreen() {
             </View>
             <TouchableOpacity
               style={styles.valueChip}
-              onPress={() => Alert.alert('Coming soon', 'Exclude contacts from seeing your status.')}
+              onPress={() => router.push('/settings/privacy/excluded-contacts')}
             >
               <Text style={styles.valueText}>Manage</Text>
             </TouchableOpacity>
@@ -152,14 +131,14 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={discoverable}
-              onValueChange={setDiscoverable}
+              value={privacy.discoverable}
+              onValueChange={(value) => updatePrivacySettings({ discoverable: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="analytics-outline" size={20} color="#a855f7" />
@@ -170,8 +149,26 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={analyticsSharing}
-              onValueChange={setAnalyticsSharing}
+              value={privacy.analyticsSharing}
+              onValueChange={(value) => updatePrivacySettings({ analyticsSharing: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="bug-outline" size={20} color="#ef4444" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Crash Reporting</Text>
+                <Text style={styles.menuItemSubtext}>Send crash data for debugging</Text>
+              </View>
+            </View>
+            <Switch
+              value={privacy.crashReporting}
+              onValueChange={(value) => updatePrivacySettings({ crashReporting: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -191,8 +188,8 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={appLock}
-              onValueChange={setAppLock}
+              value={privacy.appLock}
+              onValueChange={(value) => updatePrivacySettings({ appLock: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -209,8 +206,8 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={twoFactor}
-              onValueChange={setTwoFactor}
+              value={privacy.twoFactor}
+              onValueChange={(value) => updatePrivacySettings({ twoFactor: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -227,16 +224,19 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={loginAlerts}
-              onValueChange={setLoginAlerts}
+              value={privacy.loginAlerts}
+              onValueChange={(value) => updatePrivacySettings({ loginAlerts: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
           <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => showPicker('Session Timeout', ['15 min', '30 min', '1 hour', 'Never'], setSessionTimeout)}
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({
+              pathname: '/settings/privacy/session-timeout',
+              params: { current: privacy.sessionTimeout }
+            })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -248,10 +248,28 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{sessionTimeout}</Text>
+              <Text style={styles.menuItemValue}>{privacy.sessionTimeout}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="finger-print-outline" size={20} color="#10b981" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Biometric Auth</Text>
+                <Text style={styles.menuItemSubtext}>Use Face ID or Touch ID</Text>
+              </View>
+            </View>
+            <Switch
+              value={privacy.biometricAuth}
+              onValueChange={(value) => updatePrivacySettings({ biometricAuth: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>Content</Text>
@@ -267,8 +285,62 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={screenshotsAllowed}
-              onValueChange={setScreenshotsAllowed}
+              value={privacy.screenshotsAllowed}
+              onValueChange={(value) => updatePrivacySettings({ screenshotsAllowed: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="checkmark-done-outline" size={20} color="#8b5cf6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Read Receipts Privacy</Text>
+                <Text style={styles.menuItemSubtext}>Hide when you read messages</Text>
+              </View>
+            </View>
+            <Switch
+              value={privacy.readReceiptsPrivacy}
+              onValueChange={(value) => updatePrivacySettings({ readReceiptsPrivacy: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="eye-off-outline" size={20} color="#f59e0b" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Hide Online Status</Text>
+                <Text style={styles.menuItemSubtext}>Appear offline to everyone</Text>
+              </View>
+            </View>
+            <Switch
+              value={privacy.hideOnlineStatus}
+              onValueChange={(value) => updatePrivacySettings({ hideOnlineStatus: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="glasses-outline" size={20} color="#6366f1" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Incognito Mode</Text>
+                <Text style={styles.menuItemSubtext}>Browse without leaving traces</Text>
+              </View>
+            </View>
+            <Switch
+              value={privacy.incognitoMode}
+              onValueChange={(value) => updatePrivacySettings({ incognitoMode: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -276,7 +348,7 @@ export default function PrivacySettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => Alert.alert('Blocked Users', 'Manage blocked users coming soon.')}
+            onPress={() => router.push('/settings/privacy/blocked-users')}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>

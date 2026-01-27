@@ -1,39 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
 import { theme } from '../../../src/styles/theme';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function StorageSettingsScreen() {
   const router = useRouter();
   const { accentColor } = useThemeStore();
   const accentHex = getAccentColorHex(accentColor);
 
-  const [autoPlayMedia, setAutoPlayMedia] = useState(true);
-  const [autoDownloadMedia, setAutoDownloadMedia] = useState(false);
-  const [highQualityUploads, setHighQualityUploads] = useState(true);
-  const [backupMode, setBackupMode] = useState('Wi-Fi only');
-  const [dataSaver, setDataSaver] = useState(false);
+  const { storage, updateStorageSettings } = useSettingsStore();
 
   const storageUsed = 3.4;
   const storageTotal = 10;
   const storagePercent = Math.min(100, Math.round((storageUsed / storageTotal) * 100));
 
-  const showPicker = (title: string, options: string[], setter: (value: string) => void) => {
-    Alert.alert(title, '', [
-      ...options.map((option) => ({ text: option, onPress: () => setter(option) })),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   const handleClearCache = () => {
-    Alert.alert('Clear Cache', 'Clear cached media and temporary files?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive' },
-    ]);
+    router.push('/settings/storage/clear-cache');
   };
 
   return (
@@ -60,8 +47,8 @@ export default function StorageSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={autoPlayMedia}
-              onValueChange={setAutoPlayMedia}
+              value={storage.autoPlayMedia}
+              onValueChange={(value) => updateStorageSettings({ autoPlayMedia: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
@@ -78,14 +65,52 @@ export default function StorageSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={autoDownloadMedia}
-              onValueChange={setAutoDownloadMedia}
+              value={storage.autoDownloadMedia}
+              onValueChange={(value) => updateStorageSettings({ autoDownloadMedia: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
 
-          <View style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({ pathname: '/settings/storage/media-quality', params: { current: storage.mediaQuality } })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="image-outline" size={20} color="#f472b6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Media Quality</Text>
+                <Text style={styles.menuItemSubtext}>Photo and video quality</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{storage.mediaQuality}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => router.push({ pathname: '/settings/storage/download-over', params: { current: storage.downloadOver } })}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="wifi-outline" size={20} color="#22d3ee" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Download Over</Text>
+                <Text style={styles.menuItemSubtext}>Network preference for downloads</Text>
+              </View>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{storage.downloadOver}</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
                 <Ionicons name="sparkles-outline" size={20} color="#f59e0b" />
@@ -96,19 +121,37 @@ export default function StorageSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={highQualityUploads}
-              onValueChange={setHighQualityUploads}
+              value={storage.highQualityUploads}
+              onValueChange={(value) => updateStorageSettings({ highQualityUploads: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="contract-outline" size={20} color="#8b5cf6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Compress Uploads</Text>
+                <Text style={styles.menuItemSubtext}>Reduce file size for faster uploads</Text>
+              </View>
+            </View>
+            <Switch
+              value={storage.compressUploads}
+              onValueChange={(value) => updateStorageSettings({ compressUploads: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Network</Text>
+        <Text style={styles.sectionTitle}>Network & Backup</Text>
         <View style={styles.section}>
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
-            onPress={() => showPicker('Backup Mode', ['Wi-Fi only', 'Wi-Fi + Cellular', 'Off'], setBackupMode)}
+            onPress={() => router.push({ pathname: '/settings/storage/backup-mode', params: { current: storage.backupMode } })}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.iconContainer}>
@@ -120,10 +163,28 @@ export default function StorageSettingsScreen() {
               </View>
             </View>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemValue}>{backupMode}</Text>
+              <Text style={styles.menuItemValue}>{storage.backupMode}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
             </View>
           </TouchableOpacity>
+
+          <View style={[styles.menuItem, styles.menuItemBorder]}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="cloud-upload-outline" size={20} color="#3b82f6" />
+              </View>
+              <View style={styles.menuItemTextGroup}>
+                <Text style={styles.menuItemText}>Auto Backup</Text>
+                <Text style={styles.menuItemSubtext}>Automatically backup chats</Text>
+              </View>
+            </View>
+            <Switch
+              value={storage.autoBackup}
+              onValueChange={(value) => updateStorageSettings({ autoBackup: value })}
+              trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
 
           <View style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
@@ -136,8 +197,8 @@ export default function StorageSettingsScreen() {
               </View>
             </View>
             <Switch
-              value={dataSaver}
-              onValueChange={setDataSaver}
+              value={storage.dataSaver}
+              onValueChange={(value) => updateStorageSettings({ dataSaver: value })}
               trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
               thumbColor={theme.colors.white}
             />
