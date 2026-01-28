@@ -1,12 +1,14 @@
 export const theme = {
   colors: {
     base: '#000000',
+    background: '#05060a',
     surface: '#0b0b0b',
     surfaceElevated: '#111111',
     surfaceGlass: '#0b0b0b',
     surfaceSubtle: '#141414',
     border: '#1f1f1f',
     borderStrong: '#2a2a2a',
+    text: '#f4f4f5',
     textPrimary: '#f4f4f5',
     textMuted: '#a1a1aa',
     textSubtle: '#71717a',
