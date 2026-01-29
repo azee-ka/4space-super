@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,6 +111,15 @@ const resolveSpaceColor = (space: Space, index: number) => {
     if (match) return match[0];
   }
   return COLOR_OPTIONS[index % COLOR_OPTIONS.length];
+};
+
+const formatRelativeDate = (dateString?: string) => {
+  if (!dateString) return 'No recent activity';
+  const diff = Date.now() - new Date(dateString).getTime();
+  if (diff < 1000 * 60 * 60) return 'Updated within the hour';
+  if (diff < 1000 * 60 * 60 * 24) return 'Updated today';
+  if (diff < 1000 * 60 * 60 * 24 * 3) return 'Updated in the last 3 days';
+  return `Updated ${new Date(dateString).toLocaleDateString()}`;
 };
 
 export default function SpacesScreen() {
@@ -251,6 +259,12 @@ export default function SpacesScreen() {
               />
             </TouchableOpacity>
             <TouchableOpacity
+              style={styles.insightsButton}
+              onPress={() => router.push('/spaces/insights')}
+            >
+              <Ionicons name="analytics-outline" size={18} color={theme.colors.textSubtle} />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.createButton, { backgroundColor: accentHex }]}
               onPress={() => setShowTemplates(true)}
             >
@@ -260,26 +274,36 @@ export default function SpacesScreen() {
         </View>
 
         {/* Stats */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
-          <View style={styles.statsRow}>
-            <View style={[styles.statCard, { borderLeftWidth: 3, borderLeftColor: accentHex }]}>
-              <Text style={styles.statValue}>{stats.total}</Text>
-              <Text style={styles.statLabel}>Total Spaces</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statCardMini, { borderColor: accentHex }]}>
+            <Text style={styles.statValue}>{stats.total}</Text>
+            <Text style={styles.statLabel}>Spaces</Text>
+          </View>
+          <View style={[styles.statCardMini, { borderColor: '#3b82f6' }]}>
+            <Text style={styles.statValue}>{stats.privateCount}</Text>
+            <Text style={styles.statLabel}>Private</Text>
+          </View>
+          <View style={[styles.statCardMini, { borderColor: '#10b981' }]}>
+            <Text style={styles.statValue}>{stats.teamCount}</Text>
+            <Text style={styles.statLabel}>Team</Text>
+          </View>
+          <View style={[styles.statCardMini, { borderColor: '#f59e0b' }]}>
+            <Text style={styles.statValue}>{stats.shared}</Text>
+            <Text style={styles.statLabel}>Shared</Text>
+          </View>
+        </View>
+
+          <View style={styles.miniFeatureRow}>
+            <View style={styles.miniFeature}>
+              <Text style={styles.miniFeatureText}>AI metrics + highlights</Text>
             </View>
-            <View style={[styles.statCard, { borderLeftWidth: 3, borderLeftColor: '#3b82f6' }]}>
-              <Text style={styles.statValue}>{stats.privateCount}</Text>
-              <Text style={styles.statLabel}>Private</Text>
+            <View style={styles.miniFeature}>
+              <Text style={styles.miniFeatureText}>Auto privacy checks</Text>
             </View>
-            <View style={[styles.statCard, { borderLeftWidth: 3, borderLeftColor: '#10b981' }]}>
-              <Text style={styles.statValue}>{stats.teamCount}</Text>
-              <Text style={styles.statLabel}>Team</Text>
-            </View>
-            <View style={[styles.statCard, { borderLeftWidth: 3, borderLeftColor: '#f59e0b' }]}>
-              <Text style={styles.statValue}>{stats.shared}</Text>
-              <Text style={styles.statLabel}>Shared</Text>
+            <View style={styles.miniFeature}>
+              <Text style={styles.miniFeatureText}>Live activity feed</Text>
             </View>
           </View>
-        </ScrollView>
 
         {/* Search */}
         <View style={styles.searchRow}>
@@ -365,22 +389,31 @@ export default function SpacesScreen() {
                       <Ionicons name={iconName as any} size={24} color={theme.colors.base} />
                     </View>
                     <Text style={styles.spaceGridName} numberOfLines={2}>{space.name}</Text>
-                    <View style={styles.spaceGridMeta}>
-                      <View style={styles.spaceGridMetaItem}>
-                        <Ionicons name="people-outline" size={11} color={theme.colors.textSubtle} />
-                        <Text style={styles.spaceGridMetaText}>
-                          {(space.members_count ?? space.member_count ?? 0)}
-                        </Text>
-                      </View>
-                      {privacyOption && (
-                        <View style={styles.spaceGridMetaItem}>
-                          <Ionicons name={privacyOption.icon as any} size={11} color={theme.colors.textSubtle} />
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              }
+            <View style={styles.spaceGridMeta}>
+              <View style={styles.spaceGridMetaItem}>
+                <Ionicons name="people-outline" size={11} color={theme.colors.textSubtle} />
+                <Text style={styles.spaceGridMetaText}>
+                  {(space.members_count ?? space.member_count ?? 0)} members
+                </Text>
+              </View>
+              {privacyOption && (
+                <View style={styles.spaceGridMetaItem}>
+                  <Ionicons name={privacyOption.icon as any} size={11} color={theme.colors.textSubtle} />
+                  <Text style={styles.spaceGridMetaText}>{privacyOption.label}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.spaceFeatureRow}>
+              <View style={styles.featureChip}>
+                <Text style={styles.featureLabel}>{space.type ?? 'workspace'}</Text>
+              </View>
+              <View style={styles.featureChip}>
+                <Text style={styles.featureLabel}>{space.privacy}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        );
+      }
 
               return (
                 <TouchableOpacity
@@ -392,28 +425,40 @@ export default function SpacesScreen() {
                     <Ionicons name={iconName as any} size={18} color={theme.colors.base} />
                   </View>
                   <View style={styles.spaceContent}>
-                    <Text style={styles.spaceName}>{space.name}</Text>
-                    <Text style={styles.spaceDescription} numberOfLines={1}>
-                      {space.description || 'No description'}
-                    </Text>
-                    <View style={styles.spaceMeta}>
+                  <Text style={styles.spaceName}>{space.name}</Text>
+                  <Text style={styles.spaceDescription} numberOfLines={2}>
+                    {space.description || 'No description yet'}
+                  </Text>
+                  <View style={styles.spaceMeta}>
+                    <View style={styles.spaceMetaItem}>
+                      <Ionicons name="people-outline" size={12} color={theme.colors.textSubtle} />
+                      <Text style={styles.spaceMetaText}>
+                        {(space.members_count ?? space.member_count ?? 0)} members
+                      </Text>
+                    </View>
+                    <View style={styles.spaceMetaItem}>
+                      <Ionicons name="time-outline" size={12} color={theme.colors.textSubtle} />
+                      <Text style={styles.spaceMetaText}>{formatRelativeDate(space.updated_at)}</Text>
+                    </View>
+                    {privacyOption && (
                       <View style={styles.spaceMetaItem}>
-                        <Ionicons name="people-outline" size={12} color={theme.colors.textSubtle} />
-                        <Text style={styles.spaceMetaText}>
-                          {(space.members_count ?? space.member_count ?? 0)} members
-                        </Text>
+                        <Ionicons name={privacyOption.icon as any} size={12} color={theme.colors.textSubtle} />
+                        <Text style={styles.spaceMetaText}>{privacyOption.label}</Text>
                       </View>
-                      {privacyOption && (
-                        <View style={styles.spaceMetaItem}>
-                          <Ionicons name={privacyOption.icon as any} size={12} color={theme.colors.textSubtle} />
-                          <Text style={styles.spaceMetaText}>{privacyOption.label}</Text>
-                        </View>
-                      )}
+                    )}
+                  </View>
+                  <View style={styles.spaceFeatureRow}>
+                    <View style={styles.featureChip}>
+                      <Text style={styles.featureLabel}>{space.type ?? 'workspace'}</Text>
+                    </View>
+                    <View style={styles.featureChip}>
+                      <Text style={styles.featureLabel}>{space.privacy}</Text>
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textSubtle} />
-                </TouchableOpacity>
-              );
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+            );
             })}
           </View>
         )}
@@ -589,6 +634,7 @@ export default function SpacesScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
     </SafeAreaView>
   );
 }
@@ -606,7 +652,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingTop: 4,
   },
   headerLeft: {
     flex: 1,
@@ -616,16 +663,24 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.colors.textSubtle,
-    marginTop: 4,
+    marginTop: 2,
   },
   viewModeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
+  insightsButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
@@ -640,18 +695,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statsScroll: {
-    marginBottom: 16,
-  },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+    marginBottom: 8,
   },
   statCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    minWidth: 110,
+    backgroundColor: theme.colors.background,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    minWidth: 120,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+  },
+  statCardMini: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minWidth: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
   },
   statValue: {
     fontSize: 20,
@@ -699,6 +766,25 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     fontWeight: '600',
   },
+  miniFeatureRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  miniFeature: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.surface,
+  },
+  miniFeatureText: {
+    fontSize: 11,
+    color: theme.colors.textSubtle,
+    fontWeight: '600',
+  },
   spaceList: {
     gap: 10,
   },
@@ -742,6 +828,23 @@ const styles = StyleSheet.create({
   spaceGridMetaText: {
     fontSize: 11,
     color: theme.colors.textSubtle,
+  },
+  spaceFeatureRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 10,
+  },
+  featureChip: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  featureLabel: {
+    fontSize: 11,
+    color: theme.colors.textSubtle,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   spaceRow: {
     flexDirection: 'row',
