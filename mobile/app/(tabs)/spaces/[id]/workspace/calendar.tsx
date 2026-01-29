@@ -268,15 +268,20 @@ export default function CalendarWorkspace() {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 160,
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: theme.colors.background,
+      borderBottomWidth: 0,
     },
     backButton: {
       padding: 8,
@@ -291,52 +296,51 @@ export default function CalendarWorkspace() {
     },
     statsRow: {
       flexDirection: 'row',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      gap: 12,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 0,
+      marginBottom: 4,
     },
     statCard: {
       flex: 1,
       backgroundColor: theme.colors.background,
-      borderRadius: 12,
-      padding: 12,
+      borderRadius: 14,
+      paddingVertical: 6,
+      paddingHorizontal: 8,
       alignItems: 'center',
+      justifyContent: 'center',
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: theme.colors.divider,
     },
     statNumber: {
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: '700',
       color: theme.colors.text,
-      marginBottom: 4,
+      marginBottom: 2,
     },
     statLabel: {
-      fontSize: 12,
+      fontSize: 11,
       color: theme.colors.textSubtle,
+      letterSpacing: 0.2,
     },
     viewToggle: {
       flexDirection: 'row',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 6,
       gap: 8,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
     },
     viewButton: {
       flex: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      backgroundColor: theme.colors.background,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      backgroundColor: theme.colors.panel,
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     viewButtonActive: {
-      backgroundColor: accentColorHex + '15',
-      borderColor: accentColorHex,
+      backgroundColor: accentColorHex + '20',
     },
     viewButtonText: {
       fontSize: 14,
@@ -347,11 +351,10 @@ export default function CalendarWorkspace() {
       color: accentColorHex,
     },
     calendarContainer: {
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+      borderBottomWidth: 0,
     },
-    monthNavigation: {
+      monthNavigation: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -394,13 +397,13 @@ export default function CalendarWorkspace() {
       aspectRatio: 1,
       padding: 4,
     },
-    dayCellButton: {
-      flex: 1,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.background,
-    },
+      dayCellButton: {
+        flex: 1,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.background,
+      },
     dayCellSelected: {
       backgroundColor: accentColorHex + '20',
       borderWidth: 2,
@@ -431,24 +434,21 @@ export default function CalendarWorkspace() {
       paddingHorizontal: 20,
       paddingVertical: 12,
       gap: 8,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
+      backgroundColor: 'transparent',
     },
     filterButton: {
       paddingVertical: 8,
       paddingHorizontal: 16,
       borderRadius: 20,
       backgroundColor: theme.colors.background,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      borderWidth: 1,
+      borderColor: theme.colors.divider,
     },
     filterButtonActive: {
-      backgroundColor: accentColorHex + '15',
-      borderColor: accentColorHex,
+      backgroundColor: accentColorHex + '20',
     },
     filterButtonText: {
       fontSize: 13,
@@ -458,19 +458,18 @@ export default function CalendarWorkspace() {
     filterButtonTextActive: {
       color: accentColorHex,
     },
-    eventsScroll: {
-      flex: 1,
-    },
     eventsContainer: {
       padding: 20,
       gap: 12,
     },
     eventCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
+      backgroundColor: theme.colors.background,
+      borderRadius: 16,
       padding: 16,
       borderLeftWidth: 4,
       gap: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.divider,
     },
     eventHeader: {
       flexDirection: 'row',
@@ -497,7 +496,8 @@ export default function CalendarWorkspace() {
       gap: 4,
       paddingVertical: 4,
       paddingHorizontal: 8,
-      borderRadius: 6,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.08)',
     },
     categoryText: {
       fontSize: 11,
@@ -523,12 +523,11 @@ export default function CalendarWorkspace() {
       flexWrap: 'wrap',
     },
     attendeeBadge: {
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.surface,
       paddingVertical: 4,
       paddingHorizontal: 8,
       borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     attendeeText: {
       fontSize: 11,
@@ -541,7 +540,7 @@ export default function CalendarWorkspace() {
       justifyContent: 'flex-end',
     },
     modalContent: {
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.card,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       maxHeight: '80%',
@@ -653,6 +652,11 @@ export default function CalendarWorkspace() {
         </TouchableOpacity>
       </View>
 
+    <ScrollView
+      style={styles.content}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Stats Row */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -759,74 +763,72 @@ export default function CalendarWorkspace() {
           </View>
 
           {/* Events for Selected Date */}
-          <ScrollView style={styles.eventsScroll}>
-            <View style={styles.eventsContainer}>
-              <Text style={styles.modalSectionTitle}>
-                Events on {MONTHS[currentMonth]} {selectedDate}, {currentYear}
-              </Text>
-              {getEventsForDate(selectedDate).length > 0 ? (
-                getEventsForDate(selectedDate).map(event => (
-                  <TouchableOpacity
-                    key={event.id}
-                    style={[styles.eventCard, { borderLeftColor: event.color }]}
-                    onPress={() => {
-                      setSelectedEvent(event);
-                      setShowEventModal(true);
-                    }}
-                  >
-                    <View style={styles.eventHeader}>
-                      <View style={styles.eventHeaderLeft}>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
-                        <Text style={styles.eventDescription}>{event.description}</Text>
-                      </View>
-                      <View style={[styles.categoryBadge, { backgroundColor: event.color + '20' }]}>
-                        <Ionicons
-                          name={CATEGORIES.find(c => c.id === event.category)?.icon as any || 'calendar'}
-                          size={12}
-                          color={event.color}
-                        />
-                        <Text style={[styles.categoryText, { color: event.color }]}>
-                          {CATEGORIES.find(c => c.id === event.category)?.name}
-                        </Text>
-                      </View>
+          <View style={styles.eventsContainer}>
+            <Text style={styles.modalSectionTitle}>
+              Events on {MONTHS[currentMonth]} {selectedDate}, {currentYear}
+            </Text>
+            {getEventsForDate(selectedDate).length > 0 ? (
+              getEventsForDate(selectedDate).map(event => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={[styles.eventCard, { borderLeftColor: event.color }]}
+                  onPress={() => {
+                    setSelectedEvent(event);
+                    setShowEventModal(true);
+                  }}
+                >
+                  <View style={styles.eventHeader}>
+                    <View style={styles.eventHeaderLeft}>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <Text style={styles.eventDescription}>{event.description}</Text>
                     </View>
-                    <View style={styles.eventDetails}>
+                    <View style={[styles.categoryBadge, { backgroundColor: event.color + '20' }]}>
+                      <Ionicons
+                        name={CATEGORIES.find(c => c.id === event.category)?.icon as any || 'calendar'}
+                        size={12}
+                        color={event.color}
+                      />
+                      <Text style={[styles.categoryText, { color: event.color }]}>
+                        {CATEGORIES.find(c => c.id === event.category)?.name}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <View style={styles.eventDetailRow}>
+                      <Ionicons name="time-outline" size={16} color={theme.colors.textSubtle} />
+                      <Text style={styles.eventDetailText}>
+                        {event.time} · {event.duration}
+                      </Text>
+                    </View>
+                    {event.location && (
                       <View style={styles.eventDetailRow}>
-                        <Ionicons name="time-outline" size={16} color={theme.colors.textSubtle} />
-                        <Text style={styles.eventDetailText}>
-                          {event.time} · {event.duration}
-                        </Text>
+                        <Ionicons name="location-outline" size={16} color={theme.colors.textSubtle} />
+                        <Text style={styles.eventDetailText}>{event.location}</Text>
                       </View>
-                      {event.location && (
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="location-outline" size={16} color={theme.colors.textSubtle} />
-                          <Text style={styles.eventDetailText}>{event.location}</Text>
+                    )}
+                    {event.attendees.length > 0 && (
+                      <View style={styles.eventDetailRow}>
+                        <Ionicons name="people-outline" size={16} color={theme.colors.textSubtle} />
+                        <View style={styles.attendeesRow}>
+                          {event.attendees.map((attendee, idx) => (
+                            <View key={idx} style={styles.attendeeBadge}>
+                              <Text style={styles.attendeeText}>{attendee}</Text>
+                            </View>
+                          ))}
                         </View>
-                      )}
-                      {event.attendees.length > 0 && (
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="people-outline" size={16} color={theme.colors.textSubtle} />
-                          <View style={styles.attendeesRow}>
-                            {event.attendees.map((attendee, idx) => (
-                              <View key={idx} style={styles.attendeeBadge}>
-                                <Text style={styles.attendeeText}>{attendee}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={48} color={theme.colors.textSubtle} />
-                  <Text style={styles.emptyStateText}>No events scheduled</Text>
-                  <Text style={styles.emptyStateSubtext}>Tap + to add an event</Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={48} color={theme.colors.textSubtle} />
+                <Text style={styles.emptyStateText}>No events scheduled</Text>
+                <Text style={styles.emptyStateSubtext}>Tap + to add an event</Text>
+              </View>
+            )}
+          </View>
         </>
       )}
 
@@ -862,85 +864,84 @@ export default function CalendarWorkspace() {
           </ScrollView>
 
           {/* Events List */}
-          <ScrollView style={styles.eventsScroll}>
-            <View style={styles.eventsContainer}>
-              {getFilteredEvents().length > 0 ? (
-                getFilteredEvents().map(event => (
-                  <TouchableOpacity
-                    key={event.id}
-                    style={[styles.eventCard, { borderLeftColor: event.color }]}
-                    onPress={() => {
-                      setSelectedEvent(event);
-                      setShowEventModal(true);
-                    }}
-                  >
-                    <View style={styles.eventHeader}>
-                      <View style={styles.eventHeaderLeft}>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
-                        <Text style={styles.eventDescription}>{event.description}</Text>
+          <View style={styles.eventsContainer}>
+            {getFilteredEvents().length > 0 ? (
+              getFilteredEvents().map(event => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={[styles.eventCard, { borderLeftColor: event.color }]}
+                  onPress={() => {
+                    setSelectedEvent(event);
+                    setShowEventModal(true);
+                  }}
+                >
+                  <View style={styles.eventHeader}>
+                    <View style={styles.eventHeaderLeft}>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <Text style={styles.eventDescription}>{event.description}</Text>
+                    </View>
+                    <View style={[styles.categoryBadge, { backgroundColor: event.color + '20' }]}>
+                      <Ionicons
+                        name={CATEGORIES.find(c => c.id === event.category)?.icon as any || 'calendar'}
+                        size={12}
+                        color={event.color}
+                      />
+                      <Text style={[styles.categoryText, { color: event.color }]}>
+                        {CATEGORIES.find(c => c.id === event.category)?.name}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <View style={styles.eventDetailRow}>
+                      <Ionicons name="calendar-outline" size={16} color={theme.colors.textSubtle} />
+                      <Text style={styles.eventDetailText}>{event.date}</Text>
+                    </View>
+                    <View style={styles.eventDetailRow}>
+                      <Ionicons name="time-outline" size={16} color={theme.colors.textSubtle} />
+                      <Text style={styles.eventDetailText}>
+                        {event.time} · {event.duration}
+                      </Text>
+                    </View>
+                    {event.location && (
+                      <View style={styles.eventDetailRow}>
+                        <Ionicons name="location-outline" size={16} color={theme.colors.textSubtle} />
+                        <Text style={styles.eventDetailText}>{event.location}</Text>
                       </View>
-                      <View style={[styles.categoryBadge, { backgroundColor: event.color + '20' }]}>
-                        <Ionicons
-                          name={CATEGORIES.find(c => c.id === event.category)?.icon as any || 'calendar'}
-                          size={12}
-                          color={event.color}
-                        />
-                        <Text style={[styles.categoryText, { color: event.color }]}>
-                          {CATEGORIES.find(c => c.id === event.category)?.name}
+                    )}
+                    {event.attendees.length > 0 && (
+                      <View style={styles.eventDetailRow}>
+                        <Ionicons name="people-outline" size={16} color={theme.colors.textSubtle} />
+                        <View style={styles.attendeesRow}>
+                          {event.attendees.map((attendee, idx) => (
+                            <View key={idx} style={styles.attendeeBadge}>
+                              <Text style={styles.attendeeText}>{attendee}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                    {event.reminder && (
+                      <View style={styles.eventDetailRow}>
+                        <Ionicons name="notifications" size={16} color={accentColorHex} />
+                        <Text style={[styles.eventDetailText, { color: accentColorHex }]}>
+                          Reminder set
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.eventDetails}>
-                      <View style={styles.eventDetailRow}>
-                        <Ionicons name="calendar-outline" size={16} color={theme.colors.textSubtle} />
-                        <Text style={styles.eventDetailText}>{event.date}</Text>
-                      </View>
-                      <View style={styles.eventDetailRow}>
-                        <Ionicons name="time-outline" size={16} color={theme.colors.textSubtle} />
-                        <Text style={styles.eventDetailText}>
-                          {event.time} · {event.duration}
-                        </Text>
-                      </View>
-                      {event.location && (
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="location-outline" size={16} color={theme.colors.textSubtle} />
-                          <Text style={styles.eventDetailText}>{event.location}</Text>
-                        </View>
-                      )}
-                      {event.attendees.length > 0 && (
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="people-outline" size={16} color={theme.colors.textSubtle} />
-                          <View style={styles.attendeesRow}>
-                            {event.attendees.map((attendee, idx) => (
-                              <View key={idx} style={styles.attendeeBadge}>
-                                <Text style={styles.attendeeText}>{attendee}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                      {event.reminder && (
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="notifications" size={16} color={accentColorHex} />
-                          <Text style={[styles.eventDetailText, { color: accentColorHex }]}>
-                            Reminder set
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={48} color={theme.colors.textSubtle} />
-                  <Text style={styles.emptyStateText}>No events found</Text>
-                  <Text style={styles.emptyStateSubtext}>Try a different filter</Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={48} color={theme.colors.textSubtle} />
+                <Text style={styles.emptyStateText}>No events found</Text>
+                <Text style={styles.emptyStateSubtext}>Try a different filter</Text>
+              </View>
+            )}
+          </View>
         </>
       )}
+    </ScrollView>
 
       {/* Event Detail Modal */}
       <Modal
