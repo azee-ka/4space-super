@@ -341,7 +341,7 @@ export default function ChatSettingsScreen() {
   const peakDay = useMemo(() => {
     if (messageList.length === 0) return null;
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const buckets = new Array(7).fill(0);
+    const buckets = new Array(7).fill(0);se
     messageList.forEach((msg) => {
       const day = new Date(msg.created_at).getDay();
       buckets[day] += 1;

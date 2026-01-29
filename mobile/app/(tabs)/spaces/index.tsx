@@ -102,8 +102,9 @@ const SPACE_TEMPLATES = [
   },
 ];
 
-type FilterType = 'all' | 'favorites' | 'recent' | 'private' | 'shared';
+type TabType = 'spaces' | 'analytics' | 'settings';
 type ViewMode = 'grid' | 'list';
+type SortType = 'recent' | 'name' | 'members' | 'activity';
 
 const resolveSpaceColor = (space: Space, index: number) => {
   if (space.color) {
@@ -129,11 +130,12 @@ export default function SpacesScreen() {
   const { data: spaces = [], isLoading } = useSpaces();
   const createSpaceMutation = useCreateSpace();
 
+  const [activeTab, setActiveTab] = useState<TabType>('spaces');
   const [showCreate, setShowCreate] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sortType, setSortType] = useState<SortType>('recent');
 
   // Create form state
   const [spaceName, setSpaceName] = useState('');
@@ -143,7 +145,7 @@ export default function SpacesScreen() {
   const [spaceColor, setSpaceColor] = useState(COLOR_OPTIONS[0]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
-  const filteredSpaces = useMemo(() => {
+  const filteredAndSortedSpaces = useMemo(() => {
     let filtered = spaces;
 
     // Apply search filter
@@ -154,34 +156,36 @@ export default function SpacesScreen() {
       );
     }
 
-    // Apply type filter
-    switch (filterType) {
-      case 'favorites':
-        // TODO: Add favorites functionality
-        filtered = filtered.filter((space) => (space as any).is_favorite);
+    // Apply sorting
+    const sorted = [...filtered];
+    switch (sortType) {
+      case 'name':
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'members':
+        sorted.sort((a, b) => (b.members_count || b.member_count || 0) - (a.members_count || a.member_count || 0));
+        break;
+      case 'activity':
+        sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
         break;
       case 'recent':
-        filtered = [...filtered].sort((a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        ).slice(0, 10);
-        break;
-      case 'private':
-        filtered = filtered.filter((space) => space.privacy === 'private');
-        break;
-      case 'shared':
-        filtered = filtered.filter((space) => space.privacy !== 'private');
+      default:
+        sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
         break;
     }
 
-    return filtered;
-  }, [spaces, searchQuery, filterType]);
+    return sorted;
+  }, [spaces, searchQuery, sortType]);
 
   const stats = useMemo(
     () => ({
       total: spaces.length,
       privateCount: spaces.filter((space) => space.privacy === 'private').length,
-      shared: spaces.filter((space) => space.privacy !== 'private').length,
+      sharedCount: spaces.filter((space) => space.privacy === 'shared').length,
       teamCount: spaces.filter((space) => space.privacy === 'team').length,
+      publicCount: spaces.filter((space) => space.privacy === 'public').length,
+      totalMembers: spaces.reduce((sum, space) => sum + (space.members_count || space.member_count || 0), 0),
+      avgMembers: spaces.length > 0 ? Math.round(spaces.reduce((sum, space) => sum + (space.members_count || space.member_count || 0), 0) / spaces.length) : 0,
     }),
     [spaces]
   );
@@ -226,12 +230,17 @@ export default function SpacesScreen() {
     }
   };
 
-  const filterOptions: Array<{ value: FilterType; label: string; icon: string }> = [
-    { value: 'all', label: 'All', icon: 'apps-outline' },
-    { value: 'favorites', label: 'Favorites', icon: 'star-outline' },
+  const tabs: Array<{ value: TabType; label: string; icon: string }> = [
+    { value: 'spaces', label: 'Spaces', icon: 'apps-outline' },
+    { value: 'analytics', label: 'Analytics', icon: 'stats-chart-outline' },
+    { value: 'settings', label: 'Settings', icon: 'settings-outline' },
+  ];
+
+  const sortOptions: Array<{ value: SortType; label: string; icon: string }> = [
     { value: 'recent', label: 'Recent', icon: 'time-outline' },
-    { value: 'private', label: 'Private', icon: 'lock-closed-outline' },
-    { value: 'shared', label: 'Shared', icon: 'people-outline' },
+    { value: 'name', label: 'Name', icon: 'text-outline' },
+    { value: 'members', label: 'Members', icon: 'people-outline' },
+    { value: 'activity', label: 'Activity', icon: 'pulse-outline' },
   ];
 
   if (isLoading) {
@@ -240,226 +249,403 @@ export default function SpacesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>Spaces</Text>
-            <Text style={styles.subtitle}>Workspaces & collaboration hubs</Text>
+            <Text style={styles.subtitle}>{stats.total} workspaces</Text>
           </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.viewModeButton}
-              onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            >
-              <Ionicons
-                name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'}
-                size={20}
-                color={theme.colors.textSubtle}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.insightsButton}
-              onPress={() => router.push('/spaces/insights')}
-            >
-              <Ionicons name="analytics-outline" size={18} color={theme.colors.textSubtle} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: accentHex }]}
-              onPress={() => setShowTemplates(true)}
-            >
-              <Ionicons name="add" size={20} color={theme.colors.base} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCardMini, { borderColor: accentHex }]}>
-            <Text style={styles.statValue}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Spaces</Text>
-          </View>
-          <View style={[styles.statCardMini, { borderColor: '#3b82f6' }]}>
-            <Text style={styles.statValue}>{stats.privateCount}</Text>
-            <Text style={styles.statLabel}>Private</Text>
-          </View>
-          <View style={[styles.statCardMini, { borderColor: '#10b981' }]}>
-            <Text style={styles.statValue}>{stats.teamCount}</Text>
-            <Text style={styles.statLabel}>Team</Text>
-          </View>
-          <View style={[styles.statCardMini, { borderColor: '#f59e0b' }]}>
-            <Text style={styles.statValue}>{stats.shared}</Text>
-            <Text style={styles.statLabel}>Shared</Text>
-          </View>
-        </View>
-
-          <View style={styles.miniFeatureRow}>
-            <View style={styles.miniFeature}>
-              <Text style={styles.miniFeatureText}>AI metrics + highlights</Text>
-            </View>
-            <View style={styles.miniFeature}>
-              <Text style={styles.miniFeatureText}>Auto privacy checks</Text>
-            </View>
-            <View style={styles.miniFeature}>
-              <Text style={styles.miniFeatureText}>Live activity feed</Text>
-            </View>
-          </View>
-
-        {/* Search */}
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={theme.colors.textSubtle} />
-          <TextInput
-            placeholder="Search spaces by name or description..."
-            placeholderTextColor={theme.colors.textSubtle}
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery !== '' && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={theme.colors.textSubtle} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-          <View style={styles.filtersRow}>
-            {filterOptions.map((option) => {
-              const isActive = filterType === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[styles.filterChip, isActive && { backgroundColor: accentHex }]}
-                  onPress={() => setFilterType(option.value)}
-                >
-                  <Ionicons
-                    name={option.icon as any}
-                    size={14}
-                    color={isActive ? theme.colors.base : theme.colors.textSubtle}
-                  />
-                  <Text style={[styles.filterText, isActive && { color: theme.colors.base }]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        {/* Spaces List */}
-        {filteredSpaces.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="apps-outline" size={40} color={theme.colors.textSubtle} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {searchQuery || filterType !== 'all' ? 'No spaces found' : 'No spaces yet'}
-            </Text>
-            <Text style={styles.emptyDescription}>
-              {searchQuery || filterType !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Create your first space or join one to get started'}
-            </Text>
-            {!searchQuery && filterType === 'all' && (
-              <TouchableOpacity
-                style={[styles.emptyButton, { backgroundColor: accentHex }]}
-                onPress={() => setShowTemplates(true)}
-              >
-                <Ionicons name="add" size={18} color={theme.colors.base} />
-                <Text style={styles.emptyButtonText}>Create a space</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <View style={viewMode === 'grid' ? styles.spaceGrid : styles.spaceList}>
-            {filteredSpaces.map((space, index) => {
-              const color = resolveSpaceColor(space, index);
-              const iconName = SPACE_ICON_MAP[space.icon || space.type || 'rocket'] || 'rocket-outline';
-              const privacyOption = PRIVACY_OPTIONS.find((option) => option.value === space.privacy);
-
-              if (viewMode === 'grid') {
-                return (
-                  <TouchableOpacity
-                    key={space.id}
-                    style={styles.spaceGridItem}
-                    onPress={() => router.push(`/spaces/${space.id}` as any)}
-                  >
-                    <View style={[styles.spaceGridIcon, { backgroundColor: color }]}>
-                      <Ionicons name={iconName as any} size={24} color={theme.colors.base} />
-                    </View>
-                    <Text style={styles.spaceGridName} numberOfLines={2}>{space.name}</Text>
-            <View style={styles.spaceGridMeta}>
-              <View style={styles.spaceGridMetaItem}>
-                <Ionicons name="people-outline" size={11} color={theme.colors.textSubtle} />
-                <Text style={styles.spaceGridMetaText}>
-                  {(space.members_count ?? space.member_count ?? 0)} members
-                </Text>
-              </View>
-              {privacyOption && (
-                <View style={styles.spaceGridMetaItem}>
-                  <Ionicons name={privacyOption.icon as any} size={11} color={theme.colors.textSubtle} />
-                  <Text style={styles.spaceGridMetaText}>{privacyOption.label}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.spaceFeatureRow}>
-              <View style={styles.featureChip}>
-                <Text style={styles.featureLabel}>{space.type ?? 'workspace'}</Text>
-              </View>
-              <View style={styles.featureChip}>
-                <Text style={styles.featureLabel}>{space.privacy}</Text>
-              </View>
-            </View>
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: accentHex }]}
+            onPress={() => setShowTemplates(true)}
+          >
+            <Ionicons name="add" size={20} color={theme.colors.base} />
           </TouchableOpacity>
-        );
-      }
+        </View>
 
-              return (
-                <TouchableOpacity
-                  key={space.id}
-                  style={styles.spaceRow}
-                  onPress={() => router.push(`/spaces/${space.id}` as any)}
-                >
-                  <View style={[styles.spaceIcon, { backgroundColor: color }]}>
-                    <Ionicons name={iconName as any} size={18} color={theme.colors.base} />
-                  </View>
-                  <View style={styles.spaceContent}>
-                  <Text style={styles.spaceName}>{space.name}</Text>
-                  <Text style={styles.spaceDescription} numberOfLines={2}>
-                    {space.description || 'No description yet'}
-                  </Text>
-                  <View style={styles.spaceMeta}>
-                    <View style={styles.spaceMetaItem}>
-                      <Ionicons name="people-outline" size={12} color={theme.colors.textSubtle} />
-                      <Text style={styles.spaceMetaText}>
-                        {(space.members_count ?? space.member_count ?? 0)} members
-                      </Text>
-                    </View>
-                    <View style={styles.spaceMetaItem}>
-                      <Ionicons name="time-outline" size={12} color={theme.colors.textSubtle} />
-                      <Text style={styles.spaceMetaText}>{formatRelativeDate(space.updated_at)}</Text>
-                    </View>
-                    {privacyOption && (
-                      <View style={styles.spaceMetaItem}>
-                        <Ionicons name={privacyOption.icon as any} size={12} color={theme.colors.textSubtle} />
-                        <Text style={styles.spaceMetaText}>{privacyOption.label}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.spaceFeatureRow}>
-                    <View style={styles.featureChip}>
-                      <Text style={styles.featureLabel}>{space.type ?? 'workspace'}</Text>
-                    </View>
-                    <View style={styles.featureChip}>
-                      <Text style={styles.featureLabel}>{space.privacy}</Text>
-                    </View>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textSubtle} />
+        {/* Tabs */}
+        <View style={styles.tabsRow}>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.value;
+            return (
+              <TouchableOpacity
+                key={tab.value}
+                style={[styles.tab, isActive && { backgroundColor: accentHex }]}
+                onPress={() => setActiveTab(tab.value)}
+              >
+                <Ionicons
+                  name={tab.icon as any}
+                  size={14}
+                  color={isActive ? theme.colors.base : theme.colors.textSubtle}
+                />
+                <Text style={[styles.tabText, isActive && { color: theme.colors.base }]}>
+                  {tab.label}
+                </Text>
               </TouchableOpacity>
             );
-            })}
+          })}
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {activeTab === 'spaces' && (
+          <View style={styles.tabPane}>
+            {/* Search and Controls */}
+            <View style={styles.controlsRow}>
+              <View style={styles.searchRow}>
+                <Ionicons name="search" size={16} color={theme.colors.textSubtle} />
+                <TextInput
+                  placeholder="Search spaces..."
+                  placeholderTextColor={theme.colors.textSubtle}
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery !== '' && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={16} color={theme.colors.textSubtle} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.viewModeButton}
+                onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+              >
+                <Ionicons
+                  name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'}
+                  size={18}
+                  color={theme.colors.textSubtle}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Sort Options */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortScroll}>
+              <View style={styles.sortRow}>
+                {sortOptions.map((option) => {
+                  const isActive = sortType === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.sortChip, isActive && { backgroundColor: accentHex }]}
+                      onPress={() => setSortType(option.value)}
+                    >
+                      <Ionicons
+                        name={option.icon as any}
+                        size={12}
+                        color={isActive ? theme.colors.base : theme.colors.textSubtle}
+                      />
+                      <Text style={[styles.sortText, isActive && { color: theme.colors.base }]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* Spaces List */}
+            {filteredAndSortedSpaces.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.iconWrap}>
+                  <Ionicons name="apps-outline" size={40} color={theme.colors.textSubtle} />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {searchQuery ? 'No spaces found' : 'No spaces yet'}
+                </Text>
+                <Text style={styles.emptyDescription}>
+                  {searchQuery
+                    ? 'Try adjusting your search'
+                    : 'Create your first space to get started'}
+                </Text>
+                {!searchQuery && (
+                  <TouchableOpacity
+                    style={[styles.emptyButton, { backgroundColor: accentHex }]}
+                    onPress={() => setShowTemplates(true)}
+                  >
+                    <Ionicons name="add" size={18} color={theme.colors.base} />
+                    <Text style={styles.emptyButtonText}>Create a space</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={viewMode === 'grid' ? styles.spaceGrid : styles.spaceList}>
+                {filteredAndSortedSpaces.map((space, index) => {
+                  const color = resolveSpaceColor(space, index);
+                  const iconName = SPACE_ICON_MAP[space.icon || space.type || 'rocket'] || 'rocket-outline';
+                  const privacyOption = PRIVACY_OPTIONS.find((option) => option.value === space.privacy);
+
+                  if (viewMode === 'grid') {
+                    return (
+                      <TouchableOpacity
+                        key={space.id}
+                        style={styles.spaceGridItem}
+                        onPress={() => router.push(`/spaces/${space.id}` as any)}
+                      >
+                        <View style={[styles.spaceGridIcon, { backgroundColor: color }]}>
+                          <Ionicons name={iconName as any} size={24} color={theme.colors.base} />
+                        </View>
+                        <Text style={styles.spaceGridName} numberOfLines={2}>{space.name}</Text>
+                        <View style={styles.spaceGridMeta}>
+                          <View style={styles.spaceGridMetaItem}>
+                            <Ionicons name="people-outline" size={11} color={theme.colors.textSubtle} />
+                            <Text style={styles.spaceGridMetaText}>
+                              {(space.members_count ?? space.member_count ?? 0)}
+                            </Text>
+                          </View>
+                          {privacyOption && (
+                            <View style={styles.spaceGridMetaItem}>
+                              <Ionicons name={privacyOption.icon as any} size={11} color={theme.colors.textSubtle} />
+                              <Text style={styles.spaceGridMetaText}>{privacyOption.label}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={space.id}
+                      style={styles.spaceRow}
+                      onPress={() => router.push(`/spaces/${space.id}` as any)}
+                    >
+                      <View style={[styles.spaceIcon, { backgroundColor: color }]}>
+                        <Ionicons name={iconName as any} size={18} color={theme.colors.base} />
+                      </View>
+                      <View style={styles.spaceContent}>
+                        <Text style={styles.spaceName}>{space.name}</Text>
+                        <Text style={styles.spaceDescription} numberOfLines={1}>
+                          {space.description || 'No description yet'}
+                        </Text>
+                        <View style={styles.spaceMeta}>
+                          <View style={styles.spaceMetaItem}>
+                            <Ionicons name="people-outline" size={11} color={theme.colors.textSubtle} />
+                            <Text style={styles.spaceMetaText}>
+                              {(space.members_count ?? space.member_count ?? 0)} members
+                            </Text>
+                          </View>
+                          {privacyOption && (
+                            <View style={styles.spaceMetaItem}>
+                              <Ionicons name={privacyOption.icon as any} size={11} color={theme.colors.textSubtle} />
+                              <Text style={styles.spaceMetaText}>{privacyOption.label}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textSubtle} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'analytics' && (
+          <View style={styles.tabPane}>
+            <Text style={styles.sectionTitle}>Overview Statistics</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <View style={[styles.statIcon, { backgroundColor: accentHex + '15' }]}>
+                  <Ionicons name="apps" size={20} color={accentHex} />
+                </View>
+                <Text style={styles.statValue}>{stats.total}</Text>
+                <Text style={styles.statLabel}>Total Spaces</Text>
+              </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statIcon, { backgroundColor: '#10b981' + '15' }]}>
+                  <Ionicons name="people" size={20} color="#10b981" />
+                </View>
+                <Text style={styles.statValue}>{stats.totalMembers}</Text>
+                <Text style={styles.statLabel}>Total Members</Text>
+              </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statIcon, { backgroundColor: '#3b82f6' + '15' }]}>
+                  <Ionicons name="trending-up" size={20} color="#3b82f6" />
+                </View>
+                <Text style={styles.statValue}>{stats.avgMembers}</Text>
+                <Text style={styles.statLabel}>Avg per Space</Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>Privacy Distribution</Text>
+            <View style={styles.distributionCard}>
+              <View style={styles.distributionRow}>
+                <View style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={[styles.distributionIcon, { backgroundColor: '#3b82f6' + '15' }]}>
+                      <Ionicons name="lock-closed" size={16} color="#3b82f6" />
+                    </View>
+                    <Text style={styles.distributionValue}>{stats.privateCount}</Text>
+                  </View>
+                  <Text style={styles.distributionLabel}>Private</Text>
+                  <View style={styles.distributionBar}>
+                    <View
+                      style={[
+                        styles.distributionBarFill,
+                        {
+                          width: stats.total > 0 ? `${(stats.privateCount / stats.total) * 100}%` : '0%',
+                          backgroundColor: '#3b82f6',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={[styles.distributionIcon, { backgroundColor: '#10b981' + '15' }]}>
+                      <Ionicons name="people" size={16} color="#10b981" />
+                    </View>
+                    <Text style={styles.distributionValue}>{stats.sharedCount}</Text>
+                  </View>
+                  <Text style={styles.distributionLabel}>Shared</Text>
+                  <View style={styles.distributionBar}>
+                    <View
+                      style={[
+                        styles.distributionBarFill,
+                        {
+                          width: stats.total > 0 ? `${(stats.sharedCount / stats.total) * 100}%` : '0%',
+                          backgroundColor: '#10b981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.distributionRow}>
+                <View style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={[styles.distributionIcon, { backgroundColor: '#f59e0b' + '15' }]}>
+                      <Ionicons name="business" size={16} color="#f59e0b" />
+                    </View>
+                    <Text style={styles.distributionValue}>{stats.teamCount}</Text>
+                  </View>
+                  <Text style={styles.distributionLabel}>Team</Text>
+                  <View style={styles.distributionBar}>
+                    <View
+                      style={[
+                        styles.distributionBarFill,
+                        {
+                          width: stats.total > 0 ? `${(stats.teamCount / stats.total) * 100}%` : '0%',
+                          backgroundColor: '#f59e0b',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={[styles.distributionIcon, { backgroundColor: '#ec4899' + '15' }]}>
+                      <Ionicons name="globe" size={16} color="#ec4899" />
+                    </View>
+                    <Text style={styles.distributionValue}>{stats.publicCount}</Text>
+                  </View>
+                  <Text style={styles.distributionLabel}>Public</Text>
+                  <View style={styles.distributionBar}>
+                    <View
+                      style={[
+                        styles.distributionBarFill,
+                        {
+                          width: stats.total > 0 ? `${(stats.publicCount / stats.total) * 100}%` : '0%',
+                          backgroundColor: '#ec4899',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <View style={styles.activityCard}>
+              {spaces.slice(0, 5).map((space, index) => {
+                const color = resolveSpaceColor(space, index);
+                const iconName = SPACE_ICON_MAP[space.icon || space.type || 'rocket'] || 'rocket-outline';
+                return (
+                  <View key={space.id} style={styles.activityRow}>
+                    <View style={[styles.activityIcon, { backgroundColor: color + '20' }]}>
+                      <Ionicons name={iconName as any} size={16} color={color} />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityName}>{space.name}</Text>
+                      <Text style={styles.activityTime}>{formatRelativeDate(space.updated_at)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'settings' && (
+          <View style={styles.tabPane}>
+            <Text style={styles.sectionTitle}>Preferences</Text>
+            <View style={styles.settingsCard}>
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="notifications-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Space Notifications</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+              <View style={styles.settingDivider} />
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="eye-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Default View Mode</Text>
+                </View>
+                <Text style={styles.settingValue}>{viewMode === 'grid' ? 'Grid' : 'List'}</Text>
+              </TouchableOpacity>
+              <View style={styles.settingDivider} />
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="filter-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Default Sort</Text>
+                </View>
+                <Text style={styles.settingValue}>{sortType.charAt(0).toUpperCase() + sortType.slice(1)}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionTitle}>Discovery</Text>
+            <View style={styles.settingsCard}>
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="search-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Discover Public Spaces</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+              <View style={styles.settingDivider} />
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="compass-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Browse Templates</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionTitle}>Data Management</Text>
+            <View style={styles.settingsCard}>
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="download-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Export All Spaces</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+              <View style={styles.settingDivider} />
+              <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="archive-outline" size={18} color={theme.colors.textPrimary} />
+                  <Text style={styles.settingLabel}>Archived Spaces</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -634,7 +820,6 @@ export default function SpacesScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
     </SafeAreaView>
   );
 }
@@ -644,144 +829,109 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.base,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  headerRow: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingTop: 4,
+    marginBottom: 16,
   },
   headerLeft: {
     flex: 1,
   },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '800',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSubtle,
     marginTop: 2,
   },
-  viewModeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  insightsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
   createButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statsRow: {
+  tabsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 8,
   },
-  statCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    minWidth: 120,
-    borderWidth: 1,
-    borderColor: theme.colors.divider,
-  },
-  statCardMini: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    minWidth: 90,
+  tab: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.divider,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  statLabel: {
-    fontSize: 11,
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.textSubtle,
-    marginTop: 4,
+  },
+  content: {
+    flex: 1,
+  },
+  tabPane: {
+    padding: 16,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
   },
   searchRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     gap: 10,
-    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontSize: 14,
   },
-  filtersScroll: {
-    marginBottom: 20,
+  viewModeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
   },
-  filtersRow: {
+  sortScroll: {
+    marginBottom: 16,
+  },
+  sortRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  filterChip: {
+  sortChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 20,
     backgroundColor: theme.colors.surface,
   },
-  filterText: {
-    fontSize: 13,
-    color: theme.colors.textSubtle,
-    fontWeight: '600',
-  },
-  miniFeatureRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  miniFeature: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.divider,
-    backgroundColor: theme.colors.surface,
-  },
-  miniFeatureText: {
-    fontSize: 11,
+  sortText: {
+    fontSize: 12,
     color: theme.colors.textSubtle,
     fontWeight: '600',
   },
@@ -813,7 +963,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   spaceGridMeta: {
     flexDirection: 'row',
@@ -828,23 +978,6 @@ const styles = StyleSheet.create({
   spaceGridMetaText: {
     fontSize: 11,
     color: theme.colors.textSubtle,
-  },
-  spaceFeatureRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 10,
-  },
-  featureChip: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  featureLabel: {
-    fontSize: 11,
-    color: theme.colors.textSubtle,
-    fontWeight: '600',
-    textTransform: 'capitalize',
   },
   spaceRow: {
     flexDirection: 'row',
@@ -865,7 +998,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   spaceName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: 4,
@@ -927,6 +1060,157 @@ const styles = StyleSheet.create({
     color: theme.colors.base,
     fontWeight: '700',
     fontSize: 14,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSubtle,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: theme.colors.textSubtle,
+    textAlign: 'center',
+  },
+  distributionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 24,
+    gap: 20,
+  },
+  distributionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  distributionItem: {
+    flex: 1,
+  },
+  distributionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  distributionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  distributionValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  distributionLabel: {
+    fontSize: 11,
+    color: theme.colors.textSubtle,
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  distributionBar: {
+    height: 6,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  distributionBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  activityCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 11,
+    color: theme.colors.textSubtle,
+  },
+  settingsCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 24,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  settingValue: {
+    fontSize: 13,
+    color: theme.colors.textSubtle,
+  },
+  settingDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 6,
   },
   modalOverlay: {
     flex: 1,
