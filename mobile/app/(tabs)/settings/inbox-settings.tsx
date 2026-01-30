@@ -6,16 +6,27 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Switch,
-  Alert,
   Modal,
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useInboxPreferencesStore } from '../../../src/store/inboxPreferencesStore';
+import { SettingLinkRow, SettingToggleRow } from '../../../src/components/settings/SettingRow';
+import { useInboxPreferencesStore, ChatFolder, QuickReply } from '../../../src/store/inboxPreferencesStore';
 import { theme } from '../../../src/styles/theme';
+
+const FOLDER_ICONS = [
+  'folder', 'briefcase', 'heart', 'star', 'trophy', 'shield',
+  'game-controller', 'rocket', 'bulb', 'cloud', 'flame', 'leaf'
+];
+
+const FOLDER_COLORS = [
+  '#22d3ee', '#f472b6', '#34d399', '#fbbf24', '#a855f7',
+  '#f97316', '#3b82f6', '#ef4444', '#10b981', '#ec4899'
+];
+
+const AUTO_LOCK_OPTIONS = [1, 5, 15, 30];
 
 export default function InboxSettingsScreen() {
   const router = useRouter();
@@ -49,54 +60,46 @@ export default function InboxSettingsScreen() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderIcon, setNewFolderIcon] = useState('folder');
   const [newFolderColor, setNewFolderColor] = useState('#22d3ee');
-
-  const FOLDER_ICONS = [
-    'folder', 'briefcase', 'heart', 'star', 'trophy', 'shield',
-    'game-controller', 'rocket', 'bulb', 'cloud', 'flame', 'leaf'
-  ];
-
-  const FOLDER_COLORS = [
-    '#22d3ee', '#f472b6', '#34d399', '#fbbf24', '#a855f7',
-    '#f97316', '#3b82f6', '#ef4444', '#10b981', '#ec4899'
-  ];
+  const [lockError, setLockError] = useState<string | null>(null);
+  const [lockStatus, setLockStatus] = useState<string | null>(null);
+  const [showLockRemovalConfirm, setShowLockRemovalConfirm] = useState(false);
+  const [pendingQuickReply, setPendingQuickReply] = useState<QuickReply | null>(null);
+  const [pendingFolder, setPendingFolder] = useState<ChatFolder | null>(null);
+  const [replyFormError, setReplyFormError] = useState<string | null>(null);
+  const [folderFormError, setFolderFormError] = useState<string | null>(null);
+  const [showAutoLockPicker, setShowAutoLockPicker] = useState(false);
 
   const handleSetLockCode = () => {
     if (newLockCode.length < 4) {
-      Alert.alert('Invalid Code', 'Lock code must be at least 4 characters');
+      setLockError('Lock code must be at least 4 characters');
       return;
     }
     if (newLockCode !== confirmLockCode) {
-      Alert.alert('Code Mismatch', 'Lock codes do not match');
+      setLockError('Lock codes do not match');
       return;
     }
     setLockCode(newLockCode);
     setShowLockSetup(false);
     setNewLockCode('');
     setConfirmLockCode('');
-    Alert.alert('Success', 'Lock code has been set. You can now lock chats from the inbox.');
+    setLockError(null);
+    setLockStatus('Lock code saved. Lock chats from the inbox to secure them.');
   };
 
   const handleRemoveLockCode = () => {
-    Alert.alert(
-      'Remove Lock Code',
-      'Are you sure? All locked chats will be unlocked.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            setLockCode(null);
-            Alert.alert('Success', 'Lock code removed');
-          },
-        },
-      ]
-    );
+    setShowLockRemovalConfirm(true);
+  };
+
+  const confirmRemoveLockCode = () => {
+    setLockCode(null);
+    setShowLockRemovalConfirm(false);
+    setLockError(null);
+    setLockStatus('Lock code removed.');
   };
 
   const handleAddQuickReply = () => {
     if (!newReplyLabel.trim() || !newReplyContent.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setReplyFormError('Please fill in all fields');
       return;
     }
     addQuickReply({
@@ -108,18 +111,16 @@ export default function InboxSettingsScreen() {
     setNewReplyLabel('');
     setNewReplyContent('');
     setNewReplyEmoji('');
+    setReplyFormError(null);
   };
 
-  const handleDeleteQuickReply = (replyId: string) => {
-    Alert.alert('Delete Quick Reply', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteQuickReply(replyId) },
-    ]);
+  const handleDeleteQuickReply = (reply: QuickReply) => {
+    setPendingQuickReply(reply);
   };
 
   const handleAddFolder = () => {
     if (!newFolderName.trim()) {
-      Alert.alert('Error', 'Please enter a folder name');
+      setFolderFormError('Please enter a folder name');
       return;
     }
     createFolder({
@@ -132,16 +133,11 @@ export default function InboxSettingsScreen() {
     setNewFolderName('');
     setNewFolderIcon('folder');
     setNewFolderColor('#22d3ee');
+    setFolderFormError(null);
   };
 
-  const handleDeleteFolder = (folderId: string) => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return;
-
-    Alert.alert('Delete Folder', `Delete "${folder.name}"? Chats will not be deleted.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteFolder(folderId) },
-    ]);
+  const handleDeleteFolder = (folder: ChatFolder) => {
+    setPendingFolder(folder);
   };
 
   return (
@@ -154,12 +150,15 @@ export default function InboxSettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Security Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security</Text>
 
-          <View style={styles.settingCard}>
+          <View style={styles.sectionCard}>
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <View style={[styles.settingIcon, { backgroundColor: '#f472b620' }]}>
@@ -183,33 +182,25 @@ export default function InboxSettingsScreen() {
               )}
             </View>
 
+            {lockStatus && <Text style={styles.lockStatus}>{lockStatus}</Text>}
+
             {lockCode && (
               <>
                 <View style={styles.divider} />
-                <View style={styles.settingRow}>
-                  <View style={styles.settingLeft}>
-                    <View style={[styles.settingIcon, { backgroundColor: '#a855f720' }]}>
-                      <Ionicons name="time" size={20} color="#a855f7" />
+                <SettingLinkRow
+                  icon="time-outline"
+                  iconColor="#a855f7"
+                  label="Auto-lock timeout"
+                  description={`${autoLockTimeout} minutes of inactivity`}
+                  onPress={() => setShowAutoLockPicker(true)}
+                  trailing={
+                    <View style={styles.autoLockTrailing}>
+                      <Text style={styles.autoLockValue}>{autoLockTimeout} min</Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
                     </View>
-                    <View style={styles.settingInfo}>
-                      <Text style={styles.settingLabel}>Auto-Lock After</Text>
-                      <Text style={styles.settingDescription}>{autoLockTimeout} minutes of inactivity</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() =>
-                      Alert.alert('Auto-Lock Timeout', 'Set timeout in minutes', [
-                        { text: '1 min', onPress: () => setAutoLockTimeout(1) },
-                        { text: '5 min', onPress: () => setAutoLockTimeout(5) },
-                        { text: '15 min', onPress: () => setAutoLockTimeout(15) },
-                        { text: '30 min', onPress: () => setAutoLockTimeout(30) },
-                        { text: 'Cancel', style: 'cancel' },
-                      ])
-                    }
-                  >
-                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSubtle} />
-                  </TouchableOpacity>
-                </View>
+                  }
+                  borderless
+                />
               </>
             )}
           </View>
@@ -219,44 +210,23 @@ export default function InboxSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy</Text>
 
-          <View style={styles.settingCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: '#22d3ee20' }]}>
-                  <Ionicons name="checkmark-done" size={20} color="#22d3ee" />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Read Receipts</Text>
-                  <Text style={styles.settingDescription}>Show when you've read messages</Text>
-                </View>
-              </View>
-              <Switch
-                value={showReadReceipts}
-                onValueChange={setShowReadReceipts}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: '#22d3ee40' }}
-                thumbColor={showReadReceipts ? '#22d3ee' : theme.colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: '#34d39920' }]}>
-                  <Ionicons name="create" size={20} color="#34d399" />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Typing Indicators</Text>
-                  <Text style={styles.settingDescription}>Show when you're typing</Text>
-                </View>
-              </View>
-              <Switch
-                value={showTypingIndicators}
-                onValueChange={setShowTypingIndicators}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: '#34d39940' }}
-                thumbColor={showTypingIndicators ? '#34d399' : theme.colors.textMuted}
-              />
-            </View>
+          <View style={styles.sectionCard}>
+            <SettingToggleRow
+              icon="checkmark-done-outline"
+              iconColor="#22d3ee"
+              label="Read receipts"
+              description="Show when you've read messages"
+              value={showReadReceipts}
+              onValueChange={setShowReadReceipts}
+            />
+            <SettingToggleRow
+              icon="create-outline"
+              iconColor="#34d399"
+              label="Typing indicators"
+              description="Show when you're typing"
+              value={showTypingIndicators}
+              onValueChange={setShowTypingIndicators}
+            />
           </View>
         </View>
 
@@ -264,24 +234,15 @@ export default function InboxSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
 
-          <View style={styles.settingCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: '#fbbf2420' }]}>
-                  <Ionicons name="resize" size={20} color="#fbbf24" />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Compact Mode</Text>
-                  <Text style={styles.settingDescription}>Smaller chat items, more on screen</Text>
-                </View>
-              </View>
-              <Switch
-                value={compactMode}
-                onValueChange={setCompactMode}
-                trackColor={{ false: theme.colors.surfaceSubtle, true: '#fbbf2440' }}
-                thumbColor={compactMode ? '#fbbf24' : theme.colors.textMuted}
-              />
-            </View>
+          <View style={styles.sectionCard}>
+            <SettingToggleRow
+              icon="resize"
+              iconColor="#fbbf24"
+              label="Compact mode"
+              description="Smaller chat items, more on screen"
+              value={compactMode}
+              onValueChange={setCompactMode}
+            />
           </View>
         </View>
 
@@ -294,7 +255,7 @@ export default function InboxSettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.settingCard}>
+          <View style={styles.sectionCard}>
             {folders.map((folder, index) => (
               <React.Fragment key={folder.id}>
                 {index > 0 && <View style={styles.divider} />}
@@ -310,7 +271,7 @@ export default function InboxSettingsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={() => handleDeleteFolder(folder.id)}>
+                  <TouchableOpacity onPress={() => handleDeleteFolder(folder)}>
                     <Ionicons name="trash-outline" size={20} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -328,7 +289,7 @@ export default function InboxSettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.settingCard}>
+          <View style={styles.sectionCard}>
             {quickReplies.map((reply, index) => (
               <React.Fragment key={reply.id}>
                 {index > 0 && <View style={styles.divider} />}
@@ -344,7 +305,7 @@ export default function InboxSettingsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={() => handleDeleteQuickReply(reply.id)}>
+                  <TouchableOpacity onPress={() => handleDeleteQuickReply(reply)}>
                     <Ionicons name="trash-outline" size={20} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -363,6 +324,7 @@ export default function InboxSettingsScreen() {
             <Text style={styles.modalSubtitle}>
               Create a code to protect your locked chats. You'll type this in the search bar to unlock.
             </Text>
+            {lockError && <Text style={styles.formError}>{lockError}</Text>}
 
             <TextInput
               placeholder="Enter lock code (min 4 characters)"
@@ -395,6 +357,7 @@ export default function InboxSettingsScreen() {
           <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Add Quick Reply</Text>
+            {replyFormError && <Text style={styles.formError}>{replyFormError}</Text>}
 
             <TextInput
               placeholder="Label (e.g., 'Thanks')"
@@ -435,6 +398,7 @@ export default function InboxSettingsScreen() {
           <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Create Folder</Text>
+            {folderFormError && <Text style={styles.formError}>{folderFormError}</Text>}
 
             <TextInput
               placeholder="Folder name"
@@ -483,6 +447,127 @@ export default function InboxSettingsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+      <Modal visible={showAutoLockPicker} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAutoLockPicker(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Auto-Lock Timeout</Text>
+            <Text style={styles.modalSubtitle}>
+              Choose how long the inbox stays unlocked before requiring your lock code.
+            </Text>
+            <View style={styles.optionRow}>
+              {AUTO_LOCK_OPTIONS.map((minutes) => {
+                const isActive = autoLockTimeout === minutes;
+                return (
+                  <TouchableOpacity
+                    key={minutes}
+                    style={[styles.optionChip, isActive && styles.optionChipActive]}
+                    onPress={() => {
+                      setAutoLockTimeout(minutes);
+                      setShowAutoLockPicker(false);
+                    }}
+                  >
+                    <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
+                      {minutes} min
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showLockRemovalConfirm} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLockRemovalConfirm(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Remove lock code</Text>
+            <Text style={styles.modalSubtitle}>
+              Removing the lock will unlock every saved chat. You can set a new code anytime.
+            </Text>
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowLockRemovalConfirm(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDestructiveButton]}
+                onPress={confirmRemoveLockCode}
+              >
+                <Text style={[styles.modalButtonText, styles.modalDestructiveButtonText]}>
+                  Remove code
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={Boolean(pendingQuickReply)} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setPendingQuickReply(null)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Delete quick reply</Text>
+            <Text style={styles.modalSubtitle}>
+              Delete "{pendingQuickReply?.label}"? This action cannot be undone.
+            </Text>
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setPendingQuickReply(null)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDestructiveButton]}
+                onPress={() => {
+                  if (pendingQuickReply) {
+                    deleteQuickReply(pendingQuickReply.id);
+                  }
+                  setPendingQuickReply(null);
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalDestructiveButtonText]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={Boolean(pendingFolder)} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setPendingFolder(null)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Delete folder</Text>
+            <Text style={styles.modalSubtitle}>
+              Delete "{pendingFolder?.name}"? Chats will stay in your inbox.
+            </Text>
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setPendingFolder(null)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDestructiveButton]}
+                onPress={() => {
+                  if (pendingFolder) {
+                    deleteFolder(pendingFolder.id);
+                  }
+                  setPendingFolder(null);
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalDestructiveButtonText]}>
+                  Delete folder
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -510,9 +595,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 28,
+    paddingHorizontal: 16,
+    marginBottom: 22,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -521,12 +609,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: 12,
+    color: theme.colors.textSubtle,
+    marginBottom: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  settingCard: {
+  sectionCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: 18,
     padding: 16,
@@ -563,10 +653,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSubtle,
   },
+  lockStatus: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#22d3ee',
+  },
   divider: {
     height: 1,
     backgroundColor: theme.colors.divider,
     marginVertical: 8,
+  },
+  autoLockTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  autoLockValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginRight: 6,
   },
   setupButton: {
     backgroundColor: '#22d3ee20',
@@ -626,6 +732,34 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     marginBottom: 20,
     lineHeight: 20,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 16,
+  },
+  modalCancelButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
+  modalCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  modalDestructiveButton: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+  },
+  modalDestructiveButtonText: {
+    color: '#fff',
   },
   input: {
     backgroundColor: theme.colors.surfaceSubtle,

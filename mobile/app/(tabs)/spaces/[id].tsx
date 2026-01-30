@@ -1,10 +1,27 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
+import {
+  Alert,
+  ActivityIndicator,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Space } from '../../../src/types';
-import { useSpace, useSpaceMembers, useSpaceStats } from '../../../src/hooks/useSpaces';
+import {
+  useConvertSpacePrivacy,
+  useDeleteSpace,
+  useSpace,
+  useSpaceMembers,
+  useSpaceStats,
+} from '../../../src/hooks/useSpaces';
 import { LoadingSpinner, Avatar } from '../../../src/components/ui';
 import { useThemeStore } from '../../../src/store/themeStore';
 import { getAccentColorHex } from '../../../src/utils/themeUtils';
@@ -50,6 +67,13 @@ const MOCK_CHANNELS = [
   { id: '4', name: 'help', description: 'Get help from team', unread: 0, icon: 'help-circle-outline', color: '#10b981' },
   { id: '5', name: 'design', description: 'Design discussions', unread: 5, icon: 'color-palette-outline', color: '#a855f7' },
   { id: '6', name: 'development', description: 'Dev team channel', unread: 0, icon: 'code-slash-outline', color: '#3b82f6' },
+];
+
+const PRIVACY_OPTIONS: Array<{ value: Space['privacy']; label: string; description: string }> = [
+  { value: 'private', label: 'Private', description: 'Invite-only and hidden' },
+  { value: 'shared', label: 'Shared', description: 'Invite plus link access' },
+  { value: 'team', label: 'Team', description: 'Members from your organization' },
+  { value: 'public', label: 'Public', description: 'Discoverable by anyone' },
 ];
 
 export default function SpaceDetailScreen() {
@@ -162,6 +186,111 @@ export default function SpaceDetailScreen() {
     { value: 'all', label: 'ALL' },
   ];
 
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
+  const [emailDigestsEnabled, setEmailDigestsEnabled] = useState(false);
+  const [hiddenFromDiscovery, setHiddenFromDiscovery] = useState(false);
+  const [isArchived, setIsArchived] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const { mutate: changePrivacy, isLoading: privacyLoading } = useConvertSpacePrivacy();
+  const { mutate: deleteSpace, isLoading: deletingSpace } = useDeleteSpace();
+
+  const goToSpaceSettings = () => router.push(`/spaces/${spaceId}/settings` as any);
+  const goToMembers = () => router.push(`/spaces/${spaceId}/members` as any);
+
+  const handlePrivacyChoice = (targetPrivacy: Space['privacy']) => {
+    if (!spaceId) return;
+    changePrivacy(
+      { spaceId, targetPrivacy },
+      {
+        onSuccess: () => {
+          Alert.alert('Privacy updated', `This space is now ${targetPrivacy}.`);
+        },
+        onError: (error: any) => {
+          Alert.alert('Unable to change privacy', error?.message || 'Please try again later.');
+        },
+      }
+    );
+  };
+
+  const handlePrivacyPicker = () => {
+    if (!space) return;
+    const options = PRIVACY_OPTIONS.filter((option) => option.value !== space.privacy).map((option) => ({
+      text: option.label,
+      onPress: () => handlePrivacyChoice(option.value),
+    }));
+    Alert.alert('Change privacy', 'Select how people can discover or join this space.', [
+      ...options,
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleToggleDiscovery = (value: boolean) => {
+    setHiddenFromDiscovery(value);
+    Alert.alert(
+      'Discovery updated',
+      value
+        ? 'This space is now hidden from the public directory.'
+        : 'This space is visible again and can be found by invites and search.'
+    );
+  };
+
+  const handleExportData = () => {
+    if (exporting) return;
+    setExporting(true);
+    setTimeout(() => {
+      setExporting(false);
+      Alert.alert('Export queued', 'We will email a temporary download link when it is ready.');
+    }, 1200);
+  };
+
+  const handleArchiveSpace = () => {
+    Alert.alert(
+      'Archive Space',
+      'Move this space out of the main feed while keeping everything stored safely.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          onPress: () => {
+            setIsArchived(true);
+            Alert.alert('Space archived', 'You can restore it later from the Spaces settings.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteSpace = () => {
+    if (!spaceId) return;
+    Alert.alert(
+      'Delete Space',
+      'This action cannot be undone. All content will be removed for everyone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteSpace(spaceId, {
+              onSuccess: () => {
+                Alert.alert('Space deleted', 'You will be returned to the Spaces list.', [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/spaces' as any),
+                  },
+                ]);
+              },
+              onError: (error: any) => {
+                Alert.alert('Failed to delete space', error?.message || 'Please try again later.');
+              },
+            });
+          },
+        },
+      ]
+    );
+  };
+
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
   }
@@ -185,6 +314,73 @@ export default function SpaceDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const displayType = space.type
+    ? `${space.type.charAt(0).toUpperCase()}${space.type.slice(1)}`
+    : 'General';
+  const displayPrivacy = privacyLoading
+    ? 'Updating...'
+    : `${space.privacy.charAt(0).toUpperCase()}${space.privacy.slice(1)}`;
+  const infoRows = [
+    {
+      id: 'name',
+      label: 'Name',
+      description: 'Space title and avatar',
+      value: space.name,
+      icon: 'text-outline',
+      color: '#f97316',
+      onPress: goToSpaceSettings,
+    },
+    {
+      id: 'description',
+      label: 'Description',
+      description: space.description
+        ? 'Tap to refresh the blurb'
+        : 'Add a short description',
+      value: space.description || 'No description yet',
+      icon: 'document-text-outline',
+      color: '#22d3ee',
+      onPress: goToSpaceSettings,
+    },
+    {
+      id: 'privacy',
+      label: 'Privacy',
+      description: 'Control who can discover & join',
+      value: displayPrivacy,
+      icon: 'shield-checkmark-outline',
+      color: '#a855f7',
+      onPress: handlePrivacyPicker,
+    },
+    {
+      id: 'type',
+      label: 'Space Type',
+      description: 'Track, community, or personal',
+      value: displayType,
+      icon: 'layers-outline',
+      color: '#10b981',
+      onPress: goToSpaceSettings,
+    },
+  ];
+  const notificationOptions = [
+    {
+      id: 'push',
+      label: 'Push Notifications',
+      description: 'Get instant updates on new replies',
+      icon: 'notifications-outline',
+      color: '#2563eb',
+      enabled: pushNotificationsEnabled,
+      toggle: setPushNotificationsEnabled,
+    },
+    {
+      id: 'email',
+      label: 'Email Digests',
+      description: 'Daily summary of space activity',
+      icon: 'mail-outline',
+      color: '#f59e0b',
+      enabled: emailDigestsEnabled,
+      toggle: setEmailDigestsEnabled,
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -715,63 +911,94 @@ export default function SpaceDetailScreen() {
           <View style={styles.tabPane}>
             <Text style={styles.sectionTitle}>Space Information</Text>
             <View style={styles.settingsCard}>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Name</Text>
-                <Text style={styles.settingValue}>{space.name}</Text>
-              </View>
-              <View style={styles.settingDivider} />
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Description</Text>
-                <Text style={styles.settingValue}>{space.description || 'No description'}</Text>
-              </View>
-              <View style={styles.settingDivider} />
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Privacy</Text>
-                <Text style={[styles.settingValue, { textTransform: 'capitalize' }]}>{space.privacy}</Text>
-              </View>
-              <View style={styles.settingDivider} />
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Type</Text>
-                <Text style={[styles.settingValue, { textTransform: 'capitalize' }]}>{space.type || 'General'}</Text>
-              </View>
+              {infoRows.map((row, index) => (
+                <React.Fragment key={row.id}>
+                  <TouchableOpacity
+                    style={styles.infoRow}
+                    activeOpacity={0.75}
+                    onPress={row.onPress}
+                  >
+                    <View style={[styles.infoIcon, { backgroundColor: row.color + '22' }]}>
+                      <Ionicons name={row.icon as any} size={20} color={row.color} />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>{row.label}</Text>
+                      <Text style={styles.infoDescription}>{row.description}</Text>
+                    </View>
+                    <Text style={styles.infoValue} numberOfLines={1}>
+                      {row.value}
+                    </Text>
+                  </TouchableOpacity>
+                  {index < infoRows.length - 1 && <View style={styles.settingDivider} />}
+                </React.Fragment>
+              ))}
             </View>
 
             <Text style={styles.sectionTitle}>Notifications</Text>
             <View style={styles.settingsCard}>
-              <TouchableOpacity style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <Ionicons name="notifications-outline" size={18} color={theme.colors.textPrimary} />
-                  <Text style={styles.settingLabel}>Push Notifications</Text>
-                </View>
-                <View style={[styles.toggle, { backgroundColor: accentHex }]}>
-                  <View style={styles.toggleKnob} />
-                </View>
-              </TouchableOpacity>
-              <View style={styles.settingDivider} />
-              <TouchableOpacity style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <Ionicons name="mail-outline" size={18} color={theme.colors.textPrimary} />
-                  <Text style={styles.settingLabel}>Email Digests</Text>
-                </View>
-                <View style={styles.toggle}>
-                  <View style={styles.toggleKnob} />
-                </View>
-              </TouchableOpacity>
+              {notificationOptions.map((option, index) => (
+                <React.Fragment key={option.id}>
+                  <View style={styles.notificationRow}>
+                    <View style={styles.settingLeft}>
+                      <View style={[styles.infoIcon, { backgroundColor: option.color + '22' }]}>
+                        <Ionicons name={option.icon as any} size={18} color={option.color} />
+                      </View>
+                      <View>
+                        <Text style={styles.settingLabel}>{option.label}</Text>
+                        <Text style={styles.infoDescription}>{option.description}</Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={option.enabled}
+                      onValueChange={(value) => option.toggle(value)}
+                      trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                      thumbColor={theme.colors.base}
+                    />
+                  </View>
+                  {index < notificationOptions.length - 1 && <View style={styles.settingDivider} />}
+                </React.Fragment>
+              ))}
             </View>
 
             <Text style={styles.sectionTitle}>Privacy & Security</Text>
             <View style={styles.settingsCard}>
-              <TouchableOpacity style={styles.settingRow}>
+              <View style={styles.settingRow}>
                 <View style={styles.settingLeft}>
-                  <Ionicons name="eye-off-outline" size={18} color={theme.colors.textPrimary} />
-                  <Text style={styles.settingLabel}>Hide from Discovery</Text>
+                  <View style={[styles.infoIcon, { backgroundColor: '#22d3ee22' }]}>
+                    <Ionicons name="eye-off-outline" size={18} color="#22d3ee" />
+                  </View>
+                  <View>
+                    <Text style={styles.settingLabel}>Hide from Discovery</Text>
+                    <Text style={styles.infoDescription}>Keep this space out of the public feed</Text>
+                  </View>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                <Switch
+                  value={hiddenFromDiscovery}
+                  onValueChange={handleToggleDiscovery}
+                  trackColor={{ false: theme.colors.surfaceSubtle, true: accentHex }}
+                  thumbColor={theme.colors.base}
+                />
+              </View>
+              <View style={styles.settingDivider} />
+              <TouchableOpacity style={styles.settingRow} onPress={handlePrivacyPicker}>
+                <View style={styles.settingLeft}>
+                  <View style={[styles.infoIcon, { backgroundColor: '#a855f722' }]}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#a855f7" />
+                  </View>
+                  <Text style={styles.settingLabel}>Change Privacy</Text>
+                </View>
+                {privacyLoading ? (
+                  <ActivityIndicator color={accentHex} />
+                ) : (
+                  <Text style={[styles.settingValue, { textTransform: 'capitalize' }]}>{space.privacy}</Text>
+                )}
               </TouchableOpacity>
               <View style={styles.settingDivider} />
-              <TouchableOpacity style={styles.settingRow}>
+              <TouchableOpacity style={styles.settingRow} onPress={goToMembers}>
                 <View style={styles.settingLeft}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color={theme.colors.textPrimary} />
+                  <View style={[styles.infoIcon, { backgroundColor: '#10b98122' }]}>
+                    <Ionicons name="people-outline" size={18} color="#10b981" />
+                  </View>
                   <Text style={styles.settingLabel}>Member Permissions</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
@@ -780,28 +1007,58 @@ export default function SpaceDetailScreen() {
 
             <Text style={styles.sectionTitle}>Advanced</Text>
             <View style={styles.settingsCard}>
-              <TouchableOpacity style={styles.settingRow}>
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={handleExportData}
+                activeOpacity={0.7}
+              >
                 <View style={styles.settingLeft}>
-                  <Ionicons name="download-outline" size={18} color={theme.colors.textPrimary} />
+                  <View style={[styles.infoIcon, { backgroundColor: '#3b82f620' }]}>
+                    <Ionicons name="cloud-upload-outline" size={18} color="#3b82f6" />
+                  </View>
                   <Text style={styles.settingLabel}>Export Data</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                {exporting ? (
+                  <ActivityIndicator color={accentHex} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                )}
               </TouchableOpacity>
               <View style={styles.settingDivider} />
-              <TouchableOpacity style={styles.settingRow}>
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={handleArchiveSpace}
+                activeOpacity={0.7}
+              >
                 <View style={styles.settingLeft}>
-                  <Ionicons name="archive-outline" size={18} color={theme.colors.textPrimary} />
+                  <View style={[styles.infoIcon, { backgroundColor: '#f59e0b20' }]}>
+                    <Ionicons name="archive-outline" size={18} color="#f59e0b" />
+                  </View>
                   <Text style={styles.settingLabel}>Archive Space</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={isArchived ? accentHex : theme.colors.textSubtle}
+                />
               </TouchableOpacity>
               <View style={styles.settingDivider} />
-              <TouchableOpacity style={styles.settingRow}>
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={handleDeleteSpace}
+                activeOpacity={0.7}
+              >
                 <View style={styles.settingLeft}>
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <View style={[styles.infoIcon, { backgroundColor: '#ef444420' }]}>
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </View>
                   <Text style={[styles.settingLabel, { color: '#ef4444' }]}>Delete Space</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+                {deletingSpace ? (
+                  <ActivityIndicator color="#ef4444" />
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color="#ef4444" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1536,22 +1793,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
   },
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   settingLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  infoDescription: {
+    fontSize: 12,
+    color: theme.colors.textSubtle,
+    marginTop: 2,
   },
   settingValue: {
     fontSize: 13,
     color: theme.colors.textSubtle,
     maxWidth: '60%',
     textAlign: 'right',
+  },
+  infoValue: {
+    fontSize: 13,
+    color: theme.colors.textSubtle,
+    fontWeight: '700',
+    maxWidth: '40%',
+    textAlign: 'right',
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
   settingDivider: {
     height: 1,
