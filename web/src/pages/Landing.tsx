@@ -234,10 +234,10 @@ await researchIDE.align();`;
   ];
 
   const novaIdeStats = [
-    { label: 'Auto GitOps', value: 'Sync & guard', icon: faLock },
-    { label: 'Compute Pools', value: 'ML · Bio · Physics', icon: faBolt },
-    { label: 'Copilot Memory', value: 'Last 10 experiments', icon: faBrain },
-    { label: 'Live Models', value: 'JS + Research', icon: faCode },
+    { label: 'Auto GitOps', value: 'Sync & guard', detail: 'Continuous merges with observability hooks', icon: faLock },
+    { label: 'Compute Pools', value: 'ML · Bio · Physics', detail: 'Queue, scale, and visualize from one control plane', icon: faBolt },
+    { label: 'Copilot Memory', value: 'Last 10 experiments', detail: 'Context from previous hypotheses and failures', icon: faBrain },
+    { label: 'Live Models', value: 'JS + Research', detail: 'Full stack + notebook signal in one workspace', icon: faCode },
   ];
 
   const novaIdeBadges = ['AI training', 'Bio & Physics', 'JS + Research', 'Git Reinvented'];
@@ -247,6 +247,27 @@ await researchIDE.align();`;
     'One console for JS flows, AI labs, & physics/bio simulators.',
     'Living copilot that tracks every hypothesis, failure, and discovery.',
     'Glow-first design with soft gradients that scale to light & dark themes.',
+  ];
+
+  const novaIdeFocus = [
+    { title: 'Context Matrix', detail: 'Keeps tabs on git, ML experiments, protein simulations, and docs so you never lose your train of thought.' },
+    { title: 'Live Compute Stream', detail: 'Route ML trainers, bio simulators, and physics engines through one dashboard with instant metrics.' },
+    { title: 'Signal Copilot', detail: 'Auto-suggest refactors, next steps, and citations tuned for researchers and freelancers alike.' },
+    { title: 'Git Renaissance', detail: 'Autonomous pushes, rebases, and PR drafts with science-grade audit trails.' },
+  ];
+
+  const novaIdeLeftSpotlights = [
+    { icon: faGauge, title: 'Signal Labs', detail: 'A telemetry matrix that captures experiments, git diffs, and simulation spikes within a single trace view.', gradient: 'from-indigo-500/40 to-purple-500/20' },
+    { icon: faBolt, title: 'Compute Stream', detail: 'Route ML, physics, and biology workloads through one dashboard with cost, status, and retry signals.', gradient: 'from-cyan-500/40 to-blue-500/20' },
+    { icon: faMicroscope, title: 'Bio + Physics Ready', detail: 'Native graph explorers for molecules, fluid sims, and lattice models that feed live data back to the IDE.', gradient: 'from-pink-500/40 to-rose-500/20' },
+    { icon: faCode, title: 'Git Renaissance', detail: 'Autonomous merges, drafts, and explainable history ensure reproducible research-grade experiments.', gradient: 'from-emerald-500/40 to-lime-500/20' },
+  ];
+
+  const novaIdeLeftStats = [
+    { label: 'Signal Buffer', value: '5s', sub: 'Context feed always listening' },
+    { label: 'Synced Labs', value: '12', sub: 'AI · Bio · Physics · JS' },
+    { label: 'Copilot Memory', value: '10 runs', sub: 'Hypotheses + failures retained' },
+    { label: 'Capture Latency', value: '0.04s', sub: 'Instant idea intake' },
   ];
 
   return (
@@ -401,53 +422,62 @@ await researchIDE.align();`;
       </section>
 
       {/* NovaIDE Vision */}
-      <section className="relative py-28 bg-gradient-to-b from-slate-100 via-white to-slate-200 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-black dark:text-white overflow-hidden">
+      <section className="relative py-28 bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden">
         <div className="pointer-events-none absolute inset-0 opacity-70">
-          <div className="absolute top-[-120px] left-[10%] h-[380px] w-[380px] rounded-full bg-white/60 dark:bg-sky-500/30 blur-[140px]" />
-          <div className="absolute bottom-[-80px] right-[5%] h-[320px] w-[320px] rounded-full bg-violet-200/70 dark:bg-purple-500/40 blur-[100px]" />
-          <div className="absolute inset-0 border border-black/5 dark:border-white/5 rounded-[72px] shadow-[0_0_80px_rgba(149,167,255,0.4)]" />
+          <div className="absolute top-[-120px] left-[10%] h-[380px] w-[380px] rounded-full bg-purple-500/30 blur-[160px]" />
+          <div className="absolute bottom-[-80px] right-[5%] h-[320px] w-[320px] rounded-full bg-fuchsia-500/40 blur-[120px]" />
+          <div className="absolute inset-0 border border-white/10 rounded-[72px] shadow-[0_0_80px_rgba(148,113,255,0.35)]" />
         </div>
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <ScrollReveal>
               <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.4em] text-slate-200">
-                  <FontAwesomeIcon icon={faInfinity} className="text-slate-100" />
-                  NovaIDE
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-slate-800 dark:border-white/20 dark:bg-slate-900/50 dark:text-white">
+                  <FontAwesomeIcon icon={faInfinity} className="text-slate-900 dark:text-white" />
+                  NovaIDE SynthLab
                 </div>
                 <h2 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
-                  Redefine coding from Git to IDE.
-                  <span className="block text-slate-200/80 dark:text-white/80 text-lg tracking-tight">
-                    A unified IDE for freelancers, ML/AI engineers, and researchers.
+                  This is the only lab you need.
+                  <span className="block text-lg text-slate-500 dark:text-slate-300">
+                    Signal, science, and code—together.
                   </span>
                 </h2>
                 <p className="text-lg text-slate-300 max-w-xl">
-                  NovaIDE unifies JS flows, ML training, protein folding, and physics modeling under one glow-first console. It pairs autonomous GitOps with memory-rich copilots so every experiment and sprint moves forward without context loss.
+                  NovaIDE SynthLab turns Git, notebooks, simulators, and JavaScript into one commanding experience—context-aware, synced, and ready for the most demanding AI, biology, and physics workstreams.
                 </p>
-                <div className="grid gap-4">
-                  {novaIdePillars.map((pillar, index) => (
-                    <div key={pillar.title} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-lg shadow-[0_20px_50px_rgba(15,23,42,0.35)] dark:bg-white/5">
-                      <div className="text-xs text-slate-400 uppercase tracking-[0.4em] mb-2">Pillar {String(index + 1).padStart(2, '0')}</div>
-                      <h3 className="text-2xl font-semibold text-white mb-2">{pillar.title}</h3>
-                      <p className="text-sm text-slate-300 leading-relaxed">{pillar.detail}</p>
+                <div className="grid gap-5">
+                  {novaIdeLeftSpotlights.map((spotlight) => (
+                    <div
+                      key={spotlight.title}
+                      className={`rounded-3xl border border-white/10 bg-gradient-to-br ${spotlight.gradient} bg-opacity-40 p-5 shadow-[0_30px_70px_rgba(0,0,0,0.7)]`}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="rounded-2xl bg-white/10 p-3 text-lg text-white">
+                          <FontAwesomeIcon icon={spotlight.icon} />
+                        </div>
+                        <span className="text-[11px] uppercase tracking-[0.5em] text-slate-300">SynthLab</span>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-white mb-2">{spotlight.title}</h3>
+                      <p className="text-sm text-slate-300 leading-relaxed">{spotlight.detail}</p>
                     </div>
                   ))}
                 </div>
-                <div className="grid gap-2 text-sm text-slate-200 max-w-xl">
-                  {novaIdeHighlights.map((highlight) => (
-                    <div key={highlight} className="flex items-center gap-3 rounded-full border border-white/15 bg-black/30 px-4 py-3 text-xs uppercase tracking-[0.4em] shadow-[0_15px_30px_rgba(0,0,0,0.4)]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      {highlight}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {novaIdeLeftStats.map((stat) => (
+                    <div key={stat.label} className="rounded-3xl border border-white/10 bg-slate-900/80 p-5 shadow-[0_25px_60px_rgba(0,0,0,0.75)]">
+                      <div className="text-xs uppercase tracking-[0.4em] text-slate-400 mb-1">{stat.label}</div>
+                      <div className="text-3xl font-bold text-white">{stat.value}</div>
+                      <p className="text-sm text-slate-400 mt-2">{stat.sub}</p>
                     </div>
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <Link to="/signup">
-                    <button className="rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-8 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-950 shadow-xl shadow-cyan-500/40 transition-transform duration-300 hover:-translate-y-0.5">
+                    <button className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-900 shadow-xl shadow-emerald-500/40 transition-transform duration-300 hover:-translate-y-0.5">
                       Launch NovaIDE
                     </button>
                   </Link>
-                  <button className="rounded-full border border-white/30 px-8 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-white/80 backdrop-blur-lg transition-colors duration-300 hover:border-white hover:text-white">
+                  <button className="rounded-full border border-slate-300/60 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-600 shadow-sm transition-colors duration-300 hover:border-slate-900 dark:border-white/30 dark:text-white">
                     Watch the Vision
                   </button>
                 </div>
@@ -455,32 +485,37 @@ await researchIDE.align();`;
             </ScrollReveal>
 
             <ScrollReveal direction="right">
-              <div className="relative rounded-[40px] border border-white/20 bg-gradient-to-b from-white/10 to-white/0 p-1 shadow-[0_30px_60px_rgba(0,0,0,0.6)] backdrop-blur-3xl overflow-hidden">
-                <div className="relative rounded-[36px] bg-slate-900/80 p-8 shadow-[inset_0_0_60px_rgba(56,189,248,0.3)]">
+              <div className="relative overflow-hidden rounded-[48px] border border-white/20 bg-gradient-to-br from-white/40 via-slate-100 to-slate-200 p-1 shadow-[0_40px_70px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-900/40 dark:via-slate-900/60 dark:to-black">
+                <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-cyan-400/40 blur-[120px] opacity-80" />
+                <div className="absolute -right-12 bottom-12 h-64 w-64 rounded-full bg-purple-500/40 blur-[140px]" />
+                <div className="absolute inset-y-4 right-6 w-24 rounded-full bg-violet-500/40 blur-[160px] opacity-40" />
+                <div className="relative rounded-[44px] border border-white/5 bg-black/90 p-8 shadow-[inset_0_0_60px_rgba(14,116,144,0.35)]">
                   <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.5em] text-slate-400">
-                    <span>Live Console</span>
-                    <span className="text-emerald-400">STABLE · 4SPACE</span>
+                    <span className="text-white/80">Live Console</span>
+                    <span className="text-emerald-300">STABLE · 4SPACE</span>
                   </div>
-                  <div className="mt-5 rounded-3xl bg-[#0f172a]/80 p-6 text-sm font-mono text-slate-100 shadow-[0_20px_50px_rgba(15,23,42,0.7)]">
+                  <div className="mt-6 rounded-[32px] bg-[#020617]/80 p-6 text-sm font-mono text-slate-100 shadow-[0_20px_60px_rgba(2,6,23,0.8)]">
                     {novaIdeSnippetLines.map((line, idx) => (
                       <div key={idx} className={`leading-relaxed ${line.color}`}>
                         {line.text}
                       </div>
                     ))}
+                    <div className="mt-4 text-xs text-slate-500">AI copilots keeping your hypotheses and visualizations synced across every repo.</div>
                   </div>
-                  <div className="mt-6 grid grid-cols-2 gap-4 text-xs text-slate-200">
+                  <div className="mt-6 grid grid-cols-2 gap-4">
                     {novaIdeStats.map((stat) => (
-                      <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <FontAwesomeIcon icon={stat.icon} className="text-base text-slate-100" />
+                      <div key={stat.label} className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-slate-800/40 p-4 backdrop-blur-xl shadow-[0_15px_35px_rgba(2,6,23,0.6)]">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-slate-400">
+                          <FontAwesomeIcon icon={stat.icon} className="text-base text-white" />
                           {stat.label}
                         </div>
                         <div className="text-lg font-semibold text-white">{stat.value}</div>
+                        <div className="text-[12px] text-slate-300">{stat.detail}</div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-6 text-[12px] text-slate-500">
-                    Glowing edges, soft gradients, and modular surfaces echo GitHub's futuristic polish while pointing to fully new possibilities—autonomous git flows, live simulation heatmaps, and compute orchestration that spans biology to physics.
+                  <div className="mt-6 text-[12px] text-slate-400">
+                    Every panel reports compute telemetry, deterministic git history, and experiment signals that researchers and freelancers understand instantly.
                   </div>
                 </div>
               </div>
