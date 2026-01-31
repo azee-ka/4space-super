@@ -48,11 +48,6 @@ export const publicRoutes: RouteConfig[] = [
 
 export const protectedRoutes: RouteConfig[] = [
   {
-    path: '/',
-    element: Spaces,
-    isProtected: true,
-  },
-  {
     path: '/spaces',
     element: Spaces,
     isProtected: true,

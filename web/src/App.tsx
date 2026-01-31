@@ -142,8 +142,8 @@ function RootRedirect() {
   }
 
   // If authenticated, go to dashboard
-  // If not authenticated, go to landing page
-  return <Navigate to={user ? '/dashboard' : '/'} replace />;
+  // If not authenticated, go to login
+  return <Navigate to={user ? '/dashboard' : '/login'} replace />;
 }
 
 // Component to render a single route
@@ -202,9 +202,6 @@ function App() {
         <BrowserRouter>
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
-              {/* Root route - smart redirect based on auth status */}
-              <Route path="/" element={<RootRedirect />} />
-
               {/* Render all public routes */}
               {publicRoutes.map((route) => (
                 <Route
