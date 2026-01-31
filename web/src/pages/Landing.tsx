@@ -40,7 +40,21 @@ import {
   faCircleNodes,
   faFlask,
   faBrain,
-  faMicroscope
+  faMicroscope,
+  faAtom,
+  faDna,
+  faChartArea,
+  faTerminal,
+  faMagic,
+  faNetworkWired,
+  faLightbulb,
+  faGripVertical,
+  faEye,
+  faProjectDiagram,
+  faCodeBranch,
+  faDatabase,
+  faCogs,
+  faWaveSquare
 } from '@fortawesome/free-solid-svg-icons';
 
 function useScrollAnimation() {
@@ -443,135 +457,488 @@ await researchIDE.align();`;
         </div>
       </section>
 
-      {/* NovaIDE Vision */}
-      <section className="relative py-28 bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 opacity-70">
-          <div className="absolute top-[-120px] left-[10%] h-[380px] w-[380px] rounded-full bg-purple-500/30 blur-[160px]" />
-          <div className="absolute bottom-[-80px] right-[5%] h-[320px] w-[320px] rounded-full bg-fuchsia-500/40 blur-[120px]" />
-          <div className="absolute inset-0 border border-white/10 rounded-[72px] shadow-[0_0_80px_rgba(148,113,255,0.35)]" />
+      {/* Revolutionary 4SPACE Lab Section */}
+      <section className="relative py-40 bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden">
+        {/* Animated Background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-[-200px] left-[5%] h-[600px] w-[600px] rounded-full bg-purple-600/20 blur-[180px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute top-[30%] right-[10%] h-[500px] w-[500px] rounded-full bg-cyan-500/20 blur-[160px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+          <div className="absolute bottom-[-100px] left-[20%] h-[450px] w-[450px] rounded-full bg-fuchsia-600/20 blur-[140px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
         </div>
+
         <div className="relative max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <ScrollReveal>
-              <div className="space-y-10">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white">
-                  <FontAwesomeIcon icon={faInfinity} className="text-white" />
+          {/* Header */}
+          <ScrollReveal>
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-gradient-to-r from-purple-500/10 via-cyan-500/10 to-fuchsia-500/10 px-6 py-2 text-xs font-bold uppercase tracking-[0.4em] text-white mb-8 backdrop-blur-xl">
+                <FontAwesomeIcon icon={faInfinity} className="text-cyan-400 animate-pulse" />
+                The Future of Development
+              </div>
+              <h2 className="text-6xl md:text-8xl font-black mb-8 leading-tight">
+                <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
                   4SPACE Lab
-                </div>
-                <div className="relative overflow-hidden rounded-[40px] border border-white/20 bg-gradient-to-br from-white/10 via-slate-900/70 to-black/70 p-10 shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent opacity-60 blur-3xl animate-[spin_60s_linear_infinite]" />
-                  <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-cyan-500/30 blur-[120px]" />
-                  <div className="absolute -right-12 bottom-8 h-48 w-48 rounded-full bg-purple-500/30 blur-[140px]" />
-                  <div className="relative space-y-5">
-                    <h2 className="text-4xl md:text-5xl font-bold leading-tight text-white">
-                      4SPACE Lab keeps work human.
-                    </h2>
-                    <p className="text-lg text-slate-300 max-w-2xl">
-                      Signal, compute, and discovery live in one console that scales with your team. No vanity counters, just momentum.
-                    </p>
-                    <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.4em] text-slate-400">
-                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Live Sync</span>
-                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Signal Focused</span>
-                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Minimal Data</span>
+                </span>
+              </h2>
+              <p className="text-2xl md:text-3xl text-slate-300 max-w-4xl mx-auto leading-relaxed">
+                The world's first <span className="text-cyan-400 font-semibold">Quantum-Ready</span>, <span className="text-purple-400 font-semibold">AI-Native</span> development environment.
+                <br />From freelance code to protein folding, physics simulations to ML research.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* Revolutionary Features Grid */}
+          <div className="grid lg:grid-cols-3 gap-8 mb-24">
+            {[
+              {
+                icon: faBrain,
+                title: 'Cognitive Code Engine',
+                description: 'AI that understands your codebase at quantum depth. Predicts bugs before they exist, suggests optimizations in real-time, and learns your coding patterns to become your perfect pair programmer.',
+                features: ['Context-aware autocomplete', 'Semantic bug prediction', 'Intent-based refactoring', 'Cross-language translation'],
+                gradient: 'from-purple-500/20 via-fuchsia-500/20 to-pink-500/20',
+                iconGradient: 'from-purple-500 to-fuchsia-600',
+              },
+              {
+                icon: faAtom,
+                title: 'Quantum Simulation Workspace',
+                description: 'Native quantum computing integration. Run quantum algorithms, simulate molecular dynamics, and prototype quantum ML models directly in your IDE with real-time visualization.',
+                features: ['Quantum circuit designer', 'Molecular dynamics engine', 'Qubit state visualizer', 'Hybrid quantum-classical debugging'],
+                gradient: 'from-cyan-500/20 via-blue-500/20 to-indigo-500/20',
+                iconGradient: 'from-cyan-500 to-blue-600',
+              },
+              {
+                icon: faDna,
+                title: 'BioCompute Laboratory',
+                description: 'Protein folding, genomic analysis, and drug discovery tools built into your development flow. AlphaFold integration, CRISPR design tools, and molecular docking simulations at your fingertips.',
+                features: ['Protein structure prediction', 'Gene expression analysis', 'Drug-target interaction modeling', '3D molecular viewer'],
+                gradient: 'from-emerald-500/20 via-green-500/20 to-teal-500/20',
+                iconGradient: 'from-emerald-500 to-teal-600',
+              },
+            ].map((feature, i) => (
+              <ScrollReveal key={feature.title} delay={i * 150}>
+                <div className="group relative h-full">
+                  {/* Subtle border glow on hover */}
+                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.iconGradient} rounded-3xl opacity-0 blur-lg group-hover:opacity-20 transition-opacity duration-500`} />
+
+                  <div className={`relative h-full bg-gradient-to-br ${feature.gradient} border border-white/10 rounded-3xl p-8 backdrop-blur-xl hover:border-white/30 transition-all duration-500`}>
+                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.iconGradient} flex items-center justify-center mb-6 transform group-hover:scale-105 transition-all duration-500 shadow-2xl`}>
+                      <FontAwesomeIcon icon={feature.icon} className="text-3xl text-white" />
+                    </div>
+
+                    <h3 className="text-2xl font-bold mb-4 text-white">{feature.title}</h3>
+                    <p className="text-slate-300 mb-6 leading-relaxed">{feature.description}</p>
+
+                    <div className="space-y-2">
+                      {feature.features.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm text-slate-400">
+                          <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${feature.iconGradient}`} />
+                          {item}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-                <div className="grid gap-8 lg:grid-cols-[1.3fr_0.9fr]">
-                  <div className="space-y-4">
-                    {novaLabHighlights.map((card) => (
-                      <div
-                        key={card.title}
-                        className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-lg"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/10 opacity-40 blur-3xl animate-[pulse_10s_ease-in-out_infinite]" />
-                        <div className="relative flex items-center gap-3">
-                          <div className="rounded-2xl bg-white/10 p-3 text-lg text-white">
-                            <FontAwesomeIcon icon={card.icon} />
-                          </div>
-                          <span className="text-[11px] uppercase tracking-[0.4em] text-slate-300">4SPACE</span>
-                        </div>
-                        <h3 className="relative text-2xl font-semibold text-white mt-4">{card.title}</h3>
-                        <p className="relative text-sm text-slate-200 leading-relaxed mt-2">{card.detail}</p>
+              </ScrollReveal>
+            ))}
+          </div>
+
+          {/* Immersive IDE Preview */}
+          <ScrollReveal>
+            <div className="relative mb-24">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-cyan-500/30 to-fuchsia-600/30 rounded-[48px] blur-[100px] opacity-50 animate-pulse" />
+
+              <div className="relative border border-white/20 rounded-[48px] bg-gradient-to-b from-slate-900/50 to-black/80 p-2 backdrop-blur-2xl">
+                <div className="bg-black/90 rounded-[44px] overflow-hidden border border-white/5">
+                  {/* IDE Header */}
+                  <div className="border-b border-white/10 p-4 flex items-center justify-between bg-gradient-to-r from-slate-900/80 to-slate-950/80">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                        <div className="w-3 h-3 rounded-full bg-green-500/80" />
                       </div>
-                    ))}
+                      <span className="text-xs uppercase tracking-[0.3em] text-slate-400">4SPACE Lab · Quantum Mode</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        AI Active
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faAtom} className="text-cyan-400" />
+                        Quantum Ready
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-6">
-                    <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/40 p-6 shadow-[0_25px_60px_rgba(0,0,0,0.75)]">
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400/20 to-transparent opacity-60 blur-xl animate-[pulse_5s_ease-in-out_infinite]" />
-                      <div className="relative flex items-center gap-3 text-xs uppercase tracking-[0.4em] text-slate-400">
-                        <div className="relative h-10 w-10">
-                          <span className="absolute inset-0 rounded-full border border-slate-600/70" />
-                          <span className="absolute inset-2 rounded-full bg-emerald-400/80 animate-ping" />
-                        </div>
-                        Signal path
+
+                  <div className="grid lg:grid-cols-[1fr_1.2fr] gap-px bg-white/5">
+                    {/* Code Editor */}
+                    <div className="bg-[#0a0e1a] p-6">
+                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+                        <FontAwesomeIcon icon={faCode} />
+                        <span>quantum_research.py</span>
+                        <span className="ml-auto text-emerald-400">● Editing</span>
                       </div>
-                      <div className="mt-6 flex flex-col gap-3">
-                        {novaLabSignals.map((step, idx) => (
-                          <div key={step.title} className="flex items-start gap-4">
-                            <div className="flex flex-col items-center">
-                              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                              {idx < novaLabSignals.length - 1 && <span className="h-14 w-[2px] bg-gradient-to-b from-emerald-400 to-slate-900/0" />}
+                      <div className="font-mono text-sm space-y-1">
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">1</span>
+                          <span className="text-purple-400">import</span>
+                          <span className="text-cyan-300">quantumflow</span>
+                          <span className="text-slate-400">as</span>
+                          <span className="text-cyan-300">qf</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">2</span>
+                          <span className="text-purple-400">from</span>
+                          <span className="text-cyan-300">bioforge</span>
+                          <span className="text-purple-400">import</span>
+                          <span className="text-yellow-300">ProteinFolder</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">3</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">4</span>
+                          <span className="text-slate-400"># AI suggests: Use quantum annealing for optimization</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">5</span>
+                          <span className="text-purple-400">async def</span>
+                          <span className="text-emerald-300">fold_protein</span>
+                          <span className="text-slate-400">(</span>
+                          <span className="text-orange-300">sequence</span>
+                          <span className="text-slate-400">):</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">6</span>
+                          <span className="ml-8 text-slate-300">quantum_circuit</span>
+                          <span className="text-slate-400">=</span>
+                          <span className="text-cyan-300">qf</span>
+                          <span className="text-slate-400">.</span>
+                          <span className="text-emerald-300">create_circuit</span>
+                          <span className="text-slate-400">(</span>
+                          <span className="text-orange-300">qubits</span>
+                          <span className="text-slate-400">=</span>
+                          <span className="text-fuchsia-300">128</span>
+                          <span className="text-slate-400">)</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">7</span>
+                          <span className="ml-8 text-slate-300">folder</span>
+                          <span className="text-slate-400">=</span>
+                          <span className="text-yellow-300">ProteinFolder</span>
+                          <span className="text-slate-400">(</span>
+                          <span className="text-slate-300">quantum_circuit</span>
+                          <span className="text-slate-400">)</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="text-slate-600 select-none w-8 text-right">8</span>
+                          <span className="ml-8 text-purple-400">return</span>
+                          <span className="text-purple-400">await</span>
+                          <span className="text-slate-300">folder</span>
+                          <span className="text-slate-400">.</span>
+                          <span className="text-emerald-300">optimize</span>
+                          <span className="text-slate-400">(</span>
+                          <span className="text-orange-300">sequence</span>
+                          <span className="text-slate-400">)</span>
+                        </div>
+                      </div>
+
+                      {/* AI Suggestion */}
+                      <div className="mt-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/30 p-4">
+                        <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
+                          <FontAwesomeIcon icon={faWandMagicSparkles} className="animate-pulse" />
+                          AI Co-Pilot Suggestion
+                        </div>
+                        <p className="text-sm text-slate-300">
+                          Consider adding error correction codes for quantum noise. Would you like me to implement QECC?
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Live Visualization */}
+                    <div className="bg-[#050810] p-6">
+                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+                        <FontAwesomeIcon icon={faEye} />
+                        <span>Live Quantum Visualization</span>
+                      </div>
+
+                      {/* 3D Protein Viz Placeholder */}
+                      <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-purple-950/50 via-slate-950 to-cyan-950/50 border border-white/10 overflow-hidden mb-4">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="relative">
+                            {/* Animated protein structure */}
+                            <div className="w-32 h-32 relative animate-spin" style={{ animationDuration: '20s' }}>
+                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/40 to-cyan-500/40 blur-xl" />
+                              {[...Array(8)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="absolute w-4 h-4 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500"
+                                  style={{
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: `rotate(${i * 45}deg) translateY(-50px)`,
+                                  }}
+                                />
+                              ))}
                             </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.4em] text-slate-500">{step.title}</div>
-                              <p className="text-sm text-slate-200 leading-relaxed">{step.detail}</p>
+                          </div>
+                        </div>
+                        <div className="absolute top-4 left-4 text-xs text-cyan-400 font-mono">
+                          <div>Qubits: 128</div>
+                          <div>Fidelity: 99.7%</div>
+                          <div>States: Superposition</div>
+                        </div>
+                      </div>
+
+                      {/* Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: 'Quantum Ops/s', value: '2.4M', icon: faAtom, color: 'from-cyan-500 to-blue-500' },
+                          { label: 'Protein Accuracy', value: '94.2%', icon: faDna, color: 'from-emerald-500 to-teal-500' },
+                          { label: 'GPU Utilization', value: '87%', icon: faChartArea, color: 'from-purple-500 to-fuchsia-500' },
+                          { label: 'AI Confidence', value: '96.8%', icon: faBrain, color: 'from-orange-500 to-rose-500' },
+                        ].map((metric) => (
+                          <div key={metric.label} className="rounded-xl bg-white/5 border border-white/10 p-3 backdrop-blur-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FontAwesomeIcon icon={metric.icon} className={`text-xs bg-gradient-to-r ${metric.color} bg-clip-text text-transparent`} />
+                              <span className="text-[10px] uppercase tracking-wider text-slate-500">{metric.label}</span>
                             </div>
+                            <div className="text-xl font-bold text-white">{metric.value}</div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-4">
-                      <Link to="/signup">
-                        <button className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-900 shadow-xl shadow-emerald-500/40 transition-transform duration-300 hover:-translate-y-0.5">
-                          Launch 4SPACE
-                        </button>
-                      </Link>
-                      <button className="rounded-full border border-white/20 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-white/90 shadow-sm transition-colors duration-300 hover:border-white/60">
-                        Watch the Vision
-                      </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          {/* Innovation Pillars */}
+          <div className="grid md:grid-cols-2 gap-8 mb-24">
+            {[
+              {
+                icon: faNetworkWired,
+                title: 'Neural Environment System',
+                description: 'Environments that think. Auto-configure dependencies, predict library conflicts, and manage containerization with AI-driven intelligence. Jupyter meets VS Code meets the future.',
+                points: ['Self-healing dependencies', 'Predictive conflict resolution', 'One-click quantum environments', 'Cross-platform reproducibility'],
+                gradient: 'from-blue-500 to-cyan-500',
+                bgGradient: 'from-blue-500/10 via-cyan-500/5 to-transparent',
+              },
+              {
+                icon: faProjectDiagram,
+                title: 'Temporal Code Navigation',
+                description: 'Git reimagined. See your code evolve in 4D. Visual timeline of every change, AI-explained commit history, and parallel universe branching for testing "what-if" scenarios.',
+                points: ['4D code timeline visualization', 'AI commit archaeology', 'Parallel universe branches', 'Automatic conflict resolution'],
+                gradient: 'from-purple-500 to-fuchsia-500',
+                bgGradient: 'from-purple-500/10 via-fuchsia-500/5 to-transparent',
+              },
+              {
+                icon: faDatabase,
+                title: 'Infinite Data Canvas',
+                description: 'Work with petabyte-scale datasets as easily as Excel. Stream data from anywhere, visualize in real-time, and apply transformations that compile to optimized distributed compute.',
+                points: ['Petabyte-scale data handling', 'Real-time stream processing', 'Visual ETL pipelines', 'Auto-optimizing queries'],
+                gradient: 'from-emerald-500 to-green-500',
+                bgGradient: 'from-emerald-500/10 via-green-500/5 to-transparent',
+              },
+              {
+                icon: faLightbulb,
+                title: 'Collaborative Intelligence',
+                description: 'Multiplayer coding evolved. See teammates\' cursors, thoughts, and AI suggestions in real-time. Pair programming with AI mediators that understand team dynamics and suggest compromises.',
+                points: ['Real-time collaborative debugging', 'AI team mediator', 'Shared consciousness mode', 'Live knowledge synthesis'],
+                gradient: 'from-orange-500 to-amber-500',
+                bgGradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
+              },
+            ].map((pillar, i) => (
+              <ScrollReveal key={pillar.title} delay={i * 100}>
+                <div className="group relative">
+                  {/* Subtle glow effect */}
+                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${pillar.gradient} rounded-3xl opacity-0 blur-lg group-hover:opacity-15 transition-opacity duration-500`} />
+
+                  <div className={`relative bg-gradient-to-br ${pillar.bgGradient} border border-white/10 rounded-3xl p-8 backdrop-blur-xl hover:border-white/30 transition-all duration-500`}>
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center flex-shrink-0 shadow-xl group-hover:shadow-2xl transition-shadow duration-500`}>
+                        <FontAwesomeIcon icon={pillar.icon} className="text-2xl text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-white mb-2">{pillar.title}</h3>
+                        <div className={`h-1 w-16 rounded-full bg-gradient-to-r ${pillar.gradient}`} />
+                      </div>
+                    </div>
+
+                    <p className="text-slate-300 mb-6 leading-relaxed">{pillar.description}</p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {pillar.points.map((point, idx) => (
+                        <div key={idx} className="flex items-start gap-2 bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
+                          <FontAwesomeIcon icon={faCheck} className={`text-xs mt-0.5 bg-gradient-to-r ${pillar.gradient} bg-clip-text text-transparent flex-shrink-0`} />
+                          <span className="text-sm text-slate-300">{point}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            </ScrollReveal>
+              </ScrollReveal>
+            ))}
+          </div>
 
-            <ScrollReveal direction="right">
-              <div className="relative overflow-hidden rounded-[48px] border border-white/20 bg-gradient-to-br from-white/40 via-slate-100 to-slate-200 p-1 shadow-[0_40px_70px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-900/40 dark:via-slate-900/60 dark:to-black">
-                <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-cyan-400/40 blur-[120px] opacity-80" />
-                <div className="absolute -right-12 bottom-12 h-64 w-64 rounded-full bg-purple-500/40 blur-[140px]" />
-                <div className="absolute inset-y-4 right-6 w-24 rounded-full bg-violet-500/40 blur-[160px] opacity-40" />
-                <div className="relative rounded-[44px] border border-white/5 bg-black/90 p-8 shadow-[inset_0_0_60px_rgba(14,116,144,0.35)]">
-                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.5em] text-slate-400">
-                    <span className="text-white/80">Live Console</span>
-                    <span className="text-emerald-300">STABLE · 4SPACE</span>
+          {/* Use Cases Showcase */}
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h3 className="text-4xl md:text-5xl font-bold mb-6">
+                <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  One IDE. Infinite Possibilities.
+                </span>
+              </h3>
+              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+                From building apps to discovering new physics. All in the same environment.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-20">
+            {[
+              {
+                icon: faCode,
+                label: 'Full-Stack Development',
+                desc: 'React, Node, Python, Go',
+                color: 'from-blue-500 to-cyan-500',
+                stats: '2M+ devs'
+              },
+              {
+                icon: faBrain,
+                label: 'ML/AI Research',
+                desc: 'PyTorch, TensorFlow, JAX',
+                color: 'from-purple-500 to-fuchsia-500',
+                stats: '500K+ researchers'
+              },
+              {
+                icon: faDna,
+                label: 'Biotech Research',
+                desc: 'AlphaFold, CRISPR, Genomics',
+                color: 'from-emerald-500 to-teal-500',
+                stats: '100K+ scientists'
+              },
+              {
+                icon: faAtom,
+                label: 'Quantum Computing',
+                desc: 'Qiskit, Cirq, Q#',
+                color: 'from-cyan-500 to-blue-500',
+                stats: '50K+ quantum devs'
+              },
+              {
+                icon: faWaveSquare,
+                label: 'Physics Modeling',
+                desc: 'COMSOL, FEniCS, OpenFOAM',
+                color: 'from-orange-500 to-rose-500',
+                stats: '200K+ physicists'
+              },
+              {
+                icon: faChartArea,
+                label: 'Data Science',
+                desc: 'Pandas, Spark, Dask',
+                color: 'from-indigo-500 to-purple-500',
+                stats: '3M+ analysts'
+              },
+              {
+                icon: faMicroscope,
+                label: 'Scientific Computing',
+                desc: 'NumPy, SciPy, Julia',
+                color: 'from-green-500 to-emerald-500',
+                stats: '1M+ scientists'
+              },
+              {
+                icon: faProjectDiagram,
+                label: 'Systems Architecture',
+                desc: 'Kubernetes, Docker, Terraform',
+                color: 'from-slate-500 to-slate-700',
+                stats: '800K+ architects'
+              },
+              {
+                icon: faCogs,
+                label: 'DevOps & Cloud',
+                desc: 'AWS, GCP, Azure',
+                color: 'from-sky-500 to-blue-500',
+                stats: '2.5M+ engineers'
+              },
+              {
+                icon: faRocket,
+                label: 'Startup MVP',
+                desc: 'Rapid prototyping & scaling',
+                color: 'from-rose-500 to-pink-500',
+                stats: '400K+ startups'
+              },
+            ].map((useCase, i) => (
+              <ScrollReveal key={useCase.label} delay={i * 50}>
+                <div className="group relative">
+                  {/* Reduced glow effect */}
+                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${useCase.color} rounded-2xl opacity-0 blur-md group-hover:opacity-20 transition-opacity duration-500`} />
+
+                  <div className="relative bg-gradient-to-br from-slate-900/90 to-black/80 border border-white/10 rounded-2xl p-6 hover:border-white/30 transition-all duration-300 backdrop-blur-sm h-full flex flex-col">
+                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-lg`}>
+                      <FontAwesomeIcon icon={useCase.icon} className="text-2xl text-white" />
+                    </div>
+
+                    <h4 className="text-base font-bold text-white mb-2">{useCase.label}</h4>
+                    <p className="text-xs text-slate-400 mb-3 flex-grow">{useCase.desc}</p>
+
+                    <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                      <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${useCase.color}`} />
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{useCase.stats}</span>
+                    </div>
                   </div>
-                  <div className="mt-6 rounded-[32px] bg-[#020617]/80 p-6 text-sm font-mono text-slate-100 shadow-[0_20px_60px_rgba(2,6,23,0.8)]">
-                    {novaIdeSnippetLines.map((line, idx) => (
-                      <div key={idx} className={`leading-relaxed ${line.color}`}>
-                        {line.text}
-                      </div>
-                    ))}
-                    <div className="mt-4 text-xs text-slate-500">AI copilots keeping your hypotheses and visualizations synced across every repo.</div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+
+          {/* CTA Section */}
+          <ScrollReveal>
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-cyan-500/20 to-fuchsia-600/20 rounded-[48px] blur-[120px]" />
+
+              <div className="relative bg-gradient-to-br from-slate-900/50 to-black/50 border border-white/20 rounded-[48px] p-12 md:p-16 text-center backdrop-blur-2xl">
+                <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+                  The Future of Development
+                  <br />
+                  <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    Starts Now
+                  </span>
+                </h3>
+                <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
+                  Join the waitlist for early access to 4SPACE Lab. Be among the first to experience the IDE that will change everything.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Link to="/signup">
+                    <button className="group px-10 py-5 rounded-full font-bold text-lg bg-gradient-to-r from-cyan-500 via-purple-500 to-fuchsia-500 text-white shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
+                      Join Waitlist
+                      <FontAwesomeIcon icon={faArrowRight} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </Link>
+                  <button className="px-10 py-5 rounded-full font-bold text-lg border-2 border-white/30 text-white hover:bg-white/10 transition-all duration-300">
+                    Watch Demo
+                  </button>
+                </div>
+
+                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-400" />
+                    Free for researchers
                   </div>
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    {novaIdeStats.map((stat) => (
-                      <div key={stat.label} className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-slate-800/40 p-4 backdrop-blur-xl shadow-[0_15px_35px_rgba(2,6,23,0.6)]">
-                        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-slate-400">
-                          <FontAwesomeIcon icon={stat.icon} className="text-base text-white" />
-                          {stat.label}
-                        </div>
-                        <div className="text-lg font-semibold text-white">{stat.value}</div>
-                        <div className="text-[12px] text-slate-300">{stat.detail}</div>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-400" />
+                    Open-source core
                   </div>
-                  <div className="mt-6 text-[12px] text-slate-400">
-                    Every panel reports compute telemetry, deterministic git history, and experiment signals that researchers and freelancers understand instantly.
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-400" />
+                    Cloud + Local
                   </div>
                 </div>
               </div>
-            </ScrollReveal>
-          </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
