@@ -209,6 +209,46 @@ await researchIDE.align();`;
     { text: "        return sim.optimize(mode='multi-modal')", color: 'text-amber-200' },
   ];
 
+  const novaIdePillars = [
+    {
+      title: 'Freelancer to Researcher',
+      detail: 'A single IDE that scales from JS sprints to multi-GPU physics labs, keeping every git branch, invite, and context switch in sync.',
+    },
+    {
+      title: 'AI-First Automation',
+      detail: 'Copilots remember hypotheses, debug histories, and dataset lineage while proposing optimized pipelines for AI training, protein folding, or simulation tuning.',
+    },
+    {
+      title: 'Physics & Bio Ready',
+      detail: 'Built-in simulators for intricate science workloads, a bio-compute queue, and native graph explorers for molecules, models, and multi-dimensional experiments.',
+    },
+  ];
+
+  const novaIdeSnippetLines = [
+    { text: 'const novaIDE = new LuminousForge({', color: 'text-sky-300' },
+    { text: "  focus: 'cross-disciplinary',", color: 'text-purple-300' },
+    { text: "  modules: ['js-flow', 'ai-lab', 'bio-lab', 'quantum-git'],", color: 'text-emerald-300' },
+    { text: "  gitOps: 'autonomous',", color: 'text-orange-300' },
+    { text: "});", color: 'text-amber-200' },
+    { text: 'await novaIDE.launch();', color: 'text-rose-200' },
+  ];
+
+  const novaIdeStats = [
+    { label: 'Auto GitOps', value: 'Sync & guard', icon: faLock },
+    { label: 'Compute Pools', value: 'ML · Bio · Physics', icon: faBolt },
+    { label: 'Copilot Memory', value: 'Last 10 experiments', icon: faBrain },
+    { label: 'Live Models', value: 'JS + Research', icon: faCode },
+  ];
+
+  const novaIdeBadges = ['AI training', 'Bio & Physics', 'JS + Research', 'Git Reinvented'];
+
+  const novaIdeHighlights = [
+    'Autonomous GitOps that syncs every repo, branch, and experiment.',
+    'One console for JS flows, AI labs, & physics/bio simulators.',
+    'Living copilot that tracks every hypothesis, failure, and discovery.',
+    'Glow-first design with soft gradients that scale to light & dark themes.',
+  ];
+
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-500 dark:bg-black dark:text-white">
       {/* Header */}
@@ -357,6 +397,95 @@ await researchIDE.align();`;
               </div>
             </div>
           </ScaleReveal>
+        </div>
+      </section>
+
+      {/* NovaIDE Vision */}
+      <section className="relative py-28 bg-gradient-to-b from-slate-100 via-white to-slate-200 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-black dark:text-white overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-70">
+          <div className="absolute top-[-120px] left-[10%] h-[380px] w-[380px] rounded-full bg-white/60 dark:bg-sky-500/30 blur-[140px]" />
+          <div className="absolute bottom-[-80px] right-[5%] h-[320px] w-[320px] rounded-full bg-violet-200/70 dark:bg-purple-500/40 blur-[100px]" />
+          <div className="absolute inset-0 border border-black/5 dark:border-white/5 rounded-[72px] shadow-[0_0_80px_rgba(149,167,255,0.4)]" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <ScrollReveal>
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.4em] text-slate-200">
+                  <FontAwesomeIcon icon={faInfinity} className="text-slate-100" />
+                  NovaIDE
+                </div>
+                <h2 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
+                  Redefine coding from Git to IDE.
+                  <span className="block text-slate-200/80 dark:text-white/80 text-lg tracking-tight">
+                    A unified IDE for freelancers, ML/AI engineers, and researchers.
+                  </span>
+                </h2>
+                <p className="text-lg text-slate-300 max-w-xl">
+                  NovaIDE unifies JS flows, ML training, protein folding, and physics modeling under one glow-first console. It pairs autonomous GitOps with memory-rich copilots so every experiment and sprint moves forward without context loss.
+                </p>
+                <div className="grid gap-4">
+                  {novaIdePillars.map((pillar, index) => (
+                    <div key={pillar.title} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-lg shadow-[0_20px_50px_rgba(15,23,42,0.35)] dark:bg-white/5">
+                      <div className="text-xs text-slate-400 uppercase tracking-[0.4em] mb-2">Pillar {String(index + 1).padStart(2, '0')}</div>
+                      <h3 className="text-2xl font-semibold text-white mb-2">{pillar.title}</h3>
+                      <p className="text-sm text-slate-300 leading-relaxed">{pillar.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-2 text-sm text-slate-200 max-w-xl">
+                  {novaIdeHighlights.map((highlight) => (
+                    <div key={highlight} className="flex items-center gap-3 rounded-full border border-white/15 bg-black/30 px-4 py-3 text-xs uppercase tracking-[0.4em] shadow-[0_15px_30px_rgba(0,0,0,0.4)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      {highlight}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  <Link to="/signup">
+                    <button className="rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-8 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-950 shadow-xl shadow-cyan-500/40 transition-transform duration-300 hover:-translate-y-0.5">
+                      Launch NovaIDE
+                    </button>
+                  </Link>
+                  <button className="rounded-full border border-white/30 px-8 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-white/80 backdrop-blur-lg transition-colors duration-300 hover:border-white hover:text-white">
+                    Watch the Vision
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right">
+              <div className="relative rounded-[40px] border border-white/20 bg-gradient-to-b from-white/10 to-white/0 p-1 shadow-[0_30px_60px_rgba(0,0,0,0.6)] backdrop-blur-3xl overflow-hidden">
+                <div className="relative rounded-[36px] bg-slate-900/80 p-8 shadow-[inset_0_0_60px_rgba(56,189,248,0.3)]">
+                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.5em] text-slate-400">
+                    <span>Live Console</span>
+                    <span className="text-emerald-400">STABLE · 4SPACE</span>
+                  </div>
+                  <div className="mt-5 rounded-3xl bg-[#0f172a]/80 p-6 text-sm font-mono text-slate-100 shadow-[0_20px_50px_rgba(15,23,42,0.7)]">
+                    {novaIdeSnippetLines.map((line, idx) => (
+                      <div key={idx} className={`leading-relaxed ${line.color}`}>
+                        {line.text}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 grid grid-cols-2 gap-4 text-xs text-slate-200">
+                    {novaIdeStats.map((stat) => (
+                      <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <FontAwesomeIcon icon={stat.icon} className="text-base text-slate-100" />
+                          {stat.label}
+                        </div>
+                        <div className="text-lg font-semibold text-white">{stat.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 text-[12px] text-slate-500">
+                    Glowing edges, soft gradients, and modular surfaces echo GitHub's futuristic polish while pointing to fully new possibilities—autonomous git flows, live simulation heatmaps, and compute orchestration that spans biology to physics.
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
         </div>
       </section>
 
