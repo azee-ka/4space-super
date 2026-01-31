@@ -256,18 +256,40 @@ await researchIDE.align();`;
     { title: 'Git Renaissance', detail: 'Autonomous pushes, rebases, and PR drafts with science-grade audit trails.' },
   ];
 
-  const novaIdeLeftSpotlights = [
-    { icon: faGauge, title: 'Signal Labs', detail: 'A telemetry matrix that captures experiments, git diffs, and simulation spikes within a single trace view.', gradient: 'from-indigo-500/40 to-purple-500/20' },
-    { icon: faBolt, title: 'Compute Stream', detail: 'Route ML, physics, and biology workloads through one dashboard with cost, status, and retry signals.', gradient: 'from-cyan-500/40 to-blue-500/20' },
-    { icon: faMicroscope, title: 'Bio + Physics Ready', detail: 'Native graph explorers for molecules, fluid sims, and lattice models that feed live data back to the IDE.', gradient: 'from-pink-500/40 to-rose-500/20' },
-    { icon: faCode, title: 'Git Renaissance', detail: 'Autonomous merges, drafts, and explainable history ensure reproducible research-grade experiments.', gradient: 'from-emerald-500/40 to-lime-500/20' },
+  const novaLabHighlights = [
+    {
+      icon: faGauge,
+      title: 'Signal Console',
+      detail: 'Live telemetry, git diffs, and simulator flashes in one glance.',
+      gradient: 'from-indigo-500/50 via-purple-500/40 to-rose-500/30',
+    },
+    {
+      icon: faBolt,
+      title: 'Compute Guardrails',
+      detail: 'Queue ML, physics, and bio runs with cost whispers and retry signals.',
+      gradient: 'from-cyan-500/50 via-blue-500/40 to-indigo-500/30',
+    },
+    {
+      icon: faCode,
+      title: 'Unified Workbench',
+      detail: 'Git, notebooks, docs, and copilots live on the same timeline.',
+      gradient: 'from-emerald-500/50 via-teal-500/40 to-sky-500/30',
+    },
   ];
 
-  const novaIdeLeftStats = [
-    { label: 'Signal Buffer', value: '5s', sub: 'Context feed always listening' },
-    { label: 'Synced Labs', value: '12', sub: 'AI · Bio · Physics · JS' },
-    { label: 'Copilot Memory', value: '10 runs', sub: 'Hypotheses + failures retained' },
-    { label: 'Capture Latency', value: '0.04s', sub: 'Instant idea intake' },
+  const novaLabSignals = [
+    {
+      title: 'Capture',
+      detail: 'Every branch, diff, and experiment pulse is sampled into a single signal path.',
+    },
+    {
+      title: 'Momentum',
+      detail: 'Copilots remember your last failure, your next idea, and why the retry mattered.',
+    },
+    {
+      title: 'Clarity',
+      detail: 'Layouts prioritize the work that moves you forward, hiding the vanity metrics.',
+    },
   ];
 
   return (
@@ -431,55 +453,84 @@ await researchIDE.align();`;
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <ScrollReveal>
-              <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-slate-800 dark:border-white/20 dark:bg-slate-900/50 dark:text-white">
-                  <FontAwesomeIcon icon={faInfinity} className="text-slate-900 dark:text-white" />
-                  NovaIDE SynthLab
+              <div className="space-y-10">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white">
+                  <FontAwesomeIcon icon={faInfinity} className="text-white" />
+                  4SPACE Lab
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
-                  This is the only lab you need.
-                  <span className="block text-lg text-slate-500 dark:text-slate-300">
-                    Signal, science, and code—together.
-                  </span>
-                </h2>
-                <p className="text-lg text-slate-300 max-w-xl">
-                  NovaIDE SynthLab turns Git, notebooks, simulators, and JavaScript into one commanding experience—context-aware, synced, and ready for the most demanding AI, biology, and physics workstreams.
-                </p>
-                <div className="grid gap-5">
-                  {novaIdeLeftSpotlights.map((spotlight) => (
-                    <div
-                      key={spotlight.title}
-                      className={`rounded-3xl border border-white/10 bg-gradient-to-br ${spotlight.gradient} bg-opacity-40 p-5 shadow-[0_30px_70px_rgba(0,0,0,0.7)]`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="rounded-2xl bg-white/10 p-3 text-lg text-white">
-                          <FontAwesomeIcon icon={spotlight.icon} />
+                <div className="relative overflow-hidden rounded-[40px] border border-white/20 bg-gradient-to-br from-white/10 via-slate-900/70 to-black/70 p-10 shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent opacity-60 blur-3xl animate-[spin_60s_linear_infinite]" />
+                  <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-cyan-500/30 blur-[120px]" />
+                  <div className="absolute -right-12 bottom-8 h-48 w-48 rounded-full bg-purple-500/30 blur-[140px]" />
+                  <div className="relative space-y-5">
+                    <h2 className="text-4xl md:text-5xl font-bold leading-tight text-white">
+                      4SPACE Lab keeps work human.
+                    </h2>
+                    <p className="text-lg text-slate-300 max-w-2xl">
+                      Signal, compute, and discovery live in one console that scales with your team. No vanity counters, just momentum.
+                    </p>
+                    <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.4em] text-slate-400">
+                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Live Sync</span>
+                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Signal Focused</span>
+                      <span className="rounded-full bg-white/10 px-4 py-1 text-white">Minimal Data</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-8 lg:grid-cols-[1.3fr_0.9fr]">
+                  <div className="space-y-4">
+                    {novaLabHighlights.map((card) => (
+                      <div
+                        key={card.title}
+                        className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-lg"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/10 opacity-40 blur-3xl animate-[pulse_10s_ease-in-out_infinite]" />
+                        <div className="relative flex items-center gap-3">
+                          <div className="rounded-2xl bg-white/10 p-3 text-lg text-white">
+                            <FontAwesomeIcon icon={card.icon} />
+                          </div>
+                          <span className="text-[11px] uppercase tracking-[0.4em] text-slate-300">4SPACE</span>
                         </div>
-                        <span className="text-[11px] uppercase tracking-[0.5em] text-slate-300">SynthLab</span>
+                        <h3 className="relative text-2xl font-semibold text-white mt-4">{card.title}</h3>
+                        <p className="relative text-sm text-slate-200 leading-relaxed mt-2">{card.detail}</p>
                       </div>
-                      <h3 className="text-2xl font-semibold text-white mb-2">{spotlight.title}</h3>
-                      <p className="text-sm text-slate-300 leading-relaxed">{spotlight.detail}</p>
+                    ))}
+                  </div>
+                  <div className="space-y-6">
+                    <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/40 p-6 shadow-[0_25px_60px_rgba(0,0,0,0.75)]">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400/20 to-transparent opacity-60 blur-xl animate-[pulse_5s_ease-in-out_infinite]" />
+                      <div className="relative flex items-center gap-3 text-xs uppercase tracking-[0.4em] text-slate-400">
+                        <div className="relative h-10 w-10">
+                          <span className="absolute inset-0 rounded-full border border-slate-600/70" />
+                          <span className="absolute inset-2 rounded-full bg-emerald-400/80 animate-ping" />
+                        </div>
+                        Signal path
+                      </div>
+                      <div className="mt-6 flex flex-col gap-3">
+                        {novaLabSignals.map((step, idx) => (
+                          <div key={step.title} className="flex items-start gap-4">
+                            <div className="flex flex-col items-center">
+                              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                              {idx < novaLabSignals.length - 1 && <span className="h-14 w-[2px] bg-gradient-to-b from-emerald-400 to-slate-900/0" />}
+                            </div>
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.4em] text-slate-500">{step.title}</div>
+                              <p className="text-sm text-slate-200 leading-relaxed">{step.detail}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {novaIdeLeftStats.map((stat) => (
-                    <div key={stat.label} className="rounded-3xl border border-white/10 bg-slate-900/80 p-5 shadow-[0_25px_60px_rgba(0,0,0,0.75)]">
-                      <div className="text-xs uppercase tracking-[0.4em] text-slate-400 mb-1">{stat.label}</div>
-                      <div className="text-3xl font-bold text-white">{stat.value}</div>
-                      <p className="text-sm text-slate-400 mt-2">{stat.sub}</p>
+                    <div className="flex flex-wrap gap-4">
+                      <Link to="/signup">
+                        <button className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-900 shadow-xl shadow-emerald-500/40 transition-transform duration-300 hover:-translate-y-0.5">
+                          Launch 4SPACE
+                        </button>
+                      </Link>
+                      <button className="rounded-full border border-white/20 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-white/90 shadow-sm transition-colors duration-300 hover:border-white/60">
+                        Watch the Vision
+                      </button>
                     </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-4">
-                  <Link to="/signup">
-                    <button className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-900 shadow-xl shadow-emerald-500/40 transition-transform duration-300 hover:-translate-y-0.5">
-                      Launch NovaIDE
-                    </button>
-                  </Link>
-                  <button className="rounded-full border border-slate-300/60 px-10 py-3 font-semibold text-sm uppercase tracking-[0.4em] text-slate-600 shadow-sm transition-colors duration-300 hover:border-slate-900 dark:border-white/30 dark:text-white">
-                    Watch the Vision
-                  </button>
+                  </div>
                 </div>
               </div>
             </ScrollReveal>
