@@ -37,7 +37,10 @@ import {
   faServer,
   faFingerprint,
   faWandMagicSparkles,
-  faCircleNodes
+  faCircleNodes,
+  faFlask,
+  faBrain,
+  faMicroscope
 } from '@fortawesome/free-solid-svg-icons';
 
 function useScrollAnimation() {
@@ -181,9 +184,29 @@ await workspace.sync();`;
 await researchIDE.align();`;
 
   const codeFiles = [
-    { name: 'nova.research.ts', description: 'AI research agent orchestration that keeps experiments reproducible.', color: 'from-cyan-500/80 to-blue-500/80', tag: 'AI Research' },
-    { name: 'signal.protocol.py', description: 'Signal-processing helpers for noisy datasets, color-coded for quick scanning.', color: 'from-emerald-500/80 to-teal-500/80', tag: 'Signal Stack' },
-    { name: 'scout.notebook.md', description: 'Research journal that surfaces ideas, docs, and citations in one place.', color: 'from-purple-500/80 to-pink-500/80', tag: 'Research Log' },
+    { name: 'nova.research.ts', description: 'AI research agent orchestration keeping experiments reproducible.', color: 'from-cyan-500/80 to-blue-500/80', tag: 'AI Research' },
+    { name: 'signal.protocol.py', description: 'Signal-processing helpers for noisy datasets with live visualization hooks.', color: 'from-emerald-500/80 to-teal-500/80', tag: 'Signal Stack' },
+    { name: 'scout.notebook.md', description: 'Research journal that surfaces ideas, docs, and citations in one unified stream.', color: 'from-purple-500/80 to-pink-500/80', tag: 'Research Log' },
+  ];
+
+  const researchInsights = [
+    'Simulation-ready labs that pair data, visualization, and compute without extra tabs.',
+    'AI copilots that remember citations, experiments, and why a change matters to the science.',
+    'Universal codebase control blending notebook agility with IDE refactors and dataset-aware linting.',
+  ];
+
+  const researchFeatures = [
+    { icon: faFlask, title: 'Experiments built in', detail: 'Orchestrate ML, physics, and biology runs inside the same workspace.' },
+    { icon: faBrain, title: 'Insight-driven AI', detail: 'Summaries, next-step hints, and failure context tailored to research.' },
+    { icon: faMicroscope, title: 'Research-grade context', detail: 'Track datasets, models, and references with lineage metadata.' },
+  ];
+
+  const colorCodeLines = [
+    { text: "def train_research_model(data, sim_config):", color: 'text-emerald-300' },
+    { text: "    with NovaFlow.research_guardian() as guardian:", color: 'text-sky-300' },
+    { text: "        dataset = guardian.load(data, cache='adaptive')", color: 'text-purple-300' },
+    { text: "        sim = guardian.simulate(dataset, config=sim_config)", color: 'text-orange-300' },
+    { text: "        return sim.optimize(mode='multi-modal')", color: 'text-amber-200' },
   ];
 
   return (
@@ -630,71 +653,6 @@ await researchIDE.align();`;
                 </div>
               </ScrollReveal>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Revolutionary IDE + Research Section */}
-      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-slate-900 dark:via-black dark:to-slate-900">
-        <div className="max-w-6xl mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-12">
-              <div className="inline-block px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-4">
-                <span className="text-sm font-medium text-cyan-400">A.I. RESEARCH LAB</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white">
-                Revolutionary IDE & codebase management studio
-              </h2>
-              <p className="mt-4 text-lg text-slate-600 dark:text-gray-400">
-                Built for research-first teams that need AI copilots, live inference, and color-coded code files to tame sprawling repositories, this workspace keeps every experiment in sync with the broader coding platform vision.
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid lg:grid-cols-[1.1fr_1fr] gap-8 items-start">
-            <div className="rounded-3xl bg-white/90 p-8 shadow-2xl border border-slate-200/70 dark:bg-black/90 dark:border-white/10">
-              <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">AI + Research support stack</h3>
-              <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
-                Every pane is aware of research data, model lineage, and coding struggles. Pull AI summaries, tag findings, and keep experiments reproducible without losing the broad view of your codebase.
-              </p>
-              <ul className="space-y-3 text-sm">
-                {[
-                  'AI copilots that surface the last failing test and suggest research citations.',
-                  'Research-grade workspaces that tag datasets, notebooks, and builds in one stream.',
-                  'Context-preserving buffers that remember why you wrote the code and alert you when the story diverges.'
-                ].map((item) => (
-                  <li key={item} className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-slate-600 dark:text-slate-300">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-6 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-xs text-slate-500 dark:border-white/20 dark:bg-black/60 dark:text-gray-300">
-                Designed for radicals who want a revolutionary coding experience that understands the pain of debugging in research and celebrates breakthroughs with AI-guided summaries.
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {codeFiles.map((file) => (
-                  <div
-                    key={file.name}
-                    className={`rounded-3xl border border-slate-200/70 bg-gradient-to-br ${file.color} p-4 text-white shadow-lg`}
-                  >
-                    <div className="text-xs uppercase tracking-[0.4em] text-white/60">{file.tag}</div>
-                    <div className="mt-2 text-lg font-semibold">{file.name}</div>
-                    <p className="mt-2 text-sm text-white/80">{file.description}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-3xl border border-slate-200/70 bg-slate-900/90 p-4 text-[13px] text-slate-100 font-mono shadow-2xl">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.5em] text-emerald-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Code Pulse</span>
-                </div>
-                <pre className="mt-3 overflow-x-auto leading-relaxed text-sm">{ideSnippet}</pre>
-              </div>
-            </div>
           </div>
         </div>
       </section>
