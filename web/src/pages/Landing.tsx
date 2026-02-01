@@ -153,6 +153,7 @@ export function Landing() {
   const parallaxOffset = scrollY * 0.5;
   const mouseParallaxX = (mousePosition.x - window.innerWidth / 2) * 0.01;
   const mouseParallaxY = (mousePosition.y - window.innerHeight / 2) * 0.01;
+  const scrollProgress = Math.min(scrollY / (document.documentElement.scrollHeight - window.innerHeight), 1);
 
   const heroMetrics = [
     { label: 'Messages', count: '247', trend: '+12%', icon: faComments, glow: 'from-cyan-500/90 to-blue-500/90', accent: 'text-cyan-500' },
@@ -308,8 +309,30 @@ await researchIDE.align();`;
 
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-500 dark:bg-black dark:text-white">
+      {/* Glowing Scroll Trail */}
+      <div className="fixed left-6 top-0 bottom-0 w-1 z-50 pointer-events-none hidden xl:block">
+        {/* Glowing trail that follows scroll */}
+        <div
+          className="absolute top-0 w-full bg-gradient-to-b from-cyan-400 via-purple-500 to-transparent transition-all duration-500 ease-out"
+          style={{
+            height: `${scrollProgress * 100}%`,
+            filter: 'blur(1px)',
+            boxShadow: '0 0 20px rgba(34, 211, 238, 0.6), 0 0 40px rgba(168, 85, 247, 0.4)',
+          }}
+        />
+        {/* Active indicator dot */}
+        <div
+          className="absolute w-3 h-3 -left-1 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-full transition-all duration-500 ease-out"
+          style={{
+            top: `${scrollProgress * 100}%`,
+            boxShadow: '0 0 15px rgba(34, 211, 238, 0.8), 0 0 30px rgba(168, 85, 247, 0.6)',
+          }}
+        />
+      </div>
+
+
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 text-slate-900 border-b border-slate-200/60 backdrop-blur-xl transition-all duration-300 dark:bg-black/80 dark:text-white dark:border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 text-slate-900 border-b border-slate-200/60 backdrop-blur-xl transition-all duration-300 dark:bg-black/0 dark:text-white dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -458,29 +481,29 @@ await researchIDE.align();`;
       </section>
 
       {/* Revolutionary 4SPACE Lab Section */}
-      <section className="relative py-40 bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden">
+      <section className="relative py-40 bg-white dark:bg-black text-slate-900 dark:text-white overflow-hidden">
         {/* Animated Background */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-[-200px] left-[5%] h-[600px] w-[600px] rounded-full bg-purple-600/20 blur-[180px] animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute top-[30%] right-[10%] h-[500px] w-[500px] rounded-full bg-cyan-500/20 blur-[160px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-          <div className="absolute bottom-[-100px] left-[20%] h-[450px] w-[450px] rounded-full bg-fuchsia-600/20 blur-[140px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+          <div className="absolute top-[-200px] left-[5%] h-[600px] w-[600px] rounded-full bg-purple-400/20 dark:bg-purple-600/20 blur-[180px]" />
+          <div className="absolute top-[30%] right-[10%] h-[500px] w-[500px] rounded-full bg-cyan-400/20 dark:bg-cyan-500/20 blur-[160px]" />
+          <div className="absolute bottom-[-100px] left-[20%] h-[450px] w-[450px] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-600/20 blur-[140px]" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           {/* Header */}
           <ScrollReveal>
             <div className="text-center mb-20">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-gradient-to-r from-purple-500/10 via-cyan-500/10 to-fuchsia-500/10 px-6 py-2 text-xs font-bold uppercase tracking-[0.4em] text-white mb-8 backdrop-blur-xl">
-                <FontAwesomeIcon icon={faInfinity} className="text-cyan-400 animate-pulse" />
+              <div className="inline-flex items-center gap-3 rounded-full border border-slate-300 dark:border-white/20 bg-gradient-to-r from-purple-500/10 via-cyan-500/10 to-fuchsia-500/10 px-6 py-2 text-xs font-bold uppercase tracking-[0.4em] text-slate-700 dark:text-white mb-8 backdrop-blur-xl">
+                <FontAwesomeIcon icon={faInfinity} className="text-cyan-500 dark:text-cyan-400" />
                 The Future of Development
               </div>
               <h2 className="text-6xl md:text-8xl font-black mb-8 leading-tight">
-                <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-cyan-500 via-purple-500 to-fuchsia-500 dark:from-cyan-400 dark:via-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
                   4SPACE Lab
                 </span>
               </h2>
-              <p className="text-2xl md:text-3xl text-slate-300 max-w-4xl mx-auto leading-relaxed">
-                The world's first <span className="text-cyan-400 font-semibold">Quantum-Ready</span>, <span className="text-purple-400 font-semibold">AI-Native</span> development environment.
+              <p className="text-2xl md:text-3xl text-slate-700 dark:text-slate-300 max-w-4xl mx-auto leading-relaxed">
+                The world's first <span className="text-cyan-600 dark:text-cyan-400 font-semibold">Quantum-Ready</span>, <span className="text-purple-600 dark:text-purple-400 font-semibold">AI-Native</span> development environment.
                 <br />From freelance code to protein folding, physics simulations to ML research.
               </p>
             </div>
@@ -519,17 +542,34 @@ await researchIDE.align();`;
                   {/* Subtle border glow on hover */}
                   <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.iconGradient} rounded-3xl opacity-0 blur-lg group-hover:opacity-20 transition-opacity duration-500`} />
 
-                  <div className={`relative h-full bg-gradient-to-br ${feature.gradient} border border-white/10 rounded-3xl p-8 backdrop-blur-xl hover:border-white/30 transition-all duration-500`}>
+                  <div
+                    className={`relative h-full bg-gradient-to-br ${feature.gradient} border border-slate-200 dark:border-white/10 rounded-3xl p-8 backdrop-blur-xl hover:border-slate-300 dark:hover:border-white/30 transition-all duration-500`}
+                    style={{ transformStyle: 'preserve-3d' }}
+                    onMouseMove={(e) => {
+                      const card = e.currentTarget;
+                      const rect = card.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+                      const rotateX = (y - rect.height / 2) / 30;
+                      const rotateY = (rect.width / 2 - x) / 30;
+                      card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                      card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                      e.currentTarget.style.transform = 'perspective(1500px)';
+                    }}
+                  >
                     <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.iconGradient} flex items-center justify-center mb-6 transform group-hover:scale-105 transition-all duration-500 shadow-2xl`}>
                       <FontAwesomeIcon icon={feature.icon} className="text-3xl text-white" />
                     </div>
 
-                    <h3 className="text-2xl font-bold mb-4 text-white">{feature.title}</h3>
-                    <p className="text-slate-300 mb-6 leading-relaxed">{feature.description}</p>
+                    <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">{feature.title}</h3>
+                    <p className="text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">{feature.description}</p>
 
                     <div className="space-y-2">
                       {feature.features.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm text-slate-400">
+                        <div key={idx} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                           <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${feature.iconGradient}`} />
                           {item}
                         </div>
@@ -942,33 +982,43 @@ await researchIDE.align();`;
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="relative py-20 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-black dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { value: '50K+', label: 'Active Users', icon: faUsers },
-              { value: '99.9%', label: 'Uptime', icon: faServer },
-              { value: '10M+', label: 'Messages Sent', icon: faComments },
-              { value: '5M+', label: 'Files Stored', icon: faFolder },
-            ].map((stat, i) => (
-              <ScrollReveal key={i} delay={i * 100}>
-                <div className="text-center group">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-slate-200/60 mb-4 transform group-hover:scale-110 transition-transform duration-300 dark:border-white/10">
-                    <FontAwesomeIcon icon={stat.icon} className="text-3xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent" />
-                  </div>
-                  <div className="text-4xl font-bold mb-2 text-slate-900 dark:text-white">{stat.value}</div>
-                  <div className="text-slate-500 dark:text-gray-400">{stat.label}</div>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
-      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-gray-900 dark:via-black dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-gray-900 dark:via-black dark:to-gray-900 overflow-hidden">
+        {/* Animated grid background */}
+        <div className="absolute inset-0 opacity-30 dark:opacity-20">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(6, 182, 212, 0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: '60px 60px',
+              transform: `translateY(${scrollY * 0.1}px)`,
+            }}
+          />
+        </div>
+
+        {/* Glow orbs that follow scroll */}
+        <div
+          className="absolute w-96 h-96 bg-cyan-500/20 dark:bg-cyan-400/30 rounded-full blur-[150px]"
+          style={{
+            top: `${20 + scrollY * 0.05}%`,
+            left: `${10 + Math.sin(scrollY * 0.001) * 20}%`,
+            transition: 'all 0.3s ease-out'
+          }}
+        />
+        <div
+          className="absolute w-96 h-96 bg-purple-500/20 dark:bg-purple-400/30 rounded-full blur-[150px]"
+          style={{
+            bottom: `${20 + scrollY * 0.03}%`,
+            right: `${10 + Math.cos(scrollY * 0.001) * 20}%`,
+            transition: 'all 0.3s ease-out'
+          }}
+        />
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 mb-6">
@@ -1031,8 +1081,45 @@ await researchIDE.align();`;
               },
             ].map((feature, i) => (
               <ScrollReveal key={i} delay={i * 100}>
-                <div className="group bg-gradient-to-b from-white/90 to-slate-100 backdrop-blur-sm rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-500 h-full transform hover:-translate-y-2 shadow-sm dark:from-black/90 dark:via-slate-900/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10">
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 transform group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                <div
+                  className="group bg-gradient-to-b from-white/90 to-slate-100 backdrop-blur-sm rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-500 h-full shadow-sm dark:from-black/90 dark:via-slate-900/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 card-3d"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transform: 'perspective(1000px)'
+                  }}
+                  onMouseMove={(e) => {
+                    const card = e.currentTarget;
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = (y - rect.height / 2) / 30;
+                    const rotateY = (rect.width / 2 - x) / 30;
+                    card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                    card.style.boxShadow = '0 10px 30px rgba(139, 92, 246, 0.15), 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 30px rgba(255, 255, 255, 0.1)';
+                    card.style.border = '1px solid rgba(139, 92, 246, 0.8)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1) translateZ(0)';
+                    e.currentTarget.style.boxShadow = '';
+                    e.currentTarget.style.border = '';
+                  }}
+                >
+                  {/* Circuit-board style corner accents */}
+                  <div className="absolute top-2 left-2 w-4 h-4">
+                    <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-cyan-400/60 rounded-tl" />
+                    <div className="absolute top-0 left-1 w-1 h-0.5 bg-cyan-400/40" />
+                    <div className="absolute top-1 left-0 w-0.5 h-1 bg-cyan-400/40" />
+                  </div>
+                  <div className="absolute top-2 right-2 w-4 h-4">
+                    <div className="absolute top-0 right-0 w-2 h-2 border-r-2 border-t-2 border-purple-400/60 rounded-tr" />
+                    <div className="absolute top-0 right-1 w-1 h-0.5 bg-purple-400/40" />
+                    <div className="absolute top-1 right-0 w-0.5 h-1 bg-purple-400/40" />
+                  </div>
+
+                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 transform group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl`}>
                     <FontAwesomeIcon icon={feature.icon} className="text-white text-2xl" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">{feature.title}</h3>
@@ -1053,8 +1140,21 @@ await researchIDE.align();`;
       </section>
 
       {/* Workflow Section */}
-      <section className="relative py-32 bg-slate-50 dark:bg-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-slate-50 dark:bg-black overflow-hidden">
+        {/* Diagonal grid pattern */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(45deg, rgba(139, 92, 246, 0.15) 1px, transparent 1px),
+                linear-gradient(-45deg, rgba(139, 92, 246, 0.15) 1px, transparent 1px)
+              `,
+              backgroundSize: '50px 50px',
+            }}
+          />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6">
@@ -1093,7 +1193,30 @@ await researchIDE.align();`;
               },
             ].map((step, i) => (
               <ScrollReveal key={i} delay={i * 150} direction="up">
-                <div className="relative">
+                <div
+                  className="relative"
+                  style={{ transformStyle: 'preserve-3d' }}
+                  onMouseMove={(e) => {
+                    const card = e.currentTarget;
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const rotateX = (y - rect.height / 2) / 30;
+                    const rotateY = (rect.width / 2 - x) / 30;
+                    card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                    card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                    e.currentTarget.style.transform = 'perspective(1500px)';
+                  }}
+                >
+                  {/* Chip-like corner decorations */}
+                  <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-purple-400/50 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 border-purple-400/50 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-cyan-400/50 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-cyan-400/50 rounded-br-lg" />
+
                   <div className={`text-8xl font-bold mb-6 bg-gradient-to-r ${step.color} bg-clip-text text-transparent opacity-20`}>
                     {step.step}
                   </div>
@@ -1110,8 +1233,20 @@ await researchIDE.align();`;
       </section>
 
       {/* Spaces Demo Section */}
-      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-black dark:via-gray-900 dark:to-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-black dark:via-gray-900 dark:to-black overflow-hidden">
+        {/* Hexagonal grid pattern */}
+        <div className="absolute inset-0 opacity-15 dark:opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at center, rgba(219, 39, 119, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '30px 30px',
+            }}
+          />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/20 mb-6">
@@ -1164,7 +1299,24 @@ await researchIDE.align();`;
               },
             ].map((space, i) => (
               <ScrollReveal key={i} delay={i * 100}>
-              <div className="bg-gradient-to-b from-white/90 to-slate-100 border border-slate-200/70 backdrop-blur-sm rounded-2xl overflow-hidden hover:border-slate-300 transition-all duration-500 group cursor-pointer transform hover:scale-105 shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/20">
+              <div
+                className="bg-gradient-to-b from-white/90 to-slate-100 border border-slate-200/70 backdrop-blur-sm rounded-2xl overflow-hidden hover:border-slate-300 transition-all duration-500 group cursor-pointer shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/20"
+                style={{ transformStyle: 'preserve-3d' }}
+                onMouseMove={(e) => {
+                  const card = e.currentTarget;
+                  const rect = card.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  const rotateX = (y - rect.height / 2) / 30;
+                  const rotateY = (rect.width / 2 - x) / 30;
+                  card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                  card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                  e.currentTarget.style.transform = 'perspective(1500px)';
+                }}
+              >
                   <div className={`h-40 bg-gradient-to-br ${space.color} relative overflow-hidden`}>
                     <div className="absolute inset-0 bg-slate-900/20 dark:bg-black/30" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent dark:from-black/60" />
@@ -1208,8 +1360,21 @@ await researchIDE.align();`;
       </section>
 
       {/* Advanced Features Grid */}
-      <section className="relative py-32 bg-slate-50 dark:bg-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-slate-50 dark:bg-black overflow-hidden">
+        {/* Circuit-style grid pattern */}
+        <div className="absolute inset-0 opacity-15 dark:opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(34, 197, 94, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(34, 197, 94, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '40px 40px',
+            }}
+          />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-6">
@@ -1226,7 +1391,24 @@ await researchIDE.align();`;
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {advancedCapabilities.map((feature, i) => (
               <ScrollReveal key={feature.title} delay={(i % 4) * 50}>
-                <div className="bg-white/95 rounded-xl p-6 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 transform hover:-translate-y-1 shadow-sm dark:bg-black/90 dark:border-white/10">
+                <div
+                  className="bg-white/95 rounded-xl p-6 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:bg-black/90 dark:border-white/10"
+                  style={{ transformStyle: 'preserve-3d' }}
+                  onMouseMove={(e) => {
+                    const card = e.currentTarget;
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const rotateX = (y - rect.height / 2) / 30;
+                    const rotateY = (rect.width / 2 - x) / 30;
+                    card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                    card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                    e.currentTarget.style.transform = 'perspective(1500px)';
+                  }}
+                >
                   <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.iconBg} shadow-lg`}>
                     <FontAwesomeIcon icon={feature.icon} className="text-2xl text-white" />
                   </div>
@@ -1240,8 +1422,21 @@ await researchIDE.align();`;
       </section>
 
       {/* Use Cases */}
-      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-black dark:via-gray-900 dark:to-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:bg-gradient-to-b dark:from-black dark:via-gray-900 dark:to-black overflow-hidden">
+        {/* Cross-hatch grid pattern */}
+        <div className="absolute inset-0 opacity-15 dark:opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(45deg, rgba(99, 102, 241, 0.15) 1px, transparent 1px),
+                linear-gradient(-45deg, rgba(99, 102, 241, 0.15) 1px, transparent 1px)
+              `,
+              backgroundSize: '35px 35px',
+            }}
+          />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-6">
@@ -1257,7 +1452,24 @@ await researchIDE.align();`;
 
           <div className="grid md:grid-cols-2 gap-12">
             <ScrollReveal direction="left">
-              <div className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10">
+              <div
+                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                style={{ transformStyle: 'preserve-3d' }}
+                onMouseMove={(e) => {
+                  const card = e.currentTarget;
+                  const rect = card.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  const rotateX = (y - rect.height / 2) / 30;
+                  const rotateY = (rect.width / 2 - x) / 30;
+                  card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                  card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                  e.currentTarget.style.transform = 'perspective(1500px)';
+                }}
+              >
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-8 shadow-2xl">
                   <FontAwesomeIcon icon={faUsers} className="text-white text-3xl" />
                 </div>
@@ -1290,7 +1502,24 @@ await researchIDE.align();`;
             </ScrollReveal>
 
             <ScrollReveal direction="right">
-              <div className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10">
+              <div
+                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                style={{ transformStyle: 'preserve-3d' }}
+                onMouseMove={(e) => {
+                  const card = e.currentTarget;
+                  const rect = card.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  const rotateX = (y - rect.height / 2) / 30;
+                  const rotateY = (rect.width / 2 - x) / 30;
+                  card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                  card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                  e.currentTarget.style.transform = 'perspective(1500px)';
+                }}
+              >
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-8 shadow-2xl">
                   <FontAwesomeIcon icon={faRocket} className="text-white text-3xl" />
                 </div>
@@ -1326,8 +1555,20 @@ await researchIDE.align();`;
       </section>
 
       {/* Testimonials */}
-      <section className="relative py-32 bg-slate-50 dark:bg-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-32 bg-slate-50 dark:bg-black overflow-hidden">
+        {/* Scattered dot grid pattern */}
+        <div className="absolute inset-0 opacity-15 dark:opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                radial-gradient(circle, rgba(234, 179, 8, 0.3) 1px, transparent 1px)
+              `,
+              backgroundSize: '25px 25px',
+            }}
+          />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative">
           <ScrollReveal>
             <div className="text-center mb-20">
               <div className="inline-block px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/20 mb-6">
@@ -1363,7 +1604,24 @@ await researchIDE.align();`;
               },
             ].map((testimonial, i) => (
               <ScrollReveal key={i} delay={i * 100}>
-                <div className="bg-gradient-to-b from-white/90 via-slate-100 to-slate-100 rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10">
+                <div
+                  className="bg-gradient-to-b from-white/90 via-slate-100 to-slate-100 rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                  style={{ transformStyle: 'preserve-3d' }}
+                  onMouseMove={(e) => {
+                    const card = e.currentTarget;
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const rotateX = (y - rect.height / 2) / 30;
+                    const rotateY = (rect.width / 2 - x) / 30;
+                    card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
+                    card.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+                    e.currentTarget.style.transform = 'perspective(1500px)';
+                  }}
+                >
                   <div className="flex gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <FontAwesomeIcon key={i} icon={faStar} className="text-yellow-400 text-sm" />
@@ -1423,6 +1681,183 @@ await researchIDE.align();`;
               </div>
             </div>
           </ScrollReveal>
+        </div>
+      </section>
+
+      {/* Massive Cyberpunk Globe Section */}
+      <section className="relative py-40 bg-white dark:bg-black text-slate-900 dark:text-white overflow-hidden">
+        {/* Animated grid background */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-15">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(6, 182, 212, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(6, 182, 212, 0.3) 1px, transparent 1px)
+              `,
+              backgroundSize: '40px 40px',
+            }}
+          />
+        </div>
+
+        {/* Glow effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-400/20 dark:bg-cyan-500/20 rounded-full blur-[150px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/20 rounded-full blur-[150px]" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6">
+          <ScrollReveal>
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 backdrop-blur-xl mb-8">
+                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                <span className="text-sm font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-300">Global Network</span>
+              </div>
+              <h2 className="text-6xl md:text-8xl font-black mb-8 bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                Connected Worldwide
+              </h2>
+              <p className="text-2xl text-slate-700 dark:text-slate-300 max-w-3xl mx-auto">
+                Join developers and teams across <span className="text-cyan-500 dark:text-cyan-400 font-bold">150+ countries</span> building the future
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* Simple 3D Globe with Country Dots */}
+          <div className="relative h-[600px] flex items-center justify-center">
+            <svg className="w-full h-full max-w-[500px]" viewBox="-250 -250 500 500">
+              {/* Meridian lines */}
+              {[...Array(12)].map((_, i) => {
+                const angle = (i * 15);
+                return (
+                  <ellipse
+                    key={`meridian-${i}`}
+                    cx="0"
+                    cy="0"
+                    rx={250 * Math.abs(Math.sin((angle * Math.PI) / 180))}
+                    ry="250"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="0.5"
+                    className="text-cyan-400/15 dark:text-cyan-500/25"
+                  />
+                );
+              })}
+              {/* Latitude rings */}
+              {[-150, -75, 0, 75, 150].map((y, i) => (
+                <ellipse
+                  key={`lat-${i}`}
+                  cx="0"
+                  cy={y}
+                  rx={Math.sqrt(Math.max(0, 250 * 250 - y * y))}
+                  ry={Math.sqrt(Math.max(0, 250 * 250 - y * y)) * 0.3}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  className="text-purple-400/15 dark:text-purple-500/25"
+                />
+              ))}
+              
+              {/* Country dot clusters */}
+              {/* North America */}
+              {[...Array(25)].map((_, i) => {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 50 + Math.random() * 40;
+                return (
+                  <circle
+                    key={`na-${i}`}
+                    cx={-100 + Math.cos(angle) * r}
+                    cy={80 + Math.sin(angle) * r * 0.4}
+                    r="2.5"
+                    fill="currentColor"
+                    className="text-cyan-500 dark:text-cyan-400"
+                  />
+                );
+              })}
+              {/* Europe */}
+              {[...Array(20)].map((_, i) => {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 30 + Math.random() * 25;
+                return (
+                  <circle
+                    key={`eu-${i}`}
+                    cx={20 + Math.cos(angle) * r}
+                    cy={100 + Math.sin(angle) * r * 0.3}
+                    r="2.5"
+                    fill="currentColor"
+                    className="text-purple-500 dark:text-purple-400"
+                  />
+                );
+              })}
+              {/* Asia */}
+              {[...Array(30)].map((_, i) => {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 60 + Math.random() * 50;
+                return (
+                  <circle
+                    key={`asia-${i}`}
+                    cx={120 + Math.cos(angle) * r}
+                    cy={50 + Math.sin(angle) * r * 0.5}
+                    r="2.5"
+                    fill="currentColor"
+                    className="text-fuchsia-500 dark:text-fuchsia-400"
+                  />
+                );
+              })}
+              {/* South America */}
+              {[...Array(18)].map((_, i) => {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 30 + Math.random() * 30;
+                return (
+                  <circle
+                    key={`sa-${i}`}
+                    cx={-50 + Math.cos(angle) * r}
+                    cy={-80 + Math.sin(angle) * r * 0.4}
+                    r="2.5"
+                    fill="currentColor"
+                    className="text-cyan-500 dark:text-cyan-400"
+                  />
+                );
+              })}
+              {/* Network lines */}
+              <g className="opacity-30">
+                <line x1="-100" y1="80" x2="20" y2="100" stroke="url(#lineGrad)" strokeWidth="1.5" />
+                <line x1="20" y1="100" x2="120" y2="50" stroke="url(#lineGrad)" strokeWidth="1.5" />
+                <line x1="-100" y1="80" x2="-50" y2="-80" stroke="url(#lineGrad)" strokeWidth="1.5" />
+                <line x1="120" y1="50" x2="150" y2="-100" stroke="url(#lineGrad)" strokeWidth="1.5" />
+              </g>
+              <defs>
+                <linearGradient id="lineGrad">
+                  <stop offset="0%" stopColor="rgb(34, 211, 238)" stopOpacity="0.7" />
+                  <stop offset="50%" stopColor="rgb(168, 85, 247)" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="rgb(217, 70, 239)" stopOpacity="0.7" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
+            {[
+              { value: '150+', label: 'Countries', icon: faGlobe },
+              { value: '2M+', label: 'Active Users', icon: faUsers },
+              { value: '99.99%', label: 'Uptime', icon: faServer },
+              { value: '24/7', label: 'Support', icon: faRocket },
+            ].map((stat, i) => (
+              <div
+                key={stat.label}
+                className="group relative bg-gradient-to-br from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-2xl p-6 text-center hover:border-cyan-400/60 transition-all duration-300 backdrop-blur-sm"
+                style={{
+                  animation: `float 3s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/0 to-purple-500/0 group-hover:from-cyan-400/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-300" />
+                <FontAwesomeIcon icon={stat.icon} className="text-4xl text-cyan-400 mb-3" />
+                <div className="text-4xl font-black text-white mb-1">{stat.value}</div>
+                <div className="text-sm text-slate-400 uppercase tracking-wider">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -1521,6 +1956,29 @@ await researchIDE.align();`;
         .animate-gradient {
           background-size: 200% 200%;
           animation: gradient 3s ease infinite;
+        }
+
+        @keyframes spinGlobe {
+          from { transform: rotateY(0deg) rotateX(60deg); }
+          to { transform: rotateY(360deg) rotateX(60deg); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+
+        @keyframes dashArray {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -30; }
+        }
+
+        .card-3d {
+          transition: transform 0.1s ease-out, box-shadow 0.3s ease-out;
+        }
+
+        .card-3d:hover {
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(34, 211, 238, 0.2);
         }
       `}</style>
     </div>
