@@ -560,7 +560,7 @@ await researchIDE.align();`;
                       e.currentTarget.style.transform = 'perspective(1500px)';
                     }}
                   >
-                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.iconGradient} flex items-center justify-center mb-6 transform group-hover:scale-105 transition-all duration-500 shadow-2xl`}>
+                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.iconGradient} flex items-center justify-center mb-6 transform group-hover:scale-105 transition-all duration-500 shadow-2xl dark:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.4)]`}>
                       <FontAwesomeIcon icon={feature.icon} className="text-3xl text-white" />
                     </div>
 
@@ -790,31 +790,31 @@ await researchIDE.align();`;
               <ScrollReveal key={pillar.title} delay={i * 100}>
               <div className="group relative">
                 {/* Subtle glow effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-br from-black/70 via-purple-950/70 to-black/60 rounded-3xl opacity-70 blur-3xl group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                <div className="absolute -inset-0.5 bg-gradient-to-br from-purple-200/40 via-purple-100/40 to-white/60 rounded-3xl opacity-80 blur-2xl pointer-events-none transition-opacity duration-500 group-hover:opacity-100 dark:from-black/70 dark:via-purple-950/70 dark:to-black/60" />
 
                 <div
-                  className="relative bg-black/90 border border-purple-900/60 rounded-3xl p-8 backdrop-blur-3xl hover:border-purple-800/40 transition-all duration-500 text-white shadow-[0_25px_70px_rgba(15,23,42,0.65)] overflow-hidden"
+                  className="relative bg-white/90 border border-slate-200/70 rounded-3xl p-8 backdrop-blur-3xl hover:border-slate-300 transition-all duration-250 ease-out text-slate-900 shadow-lg dark:bg-black/90 dark:border-purple-900/60 dark:text-white dark:shadow-[0_10px_40px_-10px_rgba(147,51,234,0.3)]"
                 >
                     <div className="flex items-start gap-4 mb-6">
-                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center flex-shrink-0 shadow-xl group-hover:shadow-2xl transition-shadow duration-500`}>
+                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center flex-shrink-0 shadow-xl group-hover:shadow-2xl transition-shadow duration-500 dark:shadow-[0_20px_50px_-12px_rgba(147,51,234,0.4)] dark:group-hover:shadow-[0_25px_60px_-15px_rgba(147,51,234,0.5)]`}>
                         <FontAwesomeIcon icon={pillar.icon} className="text-2xl text-white" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold text-white mb-2">{pillar.title}</h3>
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{pillar.title}</h3>
                         <div className={`h-1 w-16 rounded-full bg-gradient-to-r ${pillar.gradient}`} />
                       </div>
                     </div>
 
-                    <p className="text-slate-200 mb-6 leading-relaxed">{pillar.description}</p>
+                    <p className="text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">{pillar.description}</p>
 
                     <div className="grid grid-cols-2 gap-3">
                       {pillar.points.map((point, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-2 bg-slate-900/90 rounded-xl p-3 border border-slate-800/60 hover:border-slate-600 transition-colors"
+                          className="flex items-start gap-2 bg-white/90 rounded-xl p-3 border border-slate-200/70 hover:border-slate-300 transition-colors text-slate-700 dark:bg-slate-900/90 dark:border-slate-800/60 dark:text-slate-100"
                         >
                           <FontAwesomeIcon icon={faCheck} className={`text-xs mt-0.5 bg-gradient-to-r ${pillar.gradient} bg-clip-text text-transparent flex-shrink-0`} />
-                          <span className="text-sm text-slate-100">{point}</span>
+                          <span className="text-sm">{point}</span>
                         </div>
                       ))}
                     </div>
@@ -827,12 +827,12 @@ await researchIDE.align();`;
           {/* Use Cases Showcase */}
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-                <span className="bg-gradient-to-r from-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+              <h3 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900 dark:text-white">
+                <span className="bg-gradient-to-r from-slate-900 via-purple-600 to-fuchsia-500 bg-clip-text text-transparent">
                   One IDE. Infinite Possibilities.
                 </span>
               </h3>
-              <p className="text-xl text-slate-200 max-w-3xl mx-auto">
+              <p className="text-xl text-slate-700 max-w-3xl mx-auto">
                 From building apps to discovering new physics. All in the same environment.
               </p>
             </div>
@@ -913,19 +913,19 @@ await researchIDE.align();`;
             ].map((useCase, i) => (
               <ScrollReveal key={useCase.label} delay={i * 50}>
                 <div className="group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-purple-900/50 to-black rounded-2xl blur-3xl opacity-70 pointer-events-none transition-opacity duration-500 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-200/30 via-purple-100/40 to-white/60 rounded-2xl blur-3xl opacity-70 pointer-events-none transition-opacity duration-500 group-hover:opacity-100 dark:from-black/80 dark:via-purple-900/60 dark:to-black" />
 
-                  <div className="relative bg-black/90 border border-purple-900/60 rounded-2xl p-6 hover:border-purple-800 transition-all duration-300 backdrop-blur-sm h-full flex flex-col shadow-2xl text-white">
-                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-lg`}>
+                  <div className="relative bg-white/95 border border-slate-200/70 rounded-2xl p-6 hover:border-slate-300 transition-all duration-250 ease-out backdrop-blur-sm h-full flex flex-col shadow-lg text-slate-900 dark:bg-black/90 dark:border-purple-900/60 dark:text-white dark:shadow-[0_10px_40px_-10px_rgba(147,51,234,0.3)]">
+                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-lg dark:shadow-[0_10px_30px_-5px_rgba(147,51,234,0.4)]`}>
                       <FontAwesomeIcon icon={useCase.icon} className="text-2xl text-white" />
                     </div>
 
-                    <h4 className="text-base font-bold text-white mb-2">{useCase.label}</h4>
-                    <p className="text-xs text-slate-300 mb-3 flex-grow">{useCase.desc}</p>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">{useCase.label}</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 flex-grow">{useCase.desc}</p>
 
                     <div className="flex items-center gap-2 pt-3 border-t border-purple-900/60">
                       <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${useCase.color}`} />
-                      <span className="text-[10px] text-slate-300 uppercase tracking-wider">{useCase.stats}</span>
+                      <span className="text-[10px] text-slate-600 uppercase tracking-wider dark:text-slate-300">{useCase.stats}</span>
                     </div>
                   </div>
                 </div>
@@ -936,9 +936,9 @@ await researchIDE.align();`;
           {/* CTA Section */}
           <ScrollReveal>
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-purple-900/60 to-black/80 rounded-[48px] blur-[120px]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-200/40 via-purple-100/50 to-white/80 rounded-[48px] blur-[120px] dark:from-black/70 dark:via-purple-900/60 dark:to-black/90" />
 
-              <div className="relative bg-black/90 border border-purple-900/40 rounded-[48px] p-12 md:p-16 text-center backdrop-blur-2xl shadow-2xl text-white">
+              <div className="relative bg-white/95 border border-slate-200/70 rounded-[48px] p-12 md:p-16 text-center backdrop-blur-2xl shadow-2xl text-slate-900 dark:bg-black/90 dark:border-purple-900/40 dark:text-white">
                 <h3 className="text-4xl md:text-5xl font-bold mb-6">
                   The Future of Development
                   <br />
@@ -946,7 +946,7 @@ await researchIDE.align();`;
                     Starts Now
                   </span>
                 </h3>
-                <p className="text-xl text-slate-200 mb-10 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-700 mb-10 max-w-2xl mx-auto dark:text-slate-200">
                   Join the waitlist for early access to 4SPACE Lab. Be among the first to experience the IDE that will change everything.
                 </p>
 
@@ -957,12 +957,12 @@ await researchIDE.align();`;
                       <FontAwesomeIcon icon={faArrowRight} className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </Link>
-                  <button className="px-10 py-5 rounded-full font-bold text-lg border-2 border-white/40 text-white hover:bg-white/10 transition-all duration-300">
+                  <button className="px-10 py-5 rounded-full font-bold text-lg border-2 border-white/40 text-slate-900 hover:bg-white/10 transition-all duration-300 dark:text-white">
                     Watch Demo
                   </button>
                 </div>
 
-                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-300">
+                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2">
                     <FontAwesomeIcon icon={faCheck} className="text-emerald-400" />
                     Free for researchers
@@ -1082,7 +1082,7 @@ await researchIDE.align();`;
             ].map((feature, i) => (
               <ScrollReveal key={i} delay={i * 100}>
                 <div
-                  className="group bg-gradient-to-b from-white/90 to-slate-100 backdrop-blur-sm rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-500 h-full shadow-sm dark:from-black/90 dark:via-slate-900/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 card-3d"
+                  className="group bg-gradient-to-b from-white/90 to-slate-100 backdrop-blur-sm rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-500 h-full shadow-sm dark:from-black/90 dark:via-slate-900/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)] card-3d"
                   style={{
                     transformStyle: 'preserve-3d',
                     transform: 'perspective(1000px)'
@@ -1096,9 +1096,12 @@ await researchIDE.align();`;
                     const centerY = rect.height / 2;
                     const rotateX = (y - rect.height / 2) / 30;
                     const rotateY = (rect.width / 2 - x) / 30;
+                    const isDark = document.documentElement.classList.contains('dark');
                     card.style.transition = 'transform 0.12s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.12s cubic-bezier(0.23, 1, 0.32, 1)';
                     card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(15px)`;
-                    card.style.boxShadow = '0 10px 30px rgba(139, 92, 246, 0.15), 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 30px rgba(255, 255, 255, 0.1)';
+                    card.style.boxShadow = isDark
+                      ? '0 10px 30px rgba(147, 51, 234, 0.3), 0 0 20px rgba(147, 51, 234, 0.2), inset 0 0 30px rgba(147, 51, 234, 0.1)'
+                      : '0 10px 30px rgba(139, 92, 246, 0.15), 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 30px rgba(255, 255, 255, 0.1)';
                     card.style.border = '1px solid rgba(139, 92, 246, 0.8)';
                   }}
                   onMouseLeave={(e) => {
@@ -1119,7 +1122,7 @@ await researchIDE.align();`;
                     <div className="absolute top-1 right-0 w-0.5 h-1 bg-purple-400/40" />
                   </div>
 
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 transform group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl`}>
+                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 transform group-hover:scale-110 transition-transform duration-300 shadow-lg group-hover:shadow-2xl dark:shadow-[0_10px_30px_-5px_rgba(147,51,234,0.4)] dark:group-hover:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.5)]`}>
                     <FontAwesomeIcon icon={feature.icon} className="text-white text-2xl" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">{feature.title}</h3>
@@ -1220,7 +1223,7 @@ await researchIDE.align();`;
                   <div className={`text-8xl font-bold mb-6 bg-gradient-to-r ${step.color} bg-clip-text text-transparent opacity-20`}>
                     {step.step}
                   </div>
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-6 shadow-2xl transform hover:scale-110 transition-transform duration-300`}>
+                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-6 shadow-2xl transform hover:scale-110 transition-transform duration-300 dark:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.4)]`}>
                     <FontAwesomeIcon icon={step.icon} className="text-white text-3xl" />
                   </div>
                   <h3 className="text-3xl font-bold mb-4">{step.title}</h3>
@@ -1300,7 +1303,7 @@ await researchIDE.align();`;
             ].map((space, i) => (
               <ScrollReveal key={i} delay={i * 100}>
               <div
-                className="bg-gradient-to-b from-white/90 to-slate-100 border border-slate-200/70 backdrop-blur-sm rounded-2xl overflow-hidden hover:border-slate-300 transition-all duration-500 group cursor-pointer shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/20"
+                className="bg-gradient-to-b from-white/90 to-slate-100 border border-slate-200/70 backdrop-blur-sm rounded-2xl overflow-hidden hover:border-slate-300 transition-all duration-500 group cursor-pointer shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/20 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)]"
                 style={{ transformStyle: 'preserve-3d' }}
                 onMouseMove={(e) => {
                   const card = e.currentTarget;
@@ -1392,7 +1395,7 @@ await researchIDE.align();`;
             {advancedCapabilities.map((feature, i) => (
               <ScrollReveal key={feature.title} delay={(i % 4) * 50}>
                 <div
-                  className="bg-white/95 rounded-xl p-6 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:bg-black/90 dark:border-white/10"
+                  className="bg-white/95 rounded-xl p-6 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:bg-black/90 dark:border-white/10 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)]"
                   style={{ transformStyle: 'preserve-3d' }}
                   onMouseMove={(e) => {
                     const card = e.currentTarget;
@@ -1409,7 +1412,7 @@ await researchIDE.align();`;
                     e.currentTarget.style.transform = 'perspective(1500px)';
                   }}
                 >
-                  <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.iconBg} shadow-lg`}>
+                  <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.iconBg} shadow-lg dark:shadow-[0_10px_30px_-5px_rgba(147,51,234,0.4)]`}>
                     <FontAwesomeIcon icon={feature.icon} className="text-2xl text-white" />
                   </div>
                   <h3 className="text-lg font-bold mb-2 text-slate-900 dark:text-white">{feature.title}</h3>
@@ -1453,7 +1456,7 @@ await researchIDE.align();`;
           <div className="grid md:grid-cols-2 gap-12">
             <ScrollReveal direction="left">
               <div
-                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)]"
                 style={{ transformStyle: 'preserve-3d' }}
                 onMouseMove={(e) => {
                   const card = e.currentTarget;
@@ -1470,7 +1473,7 @@ await researchIDE.align();`;
                   e.currentTarget.style.transform = 'perspective(1500px)';
                 }}
               >
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-8 shadow-2xl">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-8 shadow-2xl dark:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.4)]">
                   <FontAwesomeIcon icon={faUsers} className="text-white text-3xl" />
                 </div>
                 <h3 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white">For Teams</h3>
@@ -1503,7 +1506,7 @@ await researchIDE.align();`;
 
             <ScrollReveal direction="right">
               <div
-                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                className="bg-gradient-to-br from-slate-100 to-white rounded-3xl p-10 border border-slate-200/60 backdrop-blur-sm shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)]"
                 style={{ transformStyle: 'preserve-3d' }}
                 onMouseMove={(e) => {
                   const card = e.currentTarget;
@@ -1520,7 +1523,7 @@ await researchIDE.align();`;
                   e.currentTarget.style.transform = 'perspective(1500px)';
                 }}
               >
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-8 shadow-2xl">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-8 shadow-2xl dark:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.4)]">
                   <FontAwesomeIcon icon={faRocket} className="text-white text-3xl" />
                 </div>
                 <h3 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white">For Individuals</h3>
@@ -1605,7 +1608,7 @@ await researchIDE.align();`;
             ].map((testimonial, i) => (
               <ScrollReveal key={i} delay={i * 100}>
                 <div
-                  className="bg-gradient-to-b from-white/90 via-slate-100 to-slate-100 rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10"
+                  className="bg-gradient-to-b from-white/90 via-slate-100 to-slate-100 rounded-2xl p-8 border border-slate-200/70 hover:border-slate-300 transition-all duration-300 shadow-sm dark:from-black/90 dark:via-black/80 dark:to-black/90 dark:bg-black/90 dark:border-white/10 dark:shadow-[0_2px_15px_-3px_rgba(147,51,234,0.2)]"
                   style={{ transformStyle: 'preserve-3d' }}
                   onMouseMove={(e) => {
                     const card = e.currentTarget;
