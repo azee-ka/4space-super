@@ -332,7 +332,7 @@ await researchIDE.align();`;
 
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 text-slate-900 border-b border-slate-200/60 backdrop-blur-xl transition-all duration-300 dark:bg-black/0 dark:text-white dark:border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 text-slate-900 border-0 border-slate-200/60 backdrop-blur-xl transition-all duration-300 dark:bg-black/0 dark:text-white dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -585,10 +585,10 @@ await researchIDE.align();`;
           <ScrollReveal>
             <div className="relative mb-24">
               {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-cyan-500/30 to-fuchsia-600/30 rounded-[48px] blur-[100px] opacity-50 animate-pulse" />
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-cyan-300/30 to-fuchsia-400/20 rounded-[48px] blur-[100px] opacity-70 animate-pulse dark:from-purple-600/30 dark:via-cyan-500/35 dark:to-fuchsia-600/30" />
 
-              <div className="relative border border-white/20 rounded-[48px] bg-gradient-to-b from-slate-900/50 to-black/80 p-2 backdrop-blur-2xl">
-                <div className="bg-black/90 rounded-[44px] overflow-hidden border border-white/5">
+              <div className="relative border border-slate-200/70 rounded-[48px] bg-gradient-to-b from-white/90 via-slate-50 to-slate-100 p-2 backdrop-blur-2xl dark:border-white/20 dark:bg-gradient-to-b dark:from-slate-900/60 dark:via-slate-950/60 dark:to-black/80">
+                <div className="bg-white rounded-[44px] overflow-hidden border border-slate-200/70 dark:bg-black/90 dark:border-white/5">
                   {/* IDE Header */}
                   <div className="border-b border-white/10 p-4 flex items-center justify-between bg-gradient-to-r from-slate-900/80 to-slate-950/80">
                     <div className="flex items-center gap-3">
@@ -613,103 +613,103 @@ await researchIDE.align();`;
 
                   <div className="grid lg:grid-cols-[1fr_1.2fr] gap-px bg-white/5">
                     {/* Code Editor */}
-                    <div className="bg-[#0a0e1a] p-6">
-                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+                    <div className="bg-white/90 dark:bg-[#0a0e1a] p-6 text-slate-900 dark:text-white">
+                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <FontAwesomeIcon icon={faCode} />
                         <span>quantum_research.py</span>
                         <span className="ml-auto text-emerald-400">● Editing</span>
                       </div>
                       <div className="font-mono text-sm space-y-1">
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">1</span>
-                          <span className="text-purple-400">import</span>
-                          <span className="text-cyan-300">quantumflow</span>
-                          <span className="text-slate-400">as</span>
-                          <span className="text-cyan-300">qf</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">1</span>
+                          <span className="text-purple-400 dark:text-purple-300">import</span>
+                          <span className="text-cyan-300 dark:text-cyan-200">quantumflow</span>
+                          <span className="text-slate-400 dark:text-slate-300">as</span>
+                          <span className="text-cyan-300 dark:text-cyan-200">qf</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">2</span>
-                          <span className="text-purple-400">from</span>
-                          <span className="text-cyan-300">bioforge</span>
-                          <span className="text-purple-400">import</span>
-                          <span className="text-yellow-300">ProteinFolder</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">2</span>
+                          <span className="text-purple-400 dark:text-purple-300">from</span>
+                          <span className="text-cyan-300 dark:text-cyan-200">bioforge</span>
+                          <span className="text-purple-400 dark:text-purple-300">import</span>
+                          <span className="text-yellow-300 dark:text-yellow-200">ProteinFolder</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">3</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">3</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">4</span>
-                          <span className="text-slate-400"># AI suggests: Use quantum annealing for optimization</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">4</span>
+                          <span className="text-slate-400 dark:text-slate-300"># AI suggests: Use quantum annealing for optimization</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">5</span>
-                          <span className="text-purple-400">async def</span>
-                          <span className="text-emerald-300">fold_protein</span>
-                          <span className="text-slate-400">(</span>
-                          <span className="text-orange-300">sequence</span>
-                          <span className="text-slate-400">):</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">5</span>
+                          <span className="text-purple-400 dark:text-purple-300">async def</span>
+                          <span className="text-emerald-300 dark:text-emerald-200">fold_protein</span>
+                          <span className="text-slate-400 dark:text-slate-300">(</span>
+                          <span className="text-orange-300 dark:text-orange-200">sequence</span>
+                          <span className="text-slate-400 dark:text-slate-300">):</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">6</span>
-                          <span className="ml-8 text-slate-300">quantum_circuit</span>
-                          <span className="text-slate-400">=</span>
-                          <span className="text-cyan-300">qf</span>
-                          <span className="text-slate-400">.</span>
-                          <span className="text-emerald-300">create_circuit</span>
-                          <span className="text-slate-400">(</span>
-                          <span className="text-orange-300">qubits</span>
-                          <span className="text-slate-400">=</span>
-                          <span className="text-fuchsia-300">128</span>
-                          <span className="text-slate-400">)</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">6</span>
+                          <span className="ml-8 text-slate-300 dark:text-slate-400">quantum_circuit</span>
+                          <span className="text-slate-400 dark:text-slate-300">=</span>
+                          <span className="text-cyan-300 dark:text-cyan-200">qf</span>
+                          <span className="text-slate-400 dark:text-slate-300">.</span>
+                          <span className="text-emerald-300 dark:text-emerald-200">create_circuit</span>
+                          <span className="text-slate-400 dark:text-slate-300">(</span>
+                          <span className="text-orange-300 dark:text-orange-200">qubits</span>
+                          <span className="text-slate-400 dark:text-slate-300">=</span>
+                          <span className="text-fuchsia-300 dark:text-fuchsia-200">128</span>
+                          <span className="text-slate-400 dark:text-slate-300">)</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">7</span>
-                          <span className="ml-8 text-slate-300">folder</span>
-                          <span className="text-slate-400">=</span>
-                          <span className="text-yellow-300">ProteinFolder</span>
-                          <span className="text-slate-400">(</span>
-                          <span className="text-slate-300">quantum_circuit</span>
-                          <span className="text-slate-400">)</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">7</span>
+                          <span className="ml-8 text-slate-300 dark:text-slate-400">folder</span>
+                          <span className="text-slate-400 dark:text-slate-300">=</span>
+                          <span className="text-yellow-300 dark:text-yellow-200">ProteinFolder</span>
+                          <span className="text-slate-400 dark:text-slate-300">(</span>
+                          <span className="text-slate-300 dark:text-slate-400">quantum_circuit</span>
+                          <span className="text-slate-400 dark:text-slate-300">)</span>
                         </div>
                         <div className="flex gap-4">
-                          <span className="text-slate-600 select-none w-8 text-right">8</span>
-                          <span className="ml-8 text-purple-400">return</span>
-                          <span className="text-purple-400">await</span>
-                          <span className="text-slate-300">folder</span>
-                          <span className="text-slate-400">.</span>
-                          <span className="text-emerald-300">optimize</span>
-                          <span className="text-slate-400">(</span>
-                          <span className="text-orange-300">sequence</span>
-                          <span className="text-slate-400">)</span>
+                          <span className="text-slate-600 select-none w-8 text-right dark:text-slate-500">8</span>
+                          <span className="ml-8 text-purple-400 dark:text-purple-300">return</span>
+                          <span className="text-purple-400 dark:text-purple-300">await</span>
+                          <span className="text-slate-300 dark:text-slate-200">folder</span>
+                          <span className="text-slate-400 dark:text-slate-300">.</span>
+                          <span className="text-emerald-300 dark:text-emerald-200">optimize</span>
+                          <span className="text-slate-400 dark:text-slate-300">(</span>
+                          <span className="text-orange-300 dark:text-orange-200">sequence</span>
+                          <span className="text-slate-400 dark:text-slate-300">)</span>
                         </div>
                       </div>
 
                       {/* AI Suggestion */}
-                      <div className="mt-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/30 p-4">
+                      <div className="mt-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/30 p-4 dark:border-purple-500/30 dark:bg-gradient-to-r dark:from-purple-600/10 dark:to-cyan-600/10">
                         <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
                           <FontAwesomeIcon icon={faWandMagicSparkles} className="animate-pulse" />
                           AI Co-Pilot Suggestion
                         </div>
-                        <p className="text-sm text-slate-300">
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
                           Consider adding error correction codes for quantum noise. Would you like me to implement QECC?
                         </p>
                       </div>
                     </div>
 
                     {/* Live Visualization */}
-                    <div className="bg-[#050810] p-6">
-                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+                    <div className="bg-white/90 dark:bg-[#050810] p-6 border border-slate-200/70 dark:border-white/10 text-slate-900 dark:text-white">
+                      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <FontAwesomeIcon icon={faEye} />
                         <span>Live Quantum Visualization</span>
                       </div>
 
                       {/* 3D Protein Viz Placeholder */}
-                      <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-purple-950/50 via-slate-950 to-cyan-950/50 border border-white/10 overflow-hidden mb-4">
+                      <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-white/80 via-slate-100 to-slate-200 border border-slate-200/60 overflow-hidden mb-4 shadow-inner dark:bg-gradient-to-br dark:from-purple-950/40 dark:via-slate-950 dark:to-cyan-950/40 dark:border-white/10">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="relative">
                             {/* Animated protein structure */}
                             <div className="w-32 h-32 relative animate-spin" style={{ animationDuration: '20s' }}>
-                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/40 to-cyan-500/40 blur-xl" />
+                              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/40 to-cyan-500/40 blur-xl dark:from-purple-600/40 dark:to-cyan-500/40" />
                               {[...Array(8)].map((_, i) => (
                                 <div
                                   key={i}
@@ -724,7 +724,7 @@ await researchIDE.align();`;
                             </div>
                           </div>
                         </div>
-                        <div className="absolute top-4 left-4 text-xs text-cyan-400 font-mono">
+                        <div className="absolute top-4 left-4 text-xs text-cyan-700 font-mono dark:text-cyan-300">
                           <div>Qubits: 128</div>
                           <div>Fidelity: 99.7%</div>
                           <div>States: Superposition</div>
@@ -739,12 +739,12 @@ await researchIDE.align();`;
                           { label: 'GPU Utilization', value: '87%', icon: faChartArea, color: 'from-purple-500 to-fuchsia-500' },
                           { label: 'AI Confidence', value: '96.8%', icon: faBrain, color: 'from-orange-500 to-rose-500' },
                         ].map((metric) => (
-                          <div key={metric.label} className="rounded-xl bg-white/5 border border-white/10 p-3 backdrop-blur-sm">
+                          <div key={metric.label} className="rounded-xl bg-white/90 border border-slate-200/60 p-3 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
                             <div className="flex items-center gap-2 mb-1">
                               <FontAwesomeIcon icon={metric.icon} className={`text-xs bg-gradient-to-r ${metric.color} bg-clip-text text-transparent`} />
-                              <span className="text-[10px] uppercase tracking-wider text-slate-500">{metric.label}</span>
+                              <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-300">{metric.label}</span>
                             </div>
-                            <div className="text-xl font-bold text-white">{metric.value}</div>
+                            <div className="text-xl font-bold text-slate-900 dark:text-white">{metric.value}</div>
                           </div>
                         ))}
                       </div>
@@ -763,40 +763,38 @@ await researchIDE.align();`;
                 title: 'Neural Environment System',
                 description: 'Environments that think. Auto-configure dependencies, predict library conflicts, and manage containerization with AI-driven intelligence. Jupyter meets VS Code meets the future.',
                 points: ['Self-healing dependencies', 'Predictive conflict resolution', 'One-click quantum environments', 'Cross-platform reproducibility'],
-                gradient: 'from-blue-500 to-cyan-500',
-                bgGradient: 'from-blue-500/10 via-cyan-500/5 to-transparent',
+                gradient: 'from-purple-500 to-fuchsia-500',
               },
               {
                 icon: faProjectDiagram,
                 title: 'Temporal Code Navigation',
                 description: 'Git reimagined. See your code evolve in 4D. Visual timeline of every change, AI-explained commit history, and parallel universe branching for testing "what-if" scenarios.',
                 points: ['4D code timeline visualization', 'AI commit archaeology', 'Parallel universe branches', 'Automatic conflict resolution'],
-                gradient: 'from-purple-500 to-fuchsia-500',
-                bgGradient: 'from-purple-500/10 via-fuchsia-500/5 to-transparent',
+                gradient: 'from-purple-500 to-rose-500',
               },
               {
                 icon: faDatabase,
                 title: 'Infinite Data Canvas',
                 description: 'Work with petabyte-scale datasets as easily as Excel. Stream data from anywhere, visualize in real-time, and apply transformations that compile to optimized distributed compute.',
                 points: ['Petabyte-scale data handling', 'Real-time stream processing', 'Visual ETL pipelines', 'Auto-optimizing queries'],
-                gradient: 'from-emerald-500 to-green-500',
-                bgGradient: 'from-emerald-500/10 via-green-500/5 to-transparent',
+                gradient: 'from-amber-500 to-fuchsia-500',
               },
               {
                 icon: faLightbulb,
                 title: 'Collaborative Intelligence',
                 description: 'Multiplayer coding evolved. See teammates\' cursors, thoughts, and AI suggestions in real-time. Pair programming with AI mediators that understand team dynamics and suggest compromises.',
                 points: ['Real-time collaborative debugging', 'AI team mediator', 'Shared consciousness mode', 'Live knowledge synthesis'],
-                gradient: 'from-orange-500 to-amber-500',
-                bgGradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
+                gradient: 'from-pink-500 to-purple-600',
               },
             ].map((pillar, i) => (
               <ScrollReveal key={pillar.title} delay={i * 100}>
-                <div className="group relative">
-                  {/* Subtle glow effect */}
-                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${pillar.gradient} rounded-3xl opacity-0 blur-lg group-hover:opacity-15 transition-opacity duration-500`} />
+              <div className="group relative">
+                {/* Subtle glow effect */}
+                <div className="absolute -inset-0.5 bg-gradient-to-br from-black/70 via-purple-950/70 to-black/60 rounded-3xl opacity-70 blur-3xl group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                  <div className={`relative bg-gradient-to-br ${pillar.bgGradient} border border-white/10 rounded-3xl p-8 backdrop-blur-xl hover:border-white/30 transition-all duration-500`}>
+                <div
+                  className="relative bg-black/90 border border-purple-900/60 rounded-3xl p-8 backdrop-blur-3xl hover:border-purple-800/40 transition-all duration-500 text-white shadow-[0_25px_70px_rgba(15,23,42,0.65)] overflow-hidden"
+                >
                     <div className="flex items-start gap-4 mb-6">
                       <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center flex-shrink-0 shadow-xl group-hover:shadow-2xl transition-shadow duration-500`}>
                         <FontAwesomeIcon icon={pillar.icon} className="text-2xl text-white" />
@@ -807,13 +805,16 @@ await researchIDE.align();`;
                       </div>
                     </div>
 
-                    <p className="text-slate-300 mb-6 leading-relaxed">{pillar.description}</p>
+                    <p className="text-slate-200 mb-6 leading-relaxed">{pillar.description}</p>
 
                     <div className="grid grid-cols-2 gap-3">
                       {pillar.points.map((point, idx) => (
-                        <div key={idx} className="flex items-start gap-2 bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2 bg-slate-900/90 rounded-xl p-3 border border-slate-800/60 hover:border-slate-600 transition-colors"
+                        >
                           <FontAwesomeIcon icon={faCheck} className={`text-xs mt-0.5 bg-gradient-to-r ${pillar.gradient} bg-clip-text text-transparent flex-shrink-0`} />
-                          <span className="text-sm text-slate-300">{point}</span>
+                          <span className="text-sm text-slate-100">{point}</span>
                         </div>
                       ))}
                     </div>
@@ -826,12 +827,12 @@ await researchIDE.align();`;
           {/* Use Cases Showcase */}
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h3 className="text-4xl md:text-5xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+              <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+                <span className="bg-gradient-to-r from-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                   One IDE. Infinite Possibilities.
                 </span>
               </h3>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+              <p className="text-xl text-slate-200 max-w-3xl mx-auto">
                 From building apps to discovering new physics. All in the same environment.
               </p>
             </div>
@@ -843,89 +844,88 @@ await researchIDE.align();`;
                 icon: faCode,
                 label: 'Full-Stack Development',
                 desc: 'React, Node, Python, Go',
-                color: 'from-blue-500 to-cyan-500',
+                color: 'from-purple-600 to-purple-500',
                 stats: '2M+ devs'
               },
               {
                 icon: faBrain,
                 label: 'ML/AI Research',
                 desc: 'PyTorch, TensorFlow, JAX',
-                color: 'from-purple-500 to-fuchsia-500',
+                color: 'from-fuchsia-500 to-pink-500',
                 stats: '500K+ researchers'
               },
               {
                 icon: faDna,
                 label: 'Biotech Research',
                 desc: 'AlphaFold, CRISPR, Genomics',
-                color: 'from-emerald-500 to-teal-500',
+                color: 'from-rose-500 to-amber-500',
                 stats: '100K+ scientists'
               },
               {
                 icon: faAtom,
                 label: 'Quantum Computing',
                 desc: 'Qiskit, Cirq, Q#',
-                color: 'from-cyan-500 to-blue-500',
+                color: 'from-purple-500 to-fuchsia-500',
                 stats: '50K+ quantum devs'
               },
               {
                 icon: faWaveSquare,
                 label: 'Physics Modeling',
                 desc: 'COMSOL, FEniCS, OpenFOAM',
-                color: 'from-orange-500 to-rose-500',
+                color: 'from-amber-500 to-rose-500',
                 stats: '200K+ physicists'
               },
               {
                 icon: faChartArea,
                 label: 'Data Science',
                 desc: 'Pandas, Spark, Dask',
-                color: 'from-indigo-500 to-purple-500',
+                color: 'from-rose-500 to-purple-700',
                 stats: '3M+ analysts'
               },
               {
                 icon: faMicroscope,
                 label: 'Scientific Computing',
                 desc: 'NumPy, SciPy, Julia',
-                color: 'from-green-500 to-emerald-500',
+                color: 'from-indigo-700 to-purple-600',
                 stats: '1M+ scientists'
               },
               {
                 icon: faProjectDiagram,
                 label: 'Systems Architecture',
                 desc: 'Kubernetes, Docker, Terraform',
-                color: 'from-slate-500 to-slate-700',
+                color: 'from-slate-700 to-slate-900',
                 stats: '800K+ architects'
               },
               {
                 icon: faCogs,
                 label: 'DevOps & Cloud',
                 desc: 'AWS, GCP, Azure',
-                color: 'from-sky-500 to-blue-500',
+                color: 'from-purple-700 to-fuchsia-600',
                 stats: '2.5M+ engineers'
               },
               {
                 icon: faRocket,
                 label: 'Startup MVP',
                 desc: 'Rapid prototyping & scaling',
-                color: 'from-rose-500 to-pink-500',
+                color: 'from-rose-600 to-pink-600',
                 stats: '400K+ startups'
               },
             ].map((useCase, i) => (
               <ScrollReveal key={useCase.label} delay={i * 50}>
-                <div className="group relative">
-                  {/* Reduced glow effect */}
-                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${useCase.color} rounded-2xl opacity-0 blur-md group-hover:opacity-20 transition-opacity duration-500`} />
+                <div className="group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-purple-900/50 to-black rounded-2xl blur-3xl opacity-70 pointer-events-none transition-opacity duration-500 group-hover:opacity-100" />
 
-                  <div className="relative bg-gradient-to-br from-slate-900/90 to-black/80 border border-white/10 rounded-2xl p-6 hover:border-white/30 transition-all duration-300 backdrop-blur-sm h-full flex flex-col">
+                  <div className="relative bg-black/90 border border-purple-900/60 rounded-2xl p-6 hover:border-purple-800 transition-all duration-300 backdrop-blur-sm h-full flex flex-col shadow-2xl text-white">
                     <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-lg`}>
                       <FontAwesomeIcon icon={useCase.icon} className="text-2xl text-white" />
                     </div>
 
                     <h4 className="text-base font-bold text-white mb-2">{useCase.label}</h4>
-                    <p className="text-xs text-slate-400 mb-3 flex-grow">{useCase.desc}</p>
+                    <p className="text-xs text-slate-300 mb-3 flex-grow">{useCase.desc}</p>
 
-                    <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                    <div className="flex items-center gap-2 pt-3 border-t border-purple-900/60">
                       <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${useCase.color}`} />
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{useCase.stats}</span>
+                      <span className="text-[10px] text-slate-300 uppercase tracking-wider">{useCase.stats}</span>
                     </div>
                   </div>
                 </div>
@@ -936,33 +936,33 @@ await researchIDE.align();`;
           {/* CTA Section */}
           <ScrollReveal>
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-cyan-500/20 to-fuchsia-600/20 rounded-[48px] blur-[120px]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-purple-900/60 to-black/80 rounded-[48px] blur-[120px]" />
 
-              <div className="relative bg-gradient-to-br from-slate-900/50 to-black/50 border border-white/20 rounded-[48px] p-12 md:p-16 text-center backdrop-blur-2xl">
-                <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+              <div className="relative bg-black/90 border border-purple-900/40 rounded-[48px] p-12 md:p-16 text-center backdrop-blur-2xl shadow-2xl text-white">
+                <h3 className="text-4xl md:text-5xl font-bold mb-6">
                   The Future of Development
                   <br />
                   <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
                     Starts Now
                   </span>
                 </h3>
-                <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-200 mb-10 max-w-2xl mx-auto">
                   Join the waitlist for early access to 4SPACE Lab. Be among the first to experience the IDE that will change everything.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Link to="/signup">
-                    <button className="group px-10 py-5 rounded-full font-bold text-lg bg-gradient-to-r from-cyan-500 via-purple-500 to-fuchsia-500 text-white shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
+                    <button className="group px-10 py-5 rounded-full font-bold text-lg bg-gradient-to-r from-purple-900 via-purple-800 to-black text-white shadow-2xl shadow-purple-900/50 hover:shadow-purple-900/70 transition-all duration-300 transform hover:scale-105">
                       Join Waitlist
                       <FontAwesomeIcon icon={faArrowRight} className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </Link>
-                  <button className="px-10 py-5 rounded-full font-bold text-lg border-2 border-white/30 text-white hover:bg-white/10 transition-all duration-300">
+                  <button className="px-10 py-5 rounded-full font-bold text-lg border-2 border-white/40 text-white hover:bg-white/10 transition-all duration-300">
                     Watch Demo
                   </button>
                 </div>
 
-                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-400">
+                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-300">
                   <div className="flex items-center gap-2">
                     <FontAwesomeIcon icon={faCheck} className="text-emerald-400" />
                     Free for researchers
@@ -1684,182 +1684,6 @@ await researchIDE.align();`;
         </div>
       </section>
 
-      {/* Massive Cyberpunk Globe Section */}
-      <section className="relative py-40 bg-white dark:bg-black text-slate-900 dark:text-white overflow-hidden">
-        {/* Animated grid background */}
-        <div className="absolute inset-0 opacity-20 dark:opacity-15">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(6, 182, 212, 0.3) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(6, 182, 212, 0.3) 1px, transparent 1px)
-              `,
-              backgroundSize: '40px 40px',
-            }}
-          />
-        </div>
-
-        {/* Glow effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-400/20 dark:bg-cyan-500/20 rounded-full blur-[150px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/20 rounded-full blur-[150px]" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-20">
-              <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 backdrop-blur-xl mb-8">
-                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-                <span className="text-sm font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-300">Global Network</span>
-              </div>
-              <h2 className="text-6xl md:text-8xl font-black mb-8 bg-gradient-to-r from-cyan-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-                Connected Worldwide
-              </h2>
-              <p className="text-2xl text-slate-700 dark:text-slate-300 max-w-3xl mx-auto">
-                Join developers and teams across <span className="text-cyan-500 dark:text-cyan-400 font-bold">150+ countries</span> building the future
-              </p>
-            </div>
-          </ScrollReveal>
-
-          {/* Simple 3D Globe with Country Dots */}
-          <div className="relative h-[600px] flex items-center justify-center">
-            <svg className="w-full h-full max-w-[500px]" viewBox="-250 -250 500 500">
-              {/* Meridian lines */}
-              {[...Array(12)].map((_, i) => {
-                const angle = (i * 15);
-                return (
-                  <ellipse
-                    key={`meridian-${i}`}
-                    cx="0"
-                    cy="0"
-                    rx={250 * Math.abs(Math.sin((angle * Math.PI) / 180))}
-                    ry="250"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="0.5"
-                    className="text-cyan-400/15 dark:text-cyan-500/25"
-                  />
-                );
-              })}
-              {/* Latitude rings */}
-              {[-150, -75, 0, 75, 150].map((y, i) => (
-                <ellipse
-                  key={`lat-${i}`}
-                  cx="0"
-                  cy={y}
-                  rx={Math.sqrt(Math.max(0, 250 * 250 - y * y))}
-                  ry={Math.sqrt(Math.max(0, 250 * 250 - y * y)) * 0.3}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="0.5"
-                  className="text-purple-400/15 dark:text-purple-500/25"
-                />
-              ))}
-              
-              {/* Country dot clusters */}
-              {/* North America */}
-              {[...Array(25)].map((_, i) => {
-                const angle = Math.random() * Math.PI * 2;
-                const r = 50 + Math.random() * 40;
-                return (
-                  <circle
-                    key={`na-${i}`}
-                    cx={-100 + Math.cos(angle) * r}
-                    cy={80 + Math.sin(angle) * r * 0.4}
-                    r="2.5"
-                    fill="currentColor"
-                    className="text-cyan-500 dark:text-cyan-400"
-                  />
-                );
-              })}
-              {/* Europe */}
-              {[...Array(20)].map((_, i) => {
-                const angle = Math.random() * Math.PI * 2;
-                const r = 30 + Math.random() * 25;
-                return (
-                  <circle
-                    key={`eu-${i}`}
-                    cx={20 + Math.cos(angle) * r}
-                    cy={100 + Math.sin(angle) * r * 0.3}
-                    r="2.5"
-                    fill="currentColor"
-                    className="text-purple-500 dark:text-purple-400"
-                  />
-                );
-              })}
-              {/* Asia */}
-              {[...Array(30)].map((_, i) => {
-                const angle = Math.random() * Math.PI * 2;
-                const r = 60 + Math.random() * 50;
-                return (
-                  <circle
-                    key={`asia-${i}`}
-                    cx={120 + Math.cos(angle) * r}
-                    cy={50 + Math.sin(angle) * r * 0.5}
-                    r="2.5"
-                    fill="currentColor"
-                    className="text-fuchsia-500 dark:text-fuchsia-400"
-                  />
-                );
-              })}
-              {/* South America */}
-              {[...Array(18)].map((_, i) => {
-                const angle = Math.random() * Math.PI * 2;
-                const r = 30 + Math.random() * 30;
-                return (
-                  <circle
-                    key={`sa-${i}`}
-                    cx={-50 + Math.cos(angle) * r}
-                    cy={-80 + Math.sin(angle) * r * 0.4}
-                    r="2.5"
-                    fill="currentColor"
-                    className="text-cyan-500 dark:text-cyan-400"
-                  />
-                );
-              })}
-              {/* Network lines */}
-              <g className="opacity-30">
-                <line x1="-100" y1="80" x2="20" y2="100" stroke="url(#lineGrad)" strokeWidth="1.5" />
-                <line x1="20" y1="100" x2="120" y2="50" stroke="url(#lineGrad)" strokeWidth="1.5" />
-                <line x1="-100" y1="80" x2="-50" y2="-80" stroke="url(#lineGrad)" strokeWidth="1.5" />
-                <line x1="120" y1="50" x2="150" y2="-100" stroke="url(#lineGrad)" strokeWidth="1.5" />
-              </g>
-              <defs>
-                <linearGradient id="lineGrad">
-                  <stop offset="0%" stopColor="rgb(34, 211, 238)" stopOpacity="0.7" />
-                  <stop offset="50%" stopColor="rgb(168, 85, 247)" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="rgb(217, 70, 239)" stopOpacity="0.7" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
-            {[
-              { value: '150+', label: 'Countries', icon: faGlobe },
-              { value: '2M+', label: 'Active Users', icon: faUsers },
-              { value: '99.99%', label: 'Uptime', icon: faServer },
-              { value: '24/7', label: 'Support', icon: faRocket },
-            ].map((stat, i) => (
-              <div
-                key={stat.label}
-                className="group relative bg-gradient-to-br from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-2xl p-6 text-center hover:border-cyan-400/60 transition-all duration-300 backdrop-blur-sm"
-                style={{
-                  animation: `float 3s ease-in-out infinite`,
-                  animationDelay: `${i * 0.2}s`
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/0 to-purple-500/0 group-hover:from-cyan-400/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-300" />
-                <FontAwesomeIcon icon={stat.icon} className="text-4xl text-cyan-400 mb-3" />
-                <div className="text-4xl font-black text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-slate-400 uppercase tracking-wider">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="relative border-t border-slate-200/60 py-16 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-black dark:text-white">
