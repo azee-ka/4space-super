@@ -497,12 +497,12 @@ await researchIDE.align();`;
                 <FontAwesomeIcon icon={faInfinity} className="text-cyan-500 dark:text-cyan-400" />
                 The Future of Development
               </div>
-              <h2 className="text-6xl md:text-8xl font-black mb-8 leading-tight">
+              <h2 className="text-6xl md:text-6xl font-black mb-8 leading-tight">
                 <span className="bg-gradient-to-r from-cyan-500 via-purple-500 to-fuchsia-500 dark:from-cyan-400 dark:via-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
                   4SPACE Lab
                 </span>
               </h2>
-              <p className="text-2xl md:text-3xl text-slate-700 dark:text-slate-300 max-w-4xl mx-auto leading-relaxed">
+              <p className="text-2xl md:text-2xl text-slate-700 dark:text-slate-300 max-w-4xl mx-auto leading-relaxed">
                 The world's first <span className="text-cyan-600 dark:text-cyan-400 font-semibold">Quantum-Ready</span>, <span className="text-purple-600 dark:text-purple-400 font-semibold">AI-Native</span> development environment.
                 <br />From freelance code to protein folding, physics simulations to ML research.
               </p>
