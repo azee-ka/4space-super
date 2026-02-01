@@ -236,17 +236,17 @@ export function Spaces() {
   return (
     <div className={`h-full flex flex-col ${isDark ? 'bg-transparent' : 'bg-slate-50'}`}>
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-[1800px] mx-auto p-6 space-y-6">
+        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
           {/* Header Section */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="space-y-2">
+            <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
                 <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">Workspace Hub</span>
               </div>
               <h1 className="text-4xl font-bold text-white">
-                Your <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Spaces</span>
+                Your <span className="text-cyan-300">Spaces</span>
               </h1>
               <p className="text-gray-400 text-lg">Organize projects, collaborate with teams, and build together</p>
             </div>
@@ -289,10 +289,14 @@ export function Spaces() {
             ].map((stat, index) => (
               <div
                 key={index}
-                className={`group relative p-4 rounded-2xl ${isDark ? 'bg-white/[0.03]' : 'bg-white'} border border-white/[0.06] hover:border-white/10 transition-all duration-300 hover:bg-white/[0.05]`}
+                className={`group relative p-4 rounded-2xl border transition-all duration-300 ${
+                  isDark
+                    ? 'bg-white/[0.02] border-white/[0.08]'
+                    : 'bg-white border-gray-200 shadow-sm'
+                }`}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                  <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center`}>
                     <FontAwesomeIcon icon={stat.icon} className={`text-${stat.color}-400`} />
                   </div>
                   {stat.change > 0 && (
@@ -626,7 +630,9 @@ export function Spaces() {
             {/* Right Sidebar - Templates & Quick Actions */}
             <div className="lg:col-span-3 space-y-6">
               {/* Quick Create */}
-              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+              <div className={`rounded-2xl border p-5 ${
+                isDark ? 'bg-slate-900/70 border-white/[0.08]' : 'bg-white border-gray-200 shadow-sm'
+              }`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
                     <FontAwesomeIcon icon={faBolt} className="text-cyan-400" />
@@ -642,7 +648,11 @@ export function Spaces() {
                     <button
                       key={template.id}
                       onClick={() => setModalOpen(true)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all duration-300 group text-left"
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 group text-left ${
+                        isDark
+                          ? 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'
+                          : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
+                      }`}
                     >
                       <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${template.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <FontAwesomeIcon icon={template.icon} className="text-white text-sm" />
@@ -658,7 +668,9 @@ export function Spaces() {
               </div>
 
               {/* Tips Card */}
-              <div className={`rounded-2xl ${isDark ? 'bg-white/[0.02]' : 'bg-white'} border border-white/[0.06] p-5`}>
+              <div className={`rounded-2xl border p-5 ${
+                isDark ? 'bg-slate-900/70 border-white/[0.08]' : 'bg-white border-gray-200 shadow-sm'
+              }`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
                     <FontAwesomeIcon icon={faStar} className="text-amber-400" />

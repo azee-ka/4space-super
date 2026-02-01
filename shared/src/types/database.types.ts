@@ -939,6 +939,100 @@ export type Database = {
           },
         ]
       }
+      note_checklists: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          id: string
+          note_id: string
+          position: number
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          id?: string
+          note_id: string
+          position?: number
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          id?: string
+          note_id?: string
+          position?: number
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_checklists_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          author_id: string
+          category: string
+          color: string
+          content: string
+          created_at: string
+          id: string
+          pinned: boolean | null
+          shared: boolean | null
+          space_id: string
+          starred: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          category: string
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean | null
+          shared?: boolean | null
+          space_id: string
+          starred?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          category?: string
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean | null
+          shared?: boolean | null
+          space_id?: string
+          starred?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null

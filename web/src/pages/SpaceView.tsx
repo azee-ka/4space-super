@@ -24,7 +24,8 @@ import {
   faSearch, faCompass,
   faDatabase, faKey,
   faExclamationTriangle, faArrowRight,
-  faMessage, faFile
+  faMessage, faFile,
+  faClipboardList, faBookOpen
 } from '@fortawesome/free-solid-svg-icons';
 
 const iconMap: { [key: string]: any } = {
@@ -41,14 +42,18 @@ const AVAILABLE_WIDGETS: Widget[] = [
   { id: 'chat', name: 'Chat', icon: faComments, color: 'from-blue-500 to-cyan-600', description: 'Real-time messaging', category: 'communication' },
   { id: 'files', name: 'Files', icon: faFolder, color: 'from-purple-500 to-pink-600', description: 'File storage & sharing', category: 'content' },
   { id: 'notes', name: 'Notes', icon: faFileAlt, color: 'from-green-500 to-teal-600', description: 'Documents & notes', category: 'content' },
+  { id: 'docs', name: 'Docs', icon: faFileAlt, color: 'from-indigo-500 to-violet-600', description: 'Living documents', category: 'content' },
   { id: 'tasks', name: 'Tasks', icon: faCheckCircle, color: 'from-orange-500 to-red-600', description: 'Task management', category: 'productivity' },
   { id: 'calendar', name: 'Calendar', icon: faCalendar, color: 'from-pink-500 to-rose-600', description: 'Events & scheduling', category: 'productivity' },
   { id: 'board', name: 'Board', icon: faChartBar, color: 'from-indigo-500 to-purple-600', description: 'Kanban boards', category: 'productivity' },
-  { id: 'whiteboard', name: 'Whiteboard', icon: faImage, color: 'from-amber-500 to-orange-600', description: 'Visual collaboration', category: 'collaboration' },
   { id: 'video', name: 'Video', icon: faVideo, color: 'from-red-500 to-pink-600', description: 'Video calls', category: 'communication' },
   { id: 'voice', name: 'Voice', icon: faMicrophone, color: 'from-blue-500 to-indigo-600', description: 'Audio channels', category: 'communication' },
   { id: 'polls', name: 'Polls', icon: faPoll, color: 'from-teal-500 to-cyan-600', description: 'Surveys & voting', category: 'collaboration' },
-  { id: 'links', name: 'Links', icon: faLink, color: 'from-violet-500 to-purple-600', description: 'Bookmarks', category: 'content' },
+  { id: 'links', name: 'Links', icon: faLink, color: 'from-violet-500 to-purple-600', description: 'Shared bookmarks', category: 'content' },
+  { id: 'forms', name: 'Forms', icon: faClipboardList, color: 'from-amber-500 to-orange-600', description: 'Structured intake', category: 'productivity' },
+  { id: 'polls', name: 'Polls', icon: faPoll, color: 'from-teal-500 to-cyan-600', description: 'Surveys & voting', category: 'collaboration' },
+  { id: 'whiteboard', name: 'Whiteboard', icon: faPalette, color: 'from-purple-500 to-cyan-600', description: 'Visual collaboration', category: 'collaboration' },
+  { id: 'wiki', name: 'Wiki', icon: faBookOpen, color: 'from-sky-500 to-indigo-600', description: 'Knowledge base & guides', category: 'content' },
   { id: 'code', name: 'Code', icon: faCode, color: 'from-slate-500 to-gray-600', description: 'Code snippets', category: 'productivity' },
 ];
 
@@ -80,7 +85,20 @@ export function SpaceView() {
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [targetPrivacy, setTargetPrivacy] = useState<'private' | 'shared' | 'team' | 'public'>('shared');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [activeWidgets, setActiveWidgets] = useState<string[]>(['chat', 'files', 'tasks']);
+  const [activeWidgets, setActiveWidgets] = useState<string[]>([
+    'chat',
+    'files',
+    'notes',
+    'tasks',
+    'calendar',
+    'board',
+    'docs',
+    'links',
+    'forms',
+    'polls',
+    'whiteboard',
+    'wiki',
+  ]);
   const [filterCategory, setFilterCategory] = useState<'all' | 'communication' | 'productivity' | 'content' | 'collaboration'>('all');
   const [widgetSearchQuery, setWidgetSearchQuery] = useState('');
 

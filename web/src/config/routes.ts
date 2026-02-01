@@ -16,6 +16,12 @@ const NotesView = lazy(() => import('../pages/NotesView').then(module => ({ defa
 const TasksView = lazy(() => import('../pages/TasksView').then(module => ({ default: module.TasksView })));
 const CalendarView = lazy(() => import('../pages/CalendarView').then(module => ({ default: module.CalendarView })));
 const BoardView = lazy(() => import('../pages/BoardView').then(module => ({ default: module.BoardView })));
+const DocsView = lazy(() => import('../pages/DocsView').then((module) => ({ default: module.DocsView })));
+const FormsView = lazy(() => import('../pages/FormsView').then((module) => ({ default: module.FormsView })));
+const LinksView = lazy(() => import('../pages/LinksView').then((module) => ({ default: module.LinksView })));
+const PollsView = lazy(() => import('../pages/PollsView').then((module) => ({ default: module.PollsView })));
+const WhiteboardView = lazy(() => import('../pages/WhiteboardView').then((module) => ({ default: module.WhiteboardView })));
+const WikiView = lazy(() => import('../pages/WikiView').then((module) => ({ default: module.WikiView })));
 
 export interface RouteConfig {
   path: string;
@@ -98,6 +104,13 @@ export const spaceWidgetRoutes: RouteConfig[] = [
     loadingMessage: 'Loading notes...',
   },
   {
+    path: '/spaces/:id/docs',
+    element: DocsView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading documents...',
+  },
+  {
     path: '/spaces/:id/tasks',
     element: TasksView,
     isProtected: true,
@@ -112,11 +125,46 @@ export const spaceWidgetRoutes: RouteConfig[] = [
     loadingMessage: 'Loading calendar...',
   },
   {
+    path: '/spaces/:id/forms',
+    element: FormsView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading forms...',
+  },
+  {
+    path: '/spaces/:id/links',
+    element: LinksView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading links...',
+  },
+  {
+    path: '/spaces/:id/polls',
+    element: PollsView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading polls...',
+  },
+  {
     path: '/spaces/:id/board',
     element: BoardView,
     isProtected: true,
     isLazy: true,
     loadingMessage: 'Loading board...',
+  },
+  {
+    path: '/spaces/:id/whiteboard',
+    element: WhiteboardView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading whiteboards...',
+  },
+  {
+    path: '/spaces/:id/wiki',
+    element: WikiView,
+    isProtected: true,
+    isLazy: true,
+    loadingMessage: 'Loading wiki...',
   },
 ];
 
