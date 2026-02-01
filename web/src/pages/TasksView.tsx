@@ -74,7 +74,7 @@ const STATUS_META: Record<Status, { label: string; gradient: string; color: stri
 };
 
 export function TasksView() {
-  const { spaceId } = useParams<{ spaceId: string }>();
+  const { id: spaceId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { theme } = useThemeStore();
   const { data: space } = useSpace(spaceId || '');

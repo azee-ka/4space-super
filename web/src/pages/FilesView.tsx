@@ -559,14 +559,10 @@ export function FilesView() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0 px-3 py-1">
 
         {/* Toolbar */}
-        <div className={`rounded-2xl ${
-          isDark
-            ? 'bg-white/[0.02] border border-white/[0.06]'
-            : 'bg-white border border-gray-200 shadow-sm'
-        } p-4`}>
+        <div className={`rounded-2xl  px-0 py-2`}>
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
@@ -603,7 +599,7 @@ export function FilesView() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
                   }`}
                 >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === 'pdf' ? 'PDF' : type.charAt(0).toUpperCase() + type.slice(1)}
                 </button>
               ))}
             </div>
@@ -661,313 +657,312 @@ export function FilesView() {
           </div>
         </div>
 
-        {/* Files Grid/List */}
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredFiles.map((file) => (
-              <motion.div
-                key={file.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.01 }}
-                onClick={() => setSelectedFile(file)}
-                className={`group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                  selectedFiles.has(file.id)
-                    ? isDark
-                      ? 'bg-cyan-500/10 border-cyan-500/30'
-                      : 'bg-cyan-50 border-cyan-200'
-                    : isDark
-                      ? 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.1]'
-                      : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
-                }`}
-              >
-                {/* Selection Checkbox */}
-                <div className="absolute top-3 left-3 z-10">
-                  <button
-                    onClick={(e) => {
+        <div className="flex-1 overflow-y-auto py-3">
+          {/* Files Grid/List */}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-0 py-4 overflow-hidden">
+              {filteredFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.01 }}
+                  onClick={() => setSelectedFile(file)}
+                  className={`group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                    selectedFiles.has(file.id)
+                      ? isDark
+                        ? 'bg-cyan-500/10 border-cyan-500/30'
+                        : 'bg-cyan-50 border-cyan-200'
+                      : isDark
+                        ? 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.1]'
+                        : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                  }`}
+                >
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFileSelection(file.id);
+                      }}
+                      className={`w-6 h-6 rounded-lg border transition-all ${
+                        selectedFiles.has(file.id)
+                          ? 'bg-cyan-500 border-cyan-400'
+                          : isDark
+                            ? 'border-white/30 bg-white/5 opacity-0 group-hover:opacity-100'
+                            : 'border-gray-300 bg-white opacity-0 group-hover:opacity-100'
+                      } flex items-center justify-center`}
+                    >
+                      {selectedFiles.has(file.id) && (
+                        <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* File Icon */}
+                  <div className={`w-full aspect-square rounded-xl ${
+                    isDark ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-gray-100'
+                  } flex items-center justify-center mb-3 overflow-hidden transition-transform group-hover:scale-105`}>
+                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm`}>
+                      <FontAwesomeIcon
+                        icon={getFileIcon(file.type)}
+                        className="text-white text-3xl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* File Info */}
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate flex-1 leading-tight`}>
+                        {file.name}
+                      </h4>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {file.starred && (
+                          <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />
+                        )}
+                        {file.shared && (
+                          <FontAwesomeIcon icon={faUsers} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center text-[9px] font-bold text-white`}>
+                        {file.owner.avatar}
+                      </div>
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'} truncate`}>{file.owner.name}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>
+                        {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
+                      </span>
+                      <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>{formatDate(file.modifiedAt)}</span>
+                    </div>
+
+                    {/* Tags */}
+                    {file.tags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {file.tags.slice(0, 2).map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${
+                              isDark
+                                ? 'bg-cyan-500/10 text-cyan-400'
+                                : 'bg-cyan-100 text-cyan-700'
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {file.tags.length > 2 && (
+                          <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                            +{file.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className={`flex-1 py-1.5 rounded-lg ${
+                        isDark
+                          ? 'bg-white/[0.05] hover:bg-white/[0.1] text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                      } text-xs font-medium transition-all flex items-center justify-center gap-1`}>
+                        <FontAwesomeIcon icon={faEye} />
+                        View
+                      </button>
+                      <button className={`flex-1 py-1.5 rounded-lg ${
+                        isDark
+                          ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400'
+                          : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-700'
+                      } text-xs font-medium transition-all flex items-center justify-center gap-1`}>
+                        <FontAwesomeIcon icon={faDownload} />
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : viewMode === 'list' ? (
+            <div className={`rounded-2xl ${
+              isDark
+                ? 'bg-white/[0.02] border border-white/[0.06]'
+                : 'bg-white border border-gray-200 shadow-sm'
+            } overflow-hidden`}>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className={`${isDark ? 'bg-white/[0.02]' : 'bg-gray-50'} border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+                    <tr>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider w-8`}>
+                        <input type="checkbox" className="rounded" />
+                      </th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Name</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Owner</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Modified</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Size</th>
+                      <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Type</th>
+                      <th className={`px-6 py-4 text-right text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {filteredFiles.map((file) => (
+                      <motion.tr
+                        key={file.id}
+                        whileHover={{ backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
+                        className="cursor-pointer"
+                        onClick={() => setSelectedFile(file)}
+                      >
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedFiles.has(file.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleFileSelection(file.id);
+                            }}
+                            className="rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm flex-shrink-0`}>
+                              <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-white text-sm" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{file.name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {file.tags.slice(0, 2).map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${
+                                      isDark ? 'bg-cyan-500/10 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
+                                    }`}
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center text-xs font-bold text-white`}>
+                              {file.owner.avatar}
+                            </div>
+                            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{file.owner.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faClock} className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{formatDate(file.modifiedAt)}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            isDark ? 'bg-white/[0.05] text-gray-400' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-[10px]" />
+                            {file.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button className={`w-8 h-8 rounded-lg ${
+                              isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
+                            } flex items-center justify-center transition-all`}>
+                              <FontAwesomeIcon icon={faDownload} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                            </button>
+                            <button className={`w-8 h-8 rounded-lg ${
+                              isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
+                            } flex items-center justify-center transition-all`}>
+                              <FontAwesomeIcon icon={faShare} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                            </button>
+                            <button className={`w-8 h-8 rounded-lg ${
+                              isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-100 hover:bg-red-200'
+                            } flex items-center justify-center transition-all`}>
+                              <FontAwesomeIcon icon={faTrash} className="text-xs text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className={`space-y-2 overflow-hidden`}>
+              {filteredFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  whileHover={{ x: 4 }}
+                  onClick={() => setSelectedFile(file)}
+                  className={`group flex items-center gap-3 p-3 rounded-xl ${
+                    selectedFiles.has(file.id)
+                      ? isDark
+                        ? 'bg-cyan-500/10 border border-cyan-500/30'
+                        : 'bg-cyan-50 border border-cyan-200'
+                      : isDark
+                        ? 'bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04]'
+                        : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                  } cursor-pointer transition-all`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.has(file.id)}
+                    onChange={(e) => {
                       e.stopPropagation();
                       toggleFileSelection(file.id);
                     }}
-                    className={`w-6 h-6 rounded-lg border transition-all ${
-                      selectedFiles.has(file.id)
-                        ? 'bg-cyan-500 border-cyan-400'
-                        : isDark
-                          ? 'border-white/30 bg-white/5 opacity-0 group-hover:opacity-100'
-                          : 'border-gray-300 bg-white opacity-0 group-hover:opacity-100'
-                    } flex items-center justify-center`}
-                  >
-                    {selectedFiles.has(file.id) && (
-                      <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />
-                    )}
-                  </button>
-                </div>
-
-                {/* File Icon */}
-                <div className={`w-full aspect-square rounded-xl ${
-                  isDark ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-gray-100'
-                } flex items-center justify-center mb-3 overflow-hidden transition-transform group-hover:scale-105`}>
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm`}>
-                    <FontAwesomeIcon
-                      icon={getFileIcon(file.type)}
-                      className="text-white text-3xl"
-                    />
+                    className="rounded"
+                  />
+                  <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm flex-shrink-0`}>
+                    <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-white text-sm" />
                   </div>
-                </div>
-
-                {/* File Info */}
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate flex-1 leading-tight`}>
-                      {file.name}
-                    </h4>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {file.starred && (
-                        <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />
-                      )}
-                      {file.shared && (
-                        <FontAwesomeIcon icon={faUsers} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
-                      )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{file.name}</p>
+                      {file.starred && <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />}
+                      {file.shared && <FontAwesomeIcon icon={faUsers} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className={isDark ? 'text-gray-500' : 'text-gray-600'}>{file.owner.name}</span>
+                      <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>
+                        {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
+                      </span>
+                      <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>{formatDate(file.modifiedAt)}</span>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center text-[9px] font-bold text-white`}>
-                      {file.owner.avatar}
-                    </div>
-                    <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'} truncate`}>{file.owner.name}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>
-                      {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
-                    </span>
-                    <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>{formatDate(file.modifiedAt)}</span>
-                  </div>
-
-                  {/* Tags */}
-                  {file.tags.length > 0 && (
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {file.tags.slice(0, 2).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${
-                            isDark
-                              ? 'bg-cyan-500/10 text-cyan-400'
-                              : 'bg-cyan-100 text-cyan-700'
-                          }`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {file.tags.length > 2 && (
-                        <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                          +{file.tags.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className={`flex-1 py-1.5 rounded-lg ${
-                      isDark
-                        ? 'bg-white/[0.05] hover:bg-white/[0.1] text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                    } text-xs font-medium transition-all flex items-center justify-center gap-1`}>
-                      <FontAwesomeIcon icon={faEye} />
-                      View
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className={`w-8 h-8 rounded-lg ${
+                      isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
+                    } flex items-center justify-center transition-all`}>
+                      <FontAwesomeIcon icon={faDownload} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
                     </button>
-                    <button className={`flex-1 py-1.5 rounded-lg ${
-                      isDark
-                        ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400'
-                        : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-700'
-                    } text-xs font-medium transition-all flex items-center justify-center gap-1`}>
-                      <FontAwesomeIcon icon={faDownload} />
-                      Download
+                    <button className={`w-8 h-8 rounded-lg ${
+                      isDark ? 'bg-cyan-500/10 hover:bg-cyan-500/20' : 'bg-cyan-100 hover:bg-cyan-200'
+                    } flex items-center justify-center transition-all`}>
+                      <FontAwesomeIcon icon={faShare} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
                     </button>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : viewMode === 'list' ? (
-          <div className={`rounded-2xl ${
-            isDark
-              ? 'bg-white/[0.02] border border-white/[0.06]'
-              : 'bg-white border border-gray-200 shadow-sm'
-          } overflow-hidden`}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={`${isDark ? 'bg-white/[0.02]' : 'bg-gray-50'} border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
-                  <tr>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider w-8`}>
-                      <input type="checkbox" className="rounded" />
-                    </th>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Name</th>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Owner</th>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Modified</th>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Size</th>
-                    <th className={`px-6 py-4 text-left text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Type</th>
-                    <th className={`px-6 py-4 text-right text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider`}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  {filteredFiles.map((file) => (
-                    <motion.tr
-                      key={file.id}
-                      whileHover={{ backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedFile(file)}
-                    >
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedFiles.has(file.id)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            toggleFileSelection(file.id);
-                          }}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm flex-shrink-0`}>
-                            <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-white text-sm" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{file.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              {file.tags.slice(0, 2).map((tag, idx) => (
-                                <span
-                                  key={idx}
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${
-                                    isDark ? 'bg-cyan-500/10 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
-                                  }`}
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center text-xs font-bold text-white`}>
-                            {file.owner.avatar}
-                          </div>
-                          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{file.owner.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <FontAwesomeIcon icon={faClock} className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{formatDate(file.modifiedAt)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                          isDark ? 'bg-white/[0.05] text-gray-400' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-[10px]" />
-                          {file.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className={`w-8 h-8 rounded-lg ${
-                            isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
-                          } flex items-center justify-center transition-all`}>
-                            <FontAwesomeIcon icon={faDownload} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                          </button>
-                          <button className={`w-8 h-8 rounded-lg ${
-                            isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
-                          } flex items-center justify-center transition-all`}>
-                            <FontAwesomeIcon icon={faShare} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                          </button>
-                          <button className={`w-8 h-8 rounded-lg ${
-                            isDark ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-red-100 hover:bg-red-200'
-                          } flex items-center justify-center transition-all`}>
-                            <FontAwesomeIcon icon={faTrash} className="text-xs text-red-400" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+                </motion.div>
+              ))}
             </div>
-          </div>
-        ) : (
-          <div className={`rounded-2xl ${
-            isDark
-              ? 'bg-white/[0.02] border border-white/[0.06]'
-              : 'bg-white border border-gray-200 shadow-sm'
-          } p-4 space-y-2`}>
-            {filteredFiles.map((file) => (
-              <motion.div
-                key={file.id}
-                whileHover={{ x: 4 }}
-                onClick={() => setSelectedFile(file)}
-                className={`group flex items-center gap-3 p-3 rounded-xl ${
-                  selectedFiles.has(file.id)
-                    ? isDark
-                      ? 'bg-cyan-500/10 border border-cyan-500/30'
-                      : 'bg-cyan-50 border border-cyan-200'
-                    : isDark
-                      ? 'bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04]'
-                      : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                } cursor-pointer transition-all`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedFiles.has(file.id)}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleFileSelection(file.id);
-                  }}
-                  className="rounded"
-                />
-                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${getFileColor(file.type)} flex items-center justify-center shadow-sm flex-shrink-0`}>
-                  <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-white text-sm" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{file.name}</p>
-                    {file.starred && <FontAwesomeIcon icon={faStar} className="text-amber-400 text-xs" />}
-                    {file.shared && <FontAwesomeIcon icon={faUsers} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className={isDark ? 'text-gray-500' : 'text-gray-600'}>{file.owner.name}</span>
-                    <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>
-                      {file.isFolder ? `${file.itemCount} items` : formatFileSize(file.size)}
-                    </span>
-                    <span className={isDark ? 'text-gray-600' : 'text-gray-500'}>{formatDate(file.modifiedAt)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className={`w-8 h-8 rounded-lg ${
-                    isDark ? 'bg-white/[0.05] hover:bg-white/[0.1]' : 'bg-gray-100 hover:bg-gray-200'
-                  } flex items-center justify-center transition-all`}>
-                    <FontAwesomeIcon icon={faDownload} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                  </button>
-                  <button className={`w-8 h-8 rounded-lg ${
-                    isDark ? 'bg-cyan-500/10 hover:bg-cyan-500/20' : 'bg-cyan-100 hover:bg-cyan-200'
-                  } flex items-center justify-center transition-all`}>
-                    <FontAwesomeIcon icon={faShare} className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
+      
       </div>
 
       {/* File Detail Modal */}
