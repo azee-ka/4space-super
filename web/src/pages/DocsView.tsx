@@ -267,7 +267,7 @@ export function DocsView() {
   return (
     <div className={`h-full ${isDark ? 'bg-transparent' : 'bg-white'} overflow-hidden flex font-sans tracking-normal`}>
       <aside
-        className={`w-64 flex-shrink-0 border-r ${isDark ? 'border-white/[0.05] bg-white/[0.02] backdrop-blur-xl' : 'border-gray-200 bg-white/80 shadow-sm'} overflow-hidden`}
+        className={`w-64 flex-shrink-0 border-r border-r-gray-400 overflow-hidden`}
       >
         <div className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto px-5 py-6 pr-1">
           <div className="space-y-2">
