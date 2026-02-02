@@ -174,11 +174,13 @@ export function DocsView() {
   const [selectedDocId, setSelectedDocId] = useState(DOCUMENTS[0]?.id ?? '');
   const [sortOrder, setSortOrder] = useState<'recent' | 'name'>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact'>('grid');
-  const isCompact = viewMode === 'compact';
-  const cardPadding = isCompact ? 'p-4' : 'p-5';
-  const cardGap = isCompact ? 'gap-2' : 'gap-3';
-  const cardMinHeight = isCompact ? 'min-h-[120px]' : 'min-h-[140px]';
-  const gridGap = isCompact ? 'gap-4' : 'gap-5';
+  const isListMode = viewMode === 'list';
+  const isCompactMode = viewMode === 'compact';
+  const isGridMode = viewMode === 'grid';
+  const cardPadding = 'p-4';
+  const cardGap = 'gap-2.5';
+  const cardMinHeight = 'min-h-[120px]';
+  const gridGap = 'gap-4';
   const defaultCardStyle = `${isDark ? 'border-white/[0.08] bg-white/[0.02]' : 'border-slate-200 bg-white/90'}`;
   const listCardStyle = isDark ? 'border-white/[0.08] bg-white/[0.02]' : 'border-slate-200 bg-white';
   const activeFilterClasses = isDark
@@ -207,7 +209,7 @@ export function DocsView() {
     () => Array.from(new Set(DOCUMENTS.map((doc) => doc.owner))).slice(0, 5),
     []
   );
-  const gridColumns = isCompact ? 'grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 md:grid-cols-2';
+  const gridColumns = isCompactMode ? 'grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   const glassLight = 'bg-white/5 border border-white/10 backdrop-blur-xl';
   const glassDark = 'bg-white/[0.02] border border-white/[0.05] backdrop-blur-xl';
@@ -477,7 +479,7 @@ export function DocsView() {
 
         <div className="flex flex-1 overflow-hidden min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto p-6">
-            {viewMode === 'list' ? (
+            {(isListMode || isCompactMode) ? (
                 <div className="space-y-3">
                   {filteredDocs.map((doc) => (
                     <button
@@ -487,29 +489,45 @@ export function DocsView() {
                         selectedDoc?.id === doc.id ? 'border-amber-400 shadow-amber-200/80' : listCardStyle
                       }`}
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white line-clamp-2">{doc.name}</h3>
-                            <span className="rounded-full border px-3 py-1 text-[10px] font-semibold text-slate-500">
-                              {doc.status.replace('_', ' ')}
-                            </span>
+                      {isCompactMode ? (
+                        <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-900 dark:text-white">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">
+                              <span>{doc.folder}</span>
+                              <span>{formatStatusLabel(doc.status)}</span>
+                            </div>
+                            <p className="line-clamp-1">{doc.name}</p>
                           </div>
-                          <p className="text-sm text-slate-500 line-clamp-3">{doc.description}</p>
-                          <div className="flex flex-wrap gap-2 text-[10px] text-slate-500">
-                            <span className="font-semibold text-slate-900 dark:text-white">{doc.folder}</span>
-                            {doc.tags.map((tag) => (
-                              <span key={tag} className={tagChipClasses}>
-                                {tag}
+                          <div className="text-[10px] text-slate-500 text-right">
+                            <div>{doc.owner}</div>
+                            <div>{doc.updatedAt}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <h3 className="text-lg font-semibold text-slate-900 dark:text-white line-clamp-2">{doc.name}</h3>
+                              <span className="rounded-full border px-3 py-1 text-[10px] font-semibold text-slate-500">
+                                {formatStatusLabel(doc.status)}
                               </span>
-                            ))}
+                            </div>
+                            <p className="text-sm text-slate-500 line-clamp-3">{doc.description}</p>
+                            <div className="flex flex-wrap gap-2 text-[10px] text-slate-500">
+                              <span className="font-semibold text-slate-900 dark:text-white">{doc.folder}</span>
+                              {doc.tags.map((tag) => (
+                                <span key={tag} className={tagChipClasses}>
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-col text-right text-[11px] text-slate-500 sm:text-left sm:text-[10px]">
+                            <span>Updated {doc.updatedAt}</span>
+                            <span>{doc.owner}</span>
                           </div>
                         </div>
-                        <div className="flex flex-col text-right text-[11px] text-slate-500 sm:text-left sm:text-[10px]">
-                          <span>Updated {doc.updatedAt}</span>
-                          <span>{doc.owner}</span>
-                        </div>
-                      </div>
+                      )}
                     </button>
                   ))}
                   {!filteredDocs.length && (
@@ -530,46 +548,25 @@ export function DocsView() {
                           : defaultCardStyle
                       }`}
                     >
-                      {isCompact ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                            <span className="truncate">{doc.folder}</span>
-                            <span className="truncate">{doc.status.replace('_', ' ')}</span>
-                          </div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2">
-                            {doc.name}
-                          </p>
-                          <div className="flex items-center justify-between text-[10px] text-slate-500">
-                            <span>{doc.owner}</span>
-                            <span>{doc.updatedAt}</span>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span className="truncate">{doc.folder}</span>
+                          <span className="truncate">{formatStatusLabel(doc.status)}</span>
                         </div>
-                      ) : (
-                        <>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-[10px] text-slate-500">
-                              <span className="truncate">{doc.folder}</span>
-                              <span className="truncate">{doc.status.replace('_', ' ')}</span>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-2">{doc.name}</h3>
-                            <p className="text-sm text-slate-500 line-clamp-3">{doc.description}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {doc.tags.map((tag) => (
-                                <span key={tag} className={tagChipClasses}>
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-500">
-                            <span className="truncate">Updated {doc.updatedAt}</span>
-                            <span className="flex items-center gap-1 truncate">
-                              <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
-                              {doc.owner}
-                            </span>
-                          </div>
-                        </>
-                      )}
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-2">{doc.name}</h3>
+                        <p className="text-sm text-slate-500 line-clamp-2">{doc.description}</p>
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span>{doc.owner}</span>
+                          <span>{doc.updatedAt}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {doc.tags.map((tag) => (
+                          <span key={tag} className={tagChipClasses}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     </article>
                   ))}
                   {!filteredDocs.length && (
