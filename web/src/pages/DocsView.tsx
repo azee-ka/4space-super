@@ -267,7 +267,7 @@ export function DocsView() {
   return (
     <div className={`h-full ${isDark ? 'bg-transparent' : 'bg-white'} overflow-hidden flex font-sans tracking-normal`}>
       <aside
-        className={`w-64 flex-shrink-0 border-r border-r-gray-400 overflow-hidden`}
+        className={`w-64 flex-shrink-0 border-r border-white/[0.1] overflow-hidden`}
       >
         <div className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto px-5 py-6 pr-1">
           <div className="space-y-2">
@@ -280,7 +280,7 @@ export function DocsView() {
               }`}
             >
               <FontAwesomeIcon icon={faArrowLeft} className="text-[11px]" />
-              Workspace
+              Space
             </button>
             <div>
               <p className="text-[11px] text-slate-500">Docs</p>
