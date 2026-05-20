@@ -8,3 +8,10 @@ mobile/FINAL_FIX.md
 mobile/SETUP.md
 .gitignore
 .DS_Store
+
+# kontxt — ephemeral files (MD files are safe to commit)
+.kontxt/*.db
+.kontxt/*.pid
+.kontxt/*.sock
+supabase/.DS_Store
+.DS_Store

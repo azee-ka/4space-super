@@ -412,6 +412,7 @@ export function LeftSidebar({
                 onlineUsers={onlineUsers}
                 spaceCategories={categories}
                 onCreateRoom={() => onOpenCreateRoomModal?.()}
+                isLoading={isLoading}
               />
             </div>
           </>

@@ -39,7 +39,7 @@ export class SpacesService {
       .from('profiles')
       .select('id')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     // If no profile, create one
     if (!profile) {
@@ -87,7 +87,7 @@ export class SpacesService {
       .select('id')
       .eq('space_id', spaceId)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!membership) {
       throw new Error('Access denied: You are not a member of this space');
@@ -95,12 +95,13 @@ export class SpacesService {
 
     const { data, error } = await this.supabase
       .from('spaces')
-      .select(`
-        *,
-        space_members!inner(user_id, role)
-      `)
+      // .select(`
+      //   *,
+      //   space_members!inner(user_id, role)
+      // `)
+      .select('*')
       .eq('id', spaceId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new Error('Space not found');

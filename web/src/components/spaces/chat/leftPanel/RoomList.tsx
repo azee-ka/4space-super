@@ -20,6 +20,7 @@ interface RoomsListProps {
   onlineUsers?: Map<string, any>;
   spaceCategories?: Array<{ id: string; name: string; icon: string; color: string; description: string }>;
   onCreateRoom?: () => void;
+  isLoading?: boolean;
 }
 
 export function RoomsList({
@@ -30,6 +31,7 @@ export function RoomsList({
   onlineUsers = new Map(),
   spaceCategories = [],
   onCreateRoom,
+  isLoading,
 }: RoomsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
@@ -109,7 +111,7 @@ export function RoomsList({
     return 'cyan';
   };
 
-  if (rooms.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
