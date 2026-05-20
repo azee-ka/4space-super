@@ -45,7 +45,7 @@ Outside spaces, users have a **dashboard**, a **spaces list**, and a **messages*
 **Backend**
 
 * Supabase: PostgreSQL, Auth, Realtime, Storage
-* Migrations under `supabase/migrations/` (74 SQL files)
+* Migrations under `supabase/migrations/` (SQL files)
 * Local Supabase project id: `4space-super` (see `supabase/config.toml`)
 
 **Shared library**
@@ -348,4 +348,3 @@ flowchart TB
 * **Production ready paths:** auth, spaces, memberships, invitations, space rooms and messages, inbox conversations, notes widget, call session persistence, chat media storage, chat settings.
 * **Rich UI, limited or no backend yet:** several workspace widgets (docs, tasks, calendar, board, forms, links, polls, whiteboard, wiki) ship full interfaces; many use in memory or sample data until dedicated tables and hooks are added.
 * **Dashboard and space home activity feeds** may show placeholder or sample activity in places.
-* **Space stats** in `SpacesService.getSpaceStats` still has TODO fields for files, tasks, and storage.
