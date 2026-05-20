@@ -349,11 +349,3 @@ flowchart TB
 * **Rich UI, limited or no backend yet:** several workspace widgets (docs, tasks, calendar, board, forms, links, polls, whiteboard, wiki) ship full interfaces; many use in memory or sample data until dedicated tables and hooks are added.
 * **Dashboard and space home activity feeds** may show placeholder or sample activity in places.
 * **Space stats** in `SpacesService.getSpaceStats` still has TODO fields for files, tasks, and storage.
-
-## Related documentation
-
-* `mobile/README.md` for mobile only setup, structure, and messaging details
-
-## License
-
-No license file is present in the repository root. Add one if you plan to distribute the project.
